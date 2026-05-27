@@ -91,7 +91,7 @@
         <input type="hidden" name="notify_url" value="https://YOUR-SITE.netlify.app/notify"/>
         <input type="hidden" name="item_name" id="pf-item-name" value="Mr Clearance Order"/>
         <input type="hidden" name="amount" id="pf-amount" value="0.00"/>
-        <button type="button" class="checkout-btn" onclick="handleCheckout()">Pay Now with PayFast</button>
+        <button type="button" class="checkout-btn" onclick="openDelivery()">🚚 Checkout &amp; Delivery</button>
       </form>
       <p class="payment-icons">All major bank cards accepted</p>
     </div>
@@ -406,10 +406,226 @@
     updateCartUI();
   }
 
-  function handleCheckout() {
-    if (cart.length === 0) { showToast('🛒 Add items to your cart first!'); return; }
-    document.getElementById('payfast-form').submit();
+
+  // ── DELIVERY SYSTEM ───────────────────────────────────────────
+  var STORE_LAT  = -33.9741;  // 368 Imam Haron Rd, Lansdowne
+  var STORE_LNG  = 18.5089;
+  var STORE_ADDR = '368 Imam Haron Road, Lansdowne';
+  var OWNER_WHATSAPP = '27677698001';
+  var DELIVERY_FEE = 50;
+  var MAX_KM = 5;
+
+  var selectedFulfilment = 'delivery';
+  var withinRange = false;
+  var currentOrderNumber = '';
+
+  function generateOrderNumber() {
+    var num = 'MRC-' + Date.now().toString().slice(-6) + Math.floor(Math.random()*100);
+    return num;
   }
+
+  function openDelivery() {
+    if (cart.length === 0) { showToast('🛒 Add items to your cart first!'); return; }
+    currentOrderNumber = generateOrderNumber();
+    document.getElementById('order-number-display').textContent = currentOrderNumber;
+    updateModalSummary();
+    document.getElementById('delivery-overlay').style.display = 'block';
+    document.getElementById('delivery-modal').style.display   = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDelivery() {
+    document.getElementById('delivery-overlay').style.display = 'none';
+    document.getElementById('delivery-modal').style.display   = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function selectFulfilment(type) {
+    selectedFulfilment = type;
+    var dOpt = document.getElementById('opt-delivery');
+    var cOpt = document.getElementById('opt-collection');
+    var dFields = document.getElementById('delivery-fields');
+    var cFields = document.getElementById('collection-fields');
+
+    if (type === 'delivery') {
+      dOpt.style.border = '1px solid rgba(224,0,32,0.6)';
+      dOpt.style.background = 'rgba(224,0,32,0.15)';
+      cOpt.style.border = '1px solid rgba(255,255,255,0.08)';
+      cOpt.style.background = 'rgba(255,255,255,0.04)';
+      dFields.style.display = 'block';
+      cFields.style.display = 'none';
+    } else {
+      cOpt.style.border = '1px solid rgba(0,200,83,0.6)';
+      cOpt.style.background = 'rgba(0,200,83,0.1)';
+      dOpt.style.border = '1px solid rgba(255,255,255,0.08)';
+      dOpt.style.background = 'rgba(255,255,255,0.04)';
+      cFields.style.display = 'block';
+      dFields.style.display = 'none';
+      document.getElementById('collection-address-note').style.display = 'block';
+    }
+    updateModalSummary();
+  }
+
+  // Simple distance check using suburb keywords within 5km of Lansdowne
+  var NEARBY_SUBURBS = [
+    'lansdowne','crawford','athlone','belgravia','claremont','kenwyn',
+    'rondebosch','wetton','wynberg','plumstead','ottery','hanover park',
+    'gatesville','penlyn','kewtown','silvertown','bridgetown'
+  ];
+
+  function checkAddress() {
+    var addr = document.getElementById('cust-address').value.toLowerCase();
+    var resultEl = document.getElementById('address-result');
+    var paxiEl = document.getElementById('paxi-section');
+    var localEl = document.getElementById('local-delivery-info');
+
+    if (addr.length < 5) {
+      resultEl.style.display = 'none';
+      paxiEl.style.display = 'none';
+      localEl.style.display = 'none';
+      withinRange = false;
+      updateModalSummary();
+      return;
+    }
+
+    var found = NEARBY_SUBURBS.some(function(sub) { return addr.indexOf(sub) !== -1; });
+    resultEl.style.display = 'block';
+    withinRange = found;
+
+    if (found) {
+      localEl.style.display = 'block';
+      paxiEl.style.display  = 'none';
+    } else {
+      localEl.style.display = 'none';
+      paxiEl.style.display  = 'block';
+    }
+    updateModalSummary();
+  }
+
+  function getDeliveryFee() {
+    if (selectedFulfilment === 'collection') return 0;
+    if (withinRange) return DELIVERY_FEE;
+    var paxi = document.getElementById('paxi-option');
+    if (paxi && paxi.value) {
+      return parseFloat(paxi.value.split('|')[1]) || 0;
+    }
+    return 0;
+  }
+
+  function updateModalSummary() {
+    var subtotal = cart.reduce(function(s,i){ return s + i.price * i.qty; }, 0);
+    var discount = Math.round(subtotal * discountPct / 100);
+    var cartTotal = subtotal - discount;
+    var deliveryFee = getDeliveryFee();
+    var grandTotal = cartTotal + deliveryFee;
+
+    var itemsHtml = cart.map(function(i){
+      return '<div style="display:flex;justify-content:space-between;padding:2px 0;">' +
+        '<span>' + i.qty + 'x ' + i.name + '</span>' +
+        '<span>R' + (i.price * i.qty).toLocaleString() + '</span>' +
+        '</div>';
+    }).join('');
+
+    document.getElementById('modal-order-items').innerHTML = itemsHtml;
+    document.getElementById('modal-subtotal').textContent = 'R ' + cartTotal.toLocaleString();
+    document.getElementById('modal-total').textContent    = 'R ' + grandTotal.toLocaleString();
+
+    var delivRow = document.getElementById('modal-delivery-row');
+    var delivFeeEl = document.getElementById('modal-delivery-fee');
+    if (selectedFulfilment === 'collection') {
+      delivFeeEl.textContent = 'FREE';
+      delivFeeEl.style.color = '#00c853';
+    } else {
+      delivFeeEl.textContent = deliveryFee > 0 ? 'R ' + deliveryFee.toLocaleString() : 'TBC';
+      delivFeeEl.style.color = '#fff';
+    }
+  }
+
+  function submitOrder() {
+    var name     = document.getElementById('cust-name').value.trim();
+    var whatsapp = document.getElementById('cust-whatsapp').value.trim();
+    var notes    = document.getElementById('cust-notes').value.trim();
+
+    if (!name)     { showToast('❌ Please enter your name'); return; }
+    if (!whatsapp) { showToast('❌ Please enter your WhatsApp number'); return; }
+
+    var address = '';
+    var deliveryInfo = '';
+    var deliveryFee = 0;
+
+    if (selectedFulfilment === 'delivery') {
+      address = document.getElementById('cust-address').value.trim();
+      if (!address) { showToast('❌ Please enter your delivery address'); return; }
+
+      if (withinRange) {
+        deliveryFee = DELIVERY_FEE;
+        deliveryInfo = '🚚 Local Delivery (R' + DELIVERY_FEE + ')';
+      } else {
+        var paxiEl = document.getElementById('paxi-option');
+        if (!paxiEl.value) { showToast('❌ Please select a PAXI option'); return; }
+        var parts = paxiEl.value.split('|');
+        deliveryFee = parseFloat(parts[1]);
+        deliveryInfo = '📦 PAXI: ' + parts[0] + ' (R' + deliveryFee + ')';
+      }
+    } else {
+      deliveryInfo = '🏪 Collection from ' + STORE_ADDR;
+      address = STORE_ADDR;
+      deliveryFee = 0;
+    }
+
+    var subtotal = cart.reduce(function(s,i){ return s + i.price * i.qty; }, 0);
+    var discount = Math.round(subtotal * discountPct / 100);
+    var cartTotal = subtotal - discount;
+    var grandTotal = cartTotal + deliveryFee;
+
+    var itemsList = cart.map(function(i){
+      return i.qty + 'x ' + i.name + ' @ R' + i.price.toLocaleString();
+    }).join('%0A');
+
+    // Message to STORE (owner)
+    var ownerMsg =
+      '🛒 *NEW ORDER — ' + currentOrderNumber + '*%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Customer:* ' + name + '%0A' +
+      '*WhatsApp:* ' + whatsapp + '%0A' +
+      '*Address:* ' + address + '%0A' +
+      '*Fulfilment:* ' + deliveryInfo + '%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Items:*%0A' + itemsList + '%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Subtotal:* R' + cartTotal.toLocaleString() + '%0A' +
+      '*Delivery:* R' + deliveryFee.toLocaleString() + '%0A' +
+      '*TOTAL: R' + grandTotal.toLocaleString() + '*%0A' +
+      (notes ? '📝 *Notes:* ' + notes : '') +
+      '%0A━━━━━━━━━━━━━━━━━━━━';
+
+    // Message to CUSTOMER
+    var cleanWA = whatsapp.replace(/^0/, '27').replace(/\s/g, '');
+    var custMsg =
+      '✅ *Order Confirmed — Mr Clearance*%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Order No:* ' + currentOrderNumber + '%0A' +
+      '*Name:* ' + name + '%0A' +
+      '*Fulfilment:* ' + deliveryInfo + '%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Your Items:*%0A' + itemsList + '%0A' +
+      '━━━━━━━━━━━━━━━━━━━━%0A' +
+      '*Total to Pay: R' + grandTotal.toLocaleString() + '*%0A' +
+      (selectedFulfilment === 'collection' ?
+        '📍 *Collect at:* ' + STORE_ADDR + '%0AMon–Sat, 9am–5pm' :
+        '🚚 We will contact you to confirm delivery time') +
+      '%0A%0AThank you for shopping with Mr Clearance! 🛍️';
+
+    // Open owner WhatsApp first then customer
+    window.open('https://wa.me/' + OWNER_WHATSAPP + '?text=' + ownerMsg, '_blank');
+    setTimeout(function(){
+      window.open('https://wa.me/' + cleanWA + '?text=' + custMsg, '_blank');
+    }, 1500);
+
+    showToast('✅ Order ' + currentOrderNumber + ' sent via WhatsApp!');
+    closeDelivery();
+  }
+
 
   // ── CATEGORY MENU ─────────────────────────────────────────────
   function toggleCatMenu() {
@@ -442,6 +658,133 @@
     setInterval(update, 1000);
   }
   </script>
+
+
+  <!-- ── DELIVERY MODAL ────────────────────────────────────── -->
+  <div id="delivery-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;backdrop-filter:blur(4px);" onclick="closeDelivery()"></div>
+
+  <div id="delivery-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:94%;max-width:480px;max-height:90vh;overflow-y:auto;
+    background:#12121e;border:1px solid rgba(224,0,32,0.25);border-radius:12px;
+    z-index:100000;padding:28px 24px;font-family:'Rajdhani',sans-serif;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+      <div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:#fff;">CHECKOUT</div>
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-top:2px;">Order Details</div>
+      </div>
+      <button onclick="closeDelivery()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:#fff;width:32px;height:32px;border-radius:4px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+
+    <!-- Order Number -->
+    <div style="background:rgba(224,0,32,0.1);border:1px solid rgba(224,0,32,0.25);border-radius:6px;padding:12px 16px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Order Number</div>
+      <div id="order-number-display" style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#ff1a3c;margin-top:4px;"></div>
+    </div>
+
+    <!-- Customer Details -->
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:6px;">Your Name *</label>
+      <input id="cust-name" type="text" placeholder="Full name" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:12px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;"/>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:6px;">Your WhatsApp Number *</label>
+      <input id="cust-whatsapp" type="tel" placeholder="e.g. 0821234567" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:12px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;"/>
+    </div>
+
+    <!-- Delivery / Collection -->
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:10px;">Fulfilment Option *</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div id="opt-delivery" onclick="selectFulfilment('delivery')" style="border:1px solid rgba(224,0,32,0.25);border-radius:6px;padding:14px;text-align:center;cursor:pointer;background:rgba(224,0,32,0.1);transition:all 0.2s;">
+          <div style="font-size:22px;">🚚</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-top:4px;">Delivery</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);">Within 5km</div>
+        </div>
+        <div id="opt-collection" onclick="selectFulfilment('collection')" style="border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,255,255,0.04);transition:all 0.2s;">
+          <div style="font-size:22px;">🏪</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-top:4px;">Collection</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);">Free</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELIVERY FIELDS -->
+    <div id="delivery-fields" style="display:block;">
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:6px;">Your Street Address *</label>
+        <input id="cust-address" type="text" placeholder="e.g. 10 Main Road, Lansdowne" oninput="checkAddress()" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:12px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;"/>
+      </div>
+      <div id="address-result" style="margin-bottom:16px;display:none;"></div>
+
+      <!-- PAXI options (shown if outside 5km) -->
+      <div id="paxi-section" style="display:none;margin-bottom:16px;">
+        <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:6px;padding:12px 14px;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;color:orange;">⚠️ Outside our 5km delivery zone</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;">Please select a PAXI delivery option or choose collection.</div>
+        </div>
+        <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:8px;">Select PAXI Option *</label>
+        <select id="paxi-option" style="width:100%;background:#181828;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:12px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:14px;outline:none;">
+          <option value="">-- Choose PAXI option --</option>
+          <option value="PUDO Locker Small|49">📦 PUDO Locker Small — R49</option>
+          <option value="PUDO Locker Medium|80">📦 PUDO Locker Medium — R80</option>
+          <option value="PUDO Locker Large|100">📦 PUDO Locker Large — R100</option>
+          <option value="PEP PAXI Small 3-5 days|109.95">🚀 PEP PAXI Small (3–5 days) — R109.95</option>
+          <option value="PEP PAXI Small 7-9 days|59.95">🐢 PEP PAXI Small (7–9 days) — R59.95</option>
+          <option value="PEP PAXI Large 3-5 days|139.95">🚀 PEP PAXI Large (3–5 days) — R139.95</option>
+          <option value="PEP PAXI Large 7-9 days|119.95">🐢 PEP PAXI Large (7–9 days) — R119.95</option>
+          <option value="Door to Door|114">🚪 Door to Door — R114</option>
+        </select>
+      </div>
+
+      <!-- Within 5km delivery fee -->
+      <div id="local-delivery-info" style="display:none;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.25);border-radius:6px;padding:12px 14px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:#00c853;">✅ Great news! We deliver to your area</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;">Delivery fee: <strong style="color:#fff;">R50</strong> · Mon–Sat, 9am–5pm</div>
+      </div>
+    </div>
+
+    <!-- COLLECTION FIELDS -->
+    <div id="collection-fields" style="display:none;margin-bottom:16px;">
+      <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.25);border-radius:6px;padding:14px;">
+        <div style="font-size:13px;font-weight:700;color:#00c853;">🏪 Collection Address</div>
+        <div style="font-size:14px;color:#fff;margin-top:6px;font-weight:600;">368 Imam Haron Road, Lansdowne</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">Monday – Saturday · 9:00am – 5:00pm</div>
+        <div id="collection-address-note" style="font-size:11px;color:rgba(255,165,0,0.8);margin-top:6px;display:none;">⚠️ Note: Our address may change soon. We will confirm via WhatsApp.</div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);display:block;margin-bottom:6px;">Special Instructions (optional)</label>
+      <textarea id="cust-notes" placeholder="e.g. Gate code, landmark, special requests..." style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:12px 14px;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;"></textarea>
+    </div>
+
+    <!-- Order Summary -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:14px;margin-bottom:20px;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:10px;">Order Summary</div>
+      <div id="modal-order-items" style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:8px;"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.6);padding:4px 0;">
+        <span>Subtotal</span><span id="modal-subtotal">R0</span>
+      </div>
+      <div id="modal-delivery-row" style="display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.6);padding:4px 0;">
+        <span>Delivery</span><span id="modal-delivery-fee">R0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#fff;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px;">
+        <span>Total</span><span id="modal-total" style="color:#ff1a3c;">R0</span>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <button onclick="submitOrder()" style="width:100%;padding:16px;background:#e00020;color:#fff;border:none;border-radius:6px;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background 0.2s;">
+      📱 Confirm Order via WhatsApp
+    </button>
+    <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.3);margin-top:10px;letter-spacing:1px;">
+      You will receive an order confirmation on WhatsApp
+    </div>
+  </div>
 
 </body>
 </html>
