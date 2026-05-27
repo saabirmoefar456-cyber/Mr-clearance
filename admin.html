@@ -232,6 +232,54 @@
       .item-actions{flex-direction:row;}
     }
   </style>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
+  authDomain: "mr-clearance.firebaseapp.com",
+  projectId: "mr-clearance",
+  storageBucket: "mr-clearance.firebasestorage.app",
+  messagingSenderId: "427065460022",
+  appId: "1:427065460022:web:77f93829d76cd9c2fd5f97"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const colRef = collection(db, 'products');
+
+    // ── Expose Firebase functions to global scope ──
+    window.fbGetProducts = async function() {
+      const snap = await getDocs(colRef);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    };
+
+    window.fbAddProduct = async function(product) {
+      const docRef = await addDoc(colRef, product);
+      return docRef.id;
+    };
+
+    window.fbUpdateProduct = async function(id, product) {
+      await updateDoc(doc(db, 'products', id), product);
+    };
+
+    window.fbDeleteProduct = async function(id) {
+      await deleteDoc(doc(db, 'products', id));
+    };
+
+    window.fbListen = function(callback) {
+      return onSnapshot(colRef, snap => {
+        const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback(products);
+      });
+    };
+
+    // Signal that Firebase is ready
+    window.firebaseReady = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
 </head>
 <body>
 
@@ -435,8 +483,14 @@
         document.getElementById('settings-tab').style.display = 'inline-block';
         loadSettings();
       }
-      renderDashboard();
-      renderProductList();
+      // Load from Firebase when ready
+      if (window.firebaseReady) {
+        loadProductsFromFirebase();
+      } else {
+        window.addEventListener('firebase-ready', function(){
+          loadProductsFromFirebase();
+        });
+      }
       showToast('Welcome ' + acc.name + '! 👋');
     } else {
       err.textContent = '❌ Wrong password. Please try again.';
@@ -467,15 +521,24 @@
     if (tab === 'dashboard') renderDashboard();
   }
 
-  // ── STORAGE ───────────────────────────────────────────────────
-  function getProducts() {
-    try {
-      var s = localStorage.getItem('mrc_products');
-      return s ? JSON.parse(s) : [];
-    } catch(e) { return []; }
-  }
+  // ── FIREBASE STORAGE ──────────────────────────────────────────
+  var cachedProducts = [];
+
+  function getProducts() { return cachedProducts; }
+
   function saveProducts(products) {
-    localStorage.setItem('mrc_products', JSON.stringify(products));
+    // No-op: Firebase handles saving via fbAddProduct/fbUpdateProduct/fbDeleteProduct
+    cachedProducts = products;
+  }
+
+  async function loadProductsFromFirebase() {
+    try {
+      cachedProducts = await window.fbGetProducts();
+      renderProductList();
+      renderDashboard();
+    } catch(e) {
+      console.error('Firebase load error:', e);
+    }
   }
 
   // ── SETTINGS ──────────────────────────────────────────────────
@@ -550,23 +613,25 @@
     if (!image)          { showToast('❌ Please enter an image URL');     return; }
     if (!desc)           { showToast('❌ Please enter a description');    return; }
 
-    var products = getProducts();
+    var productData = { name: name, price: price, category: category, badge: badge, image: image, desc: desc };
+
     if (editingId !== null) {
-      var idx = products.findIndex(function(p){ return p.id === editingId; });
-      if (idx !== -1) products[idx] = { id:editingId, name, price, category, badge, image, desc };
-      showToast('✅ Product updated!');
+      window.fbUpdateProduct(editingId, productData).then(function(){
+        showToast('✅ Product updated!');
+        loadProductsFromFirebase();
+        clearForm();
+      }).catch(function(e){ showToast('❌ Error updating. Try again.'); });
     } else {
-      var newId = products.length > 0 ? Math.max.apply(null, products.map(function(p){ return p.id; })) + 1 : 1;
-      products.push({ id:newId, name, price, category, badge, image, desc });
-      showToast('✅ ' + name + ' added to store!');
+      window.fbAddProduct(productData).then(function(){
+        showToast('✅ ' + name + ' added to store!');
+        loadProductsFromFirebase();
+        clearForm();
+      }).catch(function(e){ showToast('❌ Error saving. Try again.'); });
     }
-    saveProducts(products);
-    renderDashboard();
-    clearForm();
   }
 
   function editProduct(id) {
-    var p = getProducts().find(function(p){ return p.id === id; });
+    var p = getProducts().find(function(p){ return String(p.id) === String(id); });
     if (!p) return;
     editingId = id;
     document.getElementById('f-name').value     = p.name;
@@ -584,11 +649,10 @@
 
   function deleteProduct(id, btn) {
     if (btn.getAttribute('data-confirming') === 'true') {
-      var products = getProducts().filter(function(p){ return p.id !== id; });
-      saveProducts(products);
-      renderProductList();
-      renderDashboard();
-      showToast('🗑️ Product deleted!');
+      window.fbDeleteProduct(String(id)).then(function(){
+        loadProductsFromFirebase();
+        showToast('🗑️ Product deleted!');
+      }).catch(function(e){ showToast('❌ Error deleting. Try again.'); });
     } else {
       btn.setAttribute('data-confirming', 'true');
       btn.textContent = '⚠️ Tap again to confirm';
@@ -603,10 +667,12 @@
 
   function deleteAllProducts() {
     if (confirm('Delete ALL products? This cannot be undone!')) {
-      saveProducts([]);
-      renderProductList();
-      renderDashboard();
-      showToast('🗑️ All products deleted!');
+      var products = getProducts();
+      var promises = products.map(function(p){ return window.fbDeleteProduct(String(p.id)); });
+      Promise.all(promises).then(function(){
+        loadProductsFromFirebase();
+        showToast('🗑️ All products deleted!');
+      });
     }
   }
 
