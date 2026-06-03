@@ -1,0 +1,1192 @@
+/* =============================================
+   style.css — MR CLEARANCE
+    White & Red Theme
+
+   ============================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
+
+/* === RESET & BASE === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --red:         #e31837;
+  --red-dark:    #c01230;
+  --red-light:   #ff3d5a;
+  --red-soft:    rgba(227, 24, 55, 0.08);
+  --red-border:  rgba(227, 24, 55, 0.2);
+
+  --white:       #ffffff;
+  --bg:          #f5f5f5;
+  --bg-card:     #ffffff;
+  --border:      #e0e0e0;
+  --border-dark: #cccccc;
+
+  --text-dark:   #1a1a1a;
+  --text-mid:    #555555;
+  --text-light:  #999999;
+
+  --shadow-sm:   0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.13);
+
+  --radius:      6px;
+  --radius-sm:   3px;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+
+/* =============================================
+   LOADING SCREEN
+   ============================================= */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.loader-wrapper {
+  position: fixed;
+  inset: 0;
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  transition: opacity 0.5s ease;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #eee;
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loader-text {
+  color: var(--text-mid);
+  margin-top: 16px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* =============================================
+   TOAST
+   ============================================= */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--text-dark);
+  color: var(--white);
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  z-index: 99999;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.3s, transform 0.3s;
+  box-shadow: var(--shadow-lg);
+  max-width: 300px;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =============================================
+   NAVIGATION
+   ============================================= */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  background: var(--red);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  gap: 16px;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.nav-logo {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--white);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.nav-logo span {
+  color: #ffe0e5;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 28px;
+}
+.nav-links a {
+  color: rgba(255,255,255,0.88);
+  text-decoration: none;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.nav-links a:hover {
+  color: var(--white);
+}
+
+.nav-search {
+  background: var(--white);
+  border: none;
+  color: var(--text-dark);
+  padding: 9px 16px;
+  border-radius: 4px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  width: 220px;
+  outline: none;
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.2s;
+}
+.nav-search:focus {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.4);
+}
+.nav-search::placeholder { color: #aaa; }
+
+.cart-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--white);
+  position: relative;
+  transition: transform 0.2s;
+  background: rgba(255,255,255,0.15);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+.cart-icon:hover { transform: scale(1.05); background: rgba(255,255,255,0.25); }
+
+.cart-count {
+  background: var(--white);
+  color: var(--red);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 20px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* HAMBURGER */
+.hamburger {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.2s;
+}
+.hamburger:hover { background: rgba(255,255,255,0.3); }
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 1px;
+}
+
+/* =============================================
+   CATEGORY SIDEBAR
+   ============================================= */
+.cat-sidebar {
+  position: fixed;
+  top: 0; left: -280px;
+  width: 260px;
+  height: 100%;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  z-index: 9998;
+  padding: 0;
+  transition: left 0.35s cubic-bezier(.4,0,.2,1);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+}
+.cat-sidebar.open { left: 0; }
+
+.cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: var(--red);
+  color: var(--white);
+}
+.cat-header h3 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  text-transform: uppercase;
+}
+.cat-header button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: var(--white);
+  width: 30px; height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.cat-header button:hover { background: rgba(255,255,255,0.35); }
+
+.cat-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+}
+.cat-list li {
+  color: var(--text-dark);
+  padding: 13px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cat-list li:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.cat-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 9997;
+}
+.cat-overlay.open { display: block; }
+
+/* =============================================
+   HERO SECTION
+   ============================================= */
+.hero {
+  min-height: 420px;
+  background: linear-gradient(135deg, #e31837 0%, #c01230 50%, #8b0a1f 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 24px;
+}
+
+/* Subtle dot pattern */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* White swoosh shape */
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  bottom: -60px;
+  width: 400px;
+  height: 400px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+
+.hero-skew {
+  position: absolute;
+  top: -40px; right: 60px;
+  width: 220px; height: 220px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 50%;
+}
+.hero-blob { display: none; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-content {
+  text-align: center;
+  z-index: 1;
+  animation: fadeUp 0.8s ease 0.2s both;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.85);
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 5px 16px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: clamp(36px, 6vw, 68px);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 1.1;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.hero-accent {
+  color: #ffe0e5;
+}
+
+.hero-subtitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.82);
+  margin-bottom: 32px;
+  letter-spacing: 0.2px;
+}
+
+.hero-btns { display: flex; gap: 12px; justify-content: center; }
+
+.cta-btn {
+  padding: 14px 44px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--white);
+  color: var(--red);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+/* =============================================
+   SECTION HEADER
+   ============================================= */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-dark);
+  position: relative;
+  padding-left: 14px;
+}
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 80%;
+  background: var(--red);
+  border-radius: 2px;
+}
+
+.product-count {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* =============================================
+   PRODUCTS SECTION
+   ============================================= */
+.products-section {
+  padding: 40px 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* =============================================
+   PRODUCT CARD — Takealot style with image gallery
+   ============================================= */
+.product-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-align: left;
+  animation: fadeIn 0.5s ease both;
+  transition: box-shadow 0.25s, border-color 0.25s, transform 0.25s;
+  cursor: pointer;
+  position: relative;
+}
+.product-card:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-dark);
+  transform: translateY(-3px);
+}
+
+/* ---- IMAGE GALLERY AREA ---- */
+.card-img-wrap {
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 12px;
+  transition: opacity 0.3s ease;
+}
+
+/* Prev / Next arrows — appear on hover */
+.card-img-wrap .img-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--border);
+  color: var(--text-dark);
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+  z-index: 2;
+  box-shadow: var(--shadow-sm);
+  line-height: 1;
+}
+.card-img-wrap .img-arrow.prev { left: 6px; }
+.card-img-wrap .img-arrow.next { right: 6px; }
+.product-card:hover .img-arrow  { opacity: 1; }
+.img-arrow:hover { background: var(--white); box-shadow: var(--shadow-md); }
+
+/* Dot indicators */
+.img-dots {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+.img-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border-dark);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.img-dot.active {
+  background: var(--red);
+  transform: scale(1.2);
+}
+
+/* Badge */
+.badge-sale {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: var(--red);
+  color: #fff;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  z-index: 3;
+  text-transform: uppercase;
+}
+
+/* ---- CARD BODY ---- */
+.card-body { padding: 12px 14px 16px; }
+.product-card h3 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.product-card p {
+  font-size: 12px;
+  color: var(--text-light);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.price {
+  display: block;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--red);
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.qty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #fafafa;
+}
+.qty-control button {
+  background: transparent;
+  border: none;
+  color: var(--text-dark);
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qty-control button:hover { background: var(--red); color: var(--white); }
+.qty-val {
+  min-width: 30px;
+  text-align: center;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.add-btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.add-btn:hover {
+  background: var(--red-dark);
+  transform: scale(1.02);
+}
+
+.no-results {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 15px;
+  font-family: 'Nunito Sans', sans-serif;
+  padding: 48px;
+}
+
+/* =============================================
+   CART SIDEBAR
+   ============================================= */
+.cart-sidebar {
+  position: fixed;
+  top: 0; right: -400px;
+  width: 380px; height: 100%;
+  background: var(--white);
+  border-left: 1px solid var(--border);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.35s cubic-bezier(.4,0,.2,1);
+  box-shadow: -4px 0 32px rgba(0,0,0,0.12);
+}
+.cart-sidebar.open { right: 0; }
+
+.cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: var(--red);
+  color: var(--white);
+}
+.cart-header h3 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  text-transform: uppercase;
+}
+.cart-header button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: var(--white);
+  width: 30px; height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.cart-header button:hover { background: rgba(255,255,255,0.35); }
+
+.cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+}
+.cart-items::-webkit-scrollbar { width: 4px; }
+.cart-items::-webkit-scrollbar-track { background: transparent; }
+.cart-items::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.empty-msg {
+  color: var(--text-light);
+  text-align: center;
+  font-size: 14px;
+  font-family: 'Nunito Sans', sans-serif;
+  padding: 40px 0;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.item-name {
+  flex: 1;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.item-controls button {
+  background: #f5f5f5;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dark);
+  width: 24px; height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.item-controls button:hover { background: var(--red); color: var(--white); border-color: var(--red); }
+.item-controls span {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dark);
+  min-width: 18px;
+  text-align: center;
+}
+.item-price {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--red);
+  min-width: 70px;
+  text-align: right;
+}
+.remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+  padding: 0 2px;
+}
+.remove-btn:hover { opacity: 1; }
+
+/* PROMO */
+.promo-section {
+  padding: 12px 18px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.promo-row { display: flex; gap: 8px; }
+.promo-input {
+  flex: 1;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-dark);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.promo-input:focus { border-color: var(--red); }
+.promo-input::placeholder { color: #bbb; text-transform: none; font-weight: 600; letter-spacing: 0; }
+.promo-btn {
+  background: var(--red);
+  border: none;
+  color: #fff;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.promo-btn:hover { background: var(--red-dark); }
+.promo-msg {
+  font-size: 12px;
+  font-family: 'Nunito Sans', sans-serif;
+  margin-top: 8px;
+  font-weight: 700;
+  min-height: 18px;
+}
+
+/* CART FOOTER */
+.cart-footer {
+  padding: 14px 18px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+}
+.price-breakdown { margin-bottom: 14px; }
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-mid);
+  padding: 4px 0;
+}
+.total-row {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-dark);
+  border-top: 2px solid var(--border);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.total-row span:last-child { color: var(--red); }
+
+.checkout-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.checkout-btn:hover {
+  background: var(--red-dark);
+  transform: scale(1.01);
+}
+.payment-icons {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 8px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.cart-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9998;
+}
+.cart-overlay.open { display: block; }
+
+/* =============================================
+   DEALS SECTION
+   ============================================= */
+.deals-section {
+  padding: 48px 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.deals-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.deals-title {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: clamp(24px, 4vw, 38px);
+  font-weight: 900;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.deals-title::after {
+  content: '';
+  display: block;
+  width: 56px; height: 3px;
+  background: var(--red);
+  margin: 12px auto 0;
+  border-radius: 2px;
+}
+.deals-subtitle {
+  font-size: 14px;
+  color: var(--text-light);
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 600;
+}
+
+/* TIMER */
+.deals-timer-wrap {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.timer-label {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--red);
+  text-transform: uppercase;
+}
+.deals-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer-block {
+  background: var(--text-dark);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 72px;
+}
+.timer-block span {
+  display: block;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--white);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.timer-block label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  display: block;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+}
+.timer-sep {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+}
+
+/* DEAL CARDS */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.deal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+.deal-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+.deal-card::before { display: none; }
+
+.deal-badge {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: var(--red);
+  color: #fff;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  z-index: 3;
+  text-transform: uppercase;
+}
+.deal-img-wrap {
+  height: 220px;
+  overflow: hidden;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+.deal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s;
+}
+.deal-card:hover .deal-img { transform: scale(1.04); }
+
+.deal-body { padding: 16px 18px 20px; }
+.deal-body h3 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.deal-body p {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.deal-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.deal-old-price {
+  font-size: 13px;
+  color: var(--text-light);
+  text-decoration: line-through;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 600;
+}
+.deal-price {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--red);
+  letter-spacing: -0.5px;
+}
+.deal-qty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+.footer {
+  background: var(--text-dark);
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: 24px;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* =============================================
+   RESPONSIVE — MOBILE
+   ============================================= */
+@media (max-width: 768px) {
+
+  .navbar, .hero, .products-section, .deals-section,
+  .products-grid, .deals-grid, .footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    position: relative;
+  }
+
+  /* NAVBAR */
+  .navbar {
+    padding: 0 12px;
+    height: 56px;
+    gap: 8px;
+    position: sticky;
+  }
+  .nav-center { display: none; }
+  .nav-search { width: 120px; font-size: 13px; padding: 7px 10px; }
+  .nav-logo { font-size: 16px; }
+
+  /* HERO */
+  .hero { min-height: 300px; padding: 32px 16px; text-align: center; }
+  .hero-content { width: 100%; }
+  .hero-title { font-size: 30px; }
+  .hero-subtitle { font-size: 14px; }
+  .hero-badge { font-size: 10px; }
+  .cta-btn { padding: 12px 28px; font-size: 13px; }
+
+  /* PRODUCTS */
+  .products-section { padding: 24px 10px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .products-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card-img-wrap { height: 140px; }
+  .card-body { padding: 8px 10px 12px; }
+  .product-card h3 { font-size: 12px; }
+  .product-card p { font-size: 11px; }
+  .price { font-size: 16px; margin-bottom: 8px; }
+  .add-btn { font-size: 11px; padding: 7px 6px; }
+  .qty-control button { width: 24px; height: 24px; font-size: 14px; }
+  .qty-val { min-width: 20px; font-size: 12px; }
+  .qty-row { gap: 5px; }
+  /* Hide arrows on mobile — use dots to switch */
+  .img-arrow { display: none !important; }
+
+  /* DEALS */
+  .deals-section { padding: 28px 10px; }
+  .deals-title { font-size: 22px; }
+  .deals-grid { grid-template-columns: 1fr; max-width: 100%; gap: 12px; }
+  .deal-img-wrap { height: 180px; }
+  .timer-block { min-width: 58px; padding: 10px 12px; }
+  .timer-block span { font-size: 28px; }
+  .timer-sep { font-size: 20px; }
+
+  /* CART */
+  .cart-sidebar { width: 100%; right: -100%; }
+  .cart-header h3 { font-size: 14px; }
+
+  /* CATEGORY SIDEBAR */
+  .cat-sidebar { width: 78%; }
+}

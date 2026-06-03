@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mr Clearance — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --red:        #e31837;
+      --red-dark:   #c01230;
+      --red-light:  #ff3d5a;
+      --red-soft:   rgba(227,24,55,0.08);
+      --red-border: rgba(227,24,55,0.25);
+      --white:      #ffffff;
+      --bg:         #f5f5f5;
+      --bg-card:    #ffffff;
+      --border:     #e0e0e0;
+      --text:       #1a1a1a;
+      --text-mid:   #555;
+      --text-light: #999;
+      --green:      #27ae60;
+      --shadow:     0 2px 12px rgba(0,0,0,0.09);
+      --radius:     8px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e31837 0%, #8b0a1f 100%);
+      padding: 16px;
+    }
+    .login-box {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 48px 36px 40px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+    }
+    .login-logo-wrap {
+      width: 72px; height: 72px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 32px;
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .login-title span { color: var(--red); }
+    .login-sub {
+      font-size: 13px;
+      color: var(--text-light);
+      font-weight: 600;
+      margin-bottom: 32px;
+    }
+    .login-box input {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      color: var(--text);
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 4px;
+      outline: none;
+      margin-bottom: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-box input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-soft);
+    }
+    .login-box input::placeholder { letter-spacing:1px; color: #bbb; font-size:15px; }
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .login-btn:hover { background: var(--red-dark); transform: scale(1.01); }
+    .login-error {
+      color: var(--red);
+      font-size: 14px;
+      margin-top: 12px;
+      min-height: 20px;
+      font-weight: 700;
+    }
+
+    /* ── ADMIN NAV ── */
+    #admin-panel { display: none; }
+    .admin-nav {
+      background: var(--red);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .admin-logo {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .admin-logo span { color: #ffe0e5; }
+    .logout-btn {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.3); }
+
+    .admin-body {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 16px 60px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 24px;
+      padding-left: 14px;
+      border-left: 4px solid var(--red);
+    }
+
+    /* ── INFO BOX ── */
+    .info-box {
+      background: #eafaf1;
+      border: 1px solid #a9dfbf;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      font-size: 14px;
+      color: #1e8449;
+      line-height: 1.7;
+      font-weight: 600;
+    }
+    .info-box strong { color: var(--green); }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow);
+    }
+    .form-card-title {
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-soft);
+      background: #fff;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group input::placeholder, .form-group textarea::placeholder { color: #bbb; font-weight: 600; }
+
+    /* ── PHONE PHOTO UPLOAD ── */
+    .photo-section {
+      background: var(--bg);
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .photo-section:hover { border-color: var(--red); }
+
+    .photo-section-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .photo-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* Big friendly buttons for parents */
+    .photo-btn {
+      flex: 1;
+      min-width: 130px;
+      padding: 14px 10px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .photo-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .photo-btn .btn-icon { font-size: 28px; line-height: 1; }
+    .photo-btn-gallery {
+      background: var(--red);
+      color: #fff;
+    }
+    .photo-btn-camera {
+      background: #1a73e8;
+      color: #fff;
+    }
+    .photo-btn-url {
+      background: var(--bg-card);
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    /* Hidden real file inputs */
+    .photo-btn input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+    }
+
+    /* Image previews strip */
+    .preview-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .preview-thumb-wrap {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+    .preview-thumb-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .thumb-remove {
+      position: absolute;
+      top: 2px; right: 2px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 20px; height: 20px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .thumb-remove:hover { background: var(--red); }
+    .preview-add-more {
+      width: 80px; height: 80px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      color: var(--text-light);
+      cursor: pointer;
+      background: var(--bg);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .preview-add-more input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 100%; height: 100%;
+      cursor: pointer;
+    }
+    .preview-add-more:hover { border-color: var(--red); color: var(--red); }
+
+    /* URL input for online links */
+    .url-input-row {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .url-input-row.visible { display: flex; }
+    .url-input-row input {
+      flex: 1;
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input-row input:focus { border-color: var(--red); }
+    .url-input-row input::placeholder { color: #bbb; }
+    .url-add-btn {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .url-add-btn:hover { background: var(--red-dark); }
+
+    .photo-count-msg {
+      font-size: 12px;
+      color: var(--text-light);
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    /* ── FORM ACTIONS ── */
+    .form-actions { display:flex; gap:10px; margin-top:16px; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 14px 28px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover { background: var(--red-dark); transform: scale(1.02); }
+    .btn-secondary {
+      padding: 14px 20px;
+      background: transparent;
+      color: var(--text-mid);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--text-light); color: var(--text); }
+
+    /* ── PRODUCT TABLE ── */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .table-header h2 {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--text);
+    }
+    .product-count-badge {
+      background: var(--red-soft);
+      border: 1px solid var(--red-border);
+      color: var(--red);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    table { width:100%; border-collapse: collapse; }
+    thead tr { border-bottom: 2px solid var(--border); }
+    thead th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-light);
+      background: var(--bg);
+    }
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+    tbody td { padding: 12px 16px; font-size: 14px; font-weight: 600; color: var(--text-mid); vertical-align: middle; }
+    .td-img {
+      width: 52px; height: 52px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .td-name { font-weight: 800; color: var(--text); font-size: 14px; }
+    .td-price { font-size: 14px; font-weight: 900; color: var(--red); }
+    .td-cat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .td-badge {
+      background: var(--red-soft);
+      border: 1px solid var(--red-border);
+      color: var(--red);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      font-weight: 800;
+      display: inline-block;
+    }
+    .td-img-count {
+      font-size: 11px;
+      color: var(--text-light);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .action-btns { display:flex; gap:6px; }
+    .btn-edit {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-edit:hover { border-color: #aaa; background: #eee; }
+    .btn-delete {
+      background: transparent;
+      border: 1px solid var(--red-border);
+      color: var(--red);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-delete:hover { background: var(--red); border-color: var(--red); color:#fff; }
+
+    .empty-state { text-align: center; padding: 56px 20px; color: var(--text-light); }
+    .empty-state p { font-size: 15px; font-weight: 600; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--text);
+      color: #fff;
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.3s, transform 0.3s;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      pointer-events: none;
+      max-width: 300px;
+    }
+    .toast.show { opacity:1; transform:translateY(0); }
+
+    @media (max-width: 600px) {
+      .admin-nav { padding: 0 12px; }
+      .admin-body { padding: 20px 12px 48px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: 1; }
+      .form-card { padding: 20px 14px; }
+      thead th:nth-child(4), tbody td:nth-child(4),
+      thead th:nth-child(5), tbody td:nth-child(5) { display:none; }
+      .photo-buttons { flex-direction: column; }
+      .photo-btn { flex-direction: row; justify-content: center; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo-wrap">🏪</div>
+    <h1 class="login-title">Mr <span>Clearance</span></h1>
+    <p class="login-sub">Family Admin Panel</p>
+    <input type="password" id="password-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')login()"/>
+    <button class="login-btn" onclick="login()">🔓 Access Panel</button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<!-- ── ADMIN PANEL ── -->
+<div id="admin-panel">
+
+  <nav class="admin-nav">
+    <span class="admin-logo">Mr <span>Clearance</span> Admin</span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a href="index.html" target="_blank" class="logout-btn" style="text-decoration:none;">View Store ↗</a>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="admin-body">
+    <p class="page-title">📦 Product Manager</p>
+
+    <div class="info-box">
+      <strong>👋 Hi! Here's how to add a product:</strong><br/>
+      1. Type in the product name, price, and a short description.<br/>
+      2. Tap the big <strong>📱 Choose from Gallery</strong> button to pick photos straight from your phone.<br/>
+      3. You can add <strong>multiple photos</strong> of one product — customers can swipe through them!<br/>
+      4. Tap <strong>Save Product</strong> and it appears on the store immediately. Easy!
+    </div>
+
+    <!-- ADD / EDIT FORM -->
+    <div class="form-card">
+      <p class="form-card-title" id="form-title">➕ Add New Product</p>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" id="f-name" placeholder="e.g. Red Nike Sneakers"/>
+        </div>
+        <div class="form-group">
+          <label>Price (Rands) *</label>
+          <input type="number" id="f-price" placeholder="e.g. 250" min="1"/>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="f-category">
+            <option value="footwear">👟 Footwear</option>
+            <option value="electronics">💻 Electronics</option>
+            <option value="accessories">⌚ Accessories</option>
+            <option value="homeware">🏠 Homeware</option>
+            <option value="clothing">👕 Clothing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Badge (optional)</label>
+          <input type="text" id="f-badge" placeholder="e.g. SALE, NEW, HOT"/>
+        </div>
+        <div class="form-group full">
+          <label>Short Description *</label>
+          <textarea id="f-desc" placeholder="Describe the product in one or two sentences..."></textarea>
+        </div>
+
+        <!-- ── PHOTO UPLOAD SECTION ── -->
+        <div class="form-group full">
+          <div class="photo-section">
+            <p class="photo-section-title">📸 Product Photos</p>
+
+            <div class="photo-buttons">
+              <!-- Gallery button — opens phone's photo gallery -->
+              <button type="button" class="photo-btn photo-btn-gallery" title="Choose photos from your phone gallery">
+                <input type="file" id="gallery-input" accept="image/*" multiple onchange="handleFileUpload(this)"/>
+                <span class="btn-icon">📱</span>
+                <span>Choose from<br/>Gallery</span>
+              </button>
+
+              <!-- Camera button — opens phone camera directly -->
+              <button type="button" class="photo-btn photo-btn-camera" title="Take a photo now">
+                <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleFileUpload(this)"/>
+                <span class="btn-icon">📷</span>
+                <span>Take a<br/>Photo</span>
+              </button>
+
+              <!-- URL button — for online image links -->
+              <button type="button" class="photo-btn photo-btn-url" onclick="toggleUrlInput()" title="Paste an image link">
+                <span class="btn-icon">🔗</span>
+                <span>Paste Image<br/>Link</span>
+              </button>
+            </div>
+
+            <!-- URL paste input (hidden by default) -->
+            <div class="url-input-row" id="url-input-row">
+              <input type="url" id="url-input" placeholder="Paste image link here e.g. https://..."/>
+              <button class="url-add-btn" onclick="addImageFromUrl()">Add</button>
+            </div>
+
+            <!-- Thumbnail previews -->
+            <div class="preview-strip" id="preview-strip">
+              <!-- thumbnails injected here -->
+              <label class="preview-add-more" id="add-more-btn" style="display:none;" title="Add more photos">
+                <input type="file" accept="image/*" multiple onchange="handleFileUpload(this)"/>
+                <span>+</span>
+              </label>
+            </div>
+
+            <p class="photo-count-msg" id="photo-count-msg">No photos added yet. Add at least 1 photo.</p>
+          </div>
+        </div>
+      </div><!-- /form-grid -->
+
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveProduct()">💾 Save Product</button>
+        <button class="btn-secondary" id="cancel-btn" onclick="cancelEdit()" style="display:none">✕ Cancel Edit</button>
+        <button class="btn-secondary" onclick="clearForm()">🗑 Clear Form</button>
+      </div>
+    </div>
+
+    <!-- PRODUCT TABLE -->
+    <div class="table-card">
+      <div class="table-header">
+        <h2>All Products</h2>
+        <span class="product-count-badge" id="product-count-badge">0 Products</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Photo</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Category</th>
+            <th>Badge</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="product-table-body"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none">
+        <p>No products yet — add your first one above! 👆</p>
+      </div>
+    </div>
+
+  </div><!-- /admin-body -->
+</div><!-- /admin-panel -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── PASSWORD ──────────────────────────────────────
+  const ADMIN_PASSWORD = 'mrclearance2026';
+
+  function login() {
+    const pw  = document.getElementById('password-input').value;
+    const err = document.getElementById('login-error');
+    if (pw === ADMIN_PASSWORD) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-panel').style.display  = 'block';
+      renderTable();
+    } else {
+      err.textContent = '❌ Wrong password. Please try again.';
+      document.getElementById('password-input').value = '';
+    }
+  }
+
+  function logout() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('admin-panel').style.display  = 'none';
+    document.getElementById('password-input').value = '';
+    document.getElementById('login-error').textContent = '';
+  }
+
+  // ── STORAGE ───────────────────────────────────────
+  const DEFAULT_PRODUCTS = [
+    { id:1, name:'Air Max Sneakers',   price:1299,  category:'footwear',    badge:'SALE',  images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80'], desc:'Ultra-light running shoes built for speed and style.' },
+    { id:2, name:'Pro Headphones',     price:2499,  category:'electronics', badge:'HOT',   images:['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'], desc:'Noise-cancelling sound with 40-hour battery life.' },
+    { id:3, name:'Ultrabook Laptop',   price:14999, category:'electronics', badge:'NEW',   images:['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80'], desc:'Slim, powerful, and built for the modern creator.' },
+    { id:4, name:'Smart Watch',        price:3799,  category:'accessories', badge:'',      images:['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80'], desc:'Track fitness, calls, and notifications on your wrist.' },
+    { id:5, name:'Mirrorless Camera',  price:18500, category:'electronics', badge:'DEAL',  images:['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&q=80'], desc:'Capture life in stunning 4K resolution detail.' },
+    { id:6, name:'Urban Backpack',     price:899,   category:'accessories', badge:'',      images:['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80'], desc:'Durable, stylish carry for work or adventure.' },
+  ];
+
+  function getProducts() {
+    const stored = localStorage.getItem('mrc_products');
+    return stored ? JSON.parse(stored) : DEFAULT_PRODUCTS;
+  }
+
+  function saveProducts(products) {
+    localStorage.setItem('mrc_products', JSON.stringify(products));
+  }
+
+  // ── CURRENT IMAGES STATE ──────────────────────────
+  // Each entry is { src: 'data:...' or 'https://...' }
+  let currentImages = [];
+  let editingId = null;
+
+  // ── FILE UPLOAD (Gallery / Camera) ────────────────
+  function handleFileUpload(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+
+    let loaded = 0;
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentImages.push({ src: e.target.result });
+        loaded++;
+        if (loaded === files.length) renderPreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so same file can be picked again
+    input.value = '';
+  }
+
+  // ── URL INPUT TOGGLE ──────────────────────────────
+  function toggleUrlInput() {
+    const row = document.getElementById('url-input-row');
+    row.classList.toggle('visible');
+    if (row.classList.contains('visible')) {
+      document.getElementById('url-input').focus();
+    }
+  }
+
+  function addImageFromUrl() {
+    const urlEl = document.getElementById('url-input');
+    const url = urlEl.value.trim();
+    if (!url) { showToast('❌ Please paste an image link first'); return; }
+    if (!url.startsWith('http')) { showToast('❌ Link must start with http'); return; }
+    currentImages.push({ src: url });
+    urlEl.value = '';
+    document.getElementById('url-input-row').classList.remove('visible');
+    renderPreviews();
+    showToast('✅ Image link added!');
+  }
+
+  // ── RENDER PREVIEW THUMBNAILS ─────────────────────
+  function renderPreviews() {
+    const strip = document.getElementById('preview-strip');
+    const addMore = document.getElementById('add-more-btn');
+    const countMsg = document.getElementById('photo-count-msg');
+
+    // Remove old thumbs (keep add-more btn)
+    strip.querySelectorAll('.preview-thumb-wrap').forEach(el => el.remove());
+
+    currentImages.forEach((img, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-thumb-wrap';
+
+      const imgEl = document.createElement('img');
+      imgEl.src = img.src;
+      imgEl.alt = 'Photo ' + (idx + 1);
+      imgEl.onerror = () => { imgEl.src = 'https://via.placeholder.com/80x80/f5f5f5/ccc?text=?'; };
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'thumb-remove';
+      removeBtn.innerHTML = '✕';
+      removeBtn.title = 'Remove this photo';
+      removeBtn.onclick = () => {
+        currentImages.splice(idx, 1);
+        renderPreviews();
+      };
+
+      wrap.appendChild(imgEl);
+      wrap.appendChild(removeBtn);
+      strip.insertBefore(wrap, addMore);
+    });
+
+    // Show/hide + button
+    addMore.style.display = currentImages.length > 0 ? 'flex' : 'none';
+
+    // Update count message
+    if (currentImages.length === 0) {
+      countMsg.textContent = 'No photos added yet. Add at least 1 photo.';
+      countMsg.style.color = '#999';
+    } else {
+      countMsg.textContent = '✅ ' + currentImages.length + ' photo' + (currentImages.length !== 1 ? 's' : '') + ' added' + (currentImages.length > 1 ? ' — customers can swipe through all of them!' : '.');
+      countMsg.style.color = '#27ae60';
+    }
+  }
+
+  // ── CLEAR FORM ────────────────────────────────────
+  function clearForm() {
+    document.getElementById('f-name').value     = '';
+    document.getElementById('f-price').value    = '';
+    document.getElementById('f-badge').value    = '';
+    document.getElementById('f-desc').value     = '';
+    document.getElementById('f-category').value = 'footwear';
+    document.getElementById('url-input-row').classList.remove('visible');
+    currentImages = [];
+    renderPreviews();
+    editingId = null;
+    document.getElementById('form-title').textContent = '➕ Add New Product';
+    document.getElementById('cancel-btn').style.display = 'none';
+  }
+
+  function cancelEdit() {
+    clearForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── SAVE PRODUCT ──────────────────────────────────
+  function saveProduct() {
+    const name     = document.getElementById('f-name').value.trim();
+    const price    = parseInt(document.getElementById('f-price').value);
+    const category = document.getElementById('f-category').value;
+    const badge    = document.getElementById('f-badge').value.trim().toUpperCase();
+    const desc     = document.getElementById('f-desc').value.trim();
+
+    if (!name)               { showToast('❌ Please enter a product name');   return; }
+    if (!price || price < 1) { showToast('❌ Please enter a valid price');    return; }
+    if (!desc)               { showToast('❌ Please add a short description'); return; }
+    if (currentImages.length === 0) { showToast('❌ Please add at least one photo'); return; }
+
+    const images = currentImages.map(i => i.src);
+    const products = getProducts();
+
+    if (editingId !== null) {
+      const idx = products.findIndex(p => p.id === editingId);
+      if (idx !== -1) {
+        products[idx] = { id: editingId, name, price, category, badge, images, desc };
+        showToast('✅ Product updated!');
+      }
+    } else {
+      const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+      products.push({ id: newId, name, price, category, badge, images, desc });
+      showToast('✅ Product added to your store!');
+    }
+
+    try {
+      saveProducts(products);
+      renderTable();
+      clearForm();
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    } catch(e) {
+      if (e.name === 'QuotaExceededError') {
+        showToast('⚠️ Storage full! Try smaller photos or fewer images per product.');
+      } else {
+        showToast('❌ Error saving. Please try again.');
+        console.error(e);
+      }
+    }
+  }
+
+  // ── EDIT PRODUCT ──────────────────────────────────
+  function editProduct(id) {
+    const products = getProducts();
+    const p = products.find(p => p.id === id);
+    if (!p) return;
+
+    editingId = id;
+    document.getElementById('f-name').value     = p.name;
+    document.getElementById('f-price').value    = p.price;
+    document.getElementById('f-category').value = p.category;
+    document.getElementById('f-badge').value    = p.badge;
+    document.getElementById('f-desc').value     = p.desc;
+
+    // Load existing images
+    const imgs = p.images || (p.image ? [p.image] : []);
+    currentImages = imgs.map(src => ({ src }));
+    renderPreviews();
+
+    document.getElementById('form-title').textContent = '✏️ Edit Product';
+    document.getElementById('cancel-btn').style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── DELETE PRODUCT ────────────────────────────────
+  function deleteProduct(id) {
+    const allRows = document.querySelectorAll('tbody tr');
+    allRows.forEach(row => {
+      const btn = row.querySelector('.btn-delete');
+      if (btn && parseInt(btn.getAttribute('data-id')) === id) {
+        if (btn.getAttribute('data-confirming') === 'true') {
+          let products = getProducts();
+          products = products.filter(p => p.id !== id);
+          saveProducts(products);
+          renderTable();
+          showToast('🗑️ Product deleted.');
+        } else {
+          btn.setAttribute('data-confirming', 'true');
+          btn.textContent = 'Tap again to confirm';
+          btn.style.background = '#e31837';
+          btn.style.color = '#fff';
+          setTimeout(() => {
+            if (btn && btn.getAttribute('data-confirming') === 'true') {
+              btn.setAttribute('data-confirming', 'false');
+              btn.textContent = 'Delete';
+              btn.style.background = '';
+              btn.style.color = '';
+            }
+          }, 3000);
+        }
+      }
+    });
+  }
+
+  // ── TABLE RENDER ──────────────────────────────────
+  function renderTable() {
+    const products   = getProducts();
+    const tbody      = document.getElementById('product-table-body');
+    const emptyState = document.getElementById('empty-state');
+    const badge      = document.getElementById('product-count-badge');
+
+    badge.textContent = products.length + ' Product' + (products.length !== 1 ? 's' : '');
+
+    if (products.length === 0) {
+      tbody.innerHTML = '';
+      emptyState.style.display = 'block';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    tbody.innerHTML = products.map(p => {
+      const imgs = p.images || (p.image ? [p.image] : []);
+      const firstImg = imgs[0] || '';
+      const imgCount = imgs.length;
+      return `
+        <tr>
+          <td>
+            <img class="td-img" src="${firstImg}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/52x52/f5f5f5/ccc?text=?'"/>
+            ${imgCount > 1 ? `<div class="td-img-count">+${imgCount - 1} more photo${imgCount - 1 > 1 ? 's' : ''}</div>` : ''}
+          </td>
+          <td class="td-name">${p.name}<br/><span style="font-size:12px;color:#999;font-weight:600">${p.desc.substring(0,45)}...</span></td>
+          <td class="td-price">R ${p.price.toLocaleString()}</td>
+          <td><span class="td-cat">${p.category}</span></td>
+          <td>${p.badge ? `<span class="td-badge">${p.badge}</span>` : '<span style="color:#ccc;font-size:12px">—</span>'}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-edit" onclick="editProduct(${p.id})">✏️ Edit</button>
+              <button class="btn-delete" data-id="${p.id}" data-confirming="false" onclick="deleteProduct(${p.id})">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── TOAST ─────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
