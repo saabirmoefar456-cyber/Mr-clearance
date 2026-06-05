@@ -234,9 +234,7 @@
       <li onclick="selectCat('accessories')">⌚ Accessories</li>
       <li onclick="selectCat('homeware')">🏠 Homeware</li>
       <li onclick="selectCat('clothing')">👕 Clothing</li>
-      <li onclick="selectCat('aprons')" style="color:#8B5E83;font-style:italic;">🎀 Aprons</li>
-      <li onclick="selectCat('workwear')" style="color:#B8780A;font-weight:900;">🦺 Work Wear</li>
-      <li onclick="selectCat('aprons')" style="color:#8B5E83;font-style:italic;">🎀 Aprons</li>
+      <li onclick="selectCat('aprons')" style="color:#8B5E83;font-style:italic;">🎽 Aprons</li>
       <li onclick="selectCat('workwear')" style="color:#B8780A;font-weight:900;">🦺 Work Wear</li>
     </ul>
   </div>
@@ -253,10 +251,6 @@
     <p class="lb-counter" id="lb-counter"></p>
   </div>
 
-  <!-- CATEGORY BANNER -->
-  <div id="category-banner"></div>
-
-  <!-- NAVBAR -->
   <nav class="navbar">
     <div class="nav-left">
       <button class="hamburger" onclick="toggleCatMenu()">
@@ -319,8 +313,9 @@
   <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="hero-content">
+  <section class="hero"> id="hero-section">
+  <div id="category-banner" style="display:none;position:absolute;inset:0;z-index:5;"></div>
+   <div class="hero-content" id="hero-default-content">
       <p class="hero-badge">Clearance Deals — Cape Town 🇿🇦</p>
       <h1 class="hero-title">Shop Smart,<br/><span class="hero-accent">Save Big</span></h1>
       <p class="hero-subtitle">Handpicked clearance products delivered to your door</p>
@@ -834,35 +829,53 @@
     document.getElementById('cat-sidebar').classList.toggle('open');
     document.getElementById('cat-overlay').classList.toggle('open');
   }
-  function selectCat(category) {
+ function selectCat(category) {
     document.getElementById('category-filter').value = category;
     filterProducts();
     toggleCatMenu();
     showCategoryBanner(category);
+    document.querySelector('.products-section').scrollIntoView({ behavior: 'smooth' });
+  
   }
 
-  function showCategoryBanner(category) {
-    var banner = document.getElementById('category-banner');
-    banner.className = '';
-    if (category === 'aprons') {
-      banner.className = 'visible';
-      banner.innerHTML = '<div class="cat-banner-aprons">' +
-        '<span class="cat-banner-icon">🎀</span>' +
-        '<h2>Aprons</h2>' +
-        '<div class="banner-divider"></div>' +
-        '<p>Elegantly crafted · Every stitch, a statement</p>' +
-        '</div>';
-    } else if (category === 'workwear') {
-      banner.className = 'visible';
-      banner.innerHTML = '<div class="cat-banner-workwear">' +
-        '<span class="cat-banner-icon">🦺</span>' +
-        '<h2>Work Wear</h2>' +
-        '<div class="banner-stripe"></div>' +
-        '<p>Built tough · Ready for the site</p>' +
-        '</div>';
-    } else {
-      banner.className = '';
-      banner.innerHTML = '';
+ function showCategoryBanner(category) {
+  var banner = document.getElementById('category-banner');
+  var heroContent = document.getElementById('hero-default-content');
+
+  if (category === 'aprons') {
+    heroContent.style.display = 'none';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.background = 'linear-gradient(135deg, #f5e6ee 0%, #ede0f0 50%, #f0e8d8 100%)';
+    banner.innerHTML =
+      '<div style="text-align:center;z-index:6;padding:20px;">' +
+      '<span style="font-size:40px;display:block;margin-bottom:10px;">🎀</span>' +
+      '<h2 style="font-family:Georgia,serif;font-size:clamp(28px,5vw,52px);font-weight:700;letter-spacing:3px;color:#6b3d6b;margin-bottom:8px;">Aprons</h2>' +
+      '<div style="width:60px;height:1px;background:#c9a0c0;margin:12px auto;"></div>' +
+      '<p style="font-family:\'Nunito Sans\',sans-serif;font-size:14px;font-weight:600;color:#8b5e83;letter-spacing:1px;">Elegantly crafted · Every stitch, a statement</p>' +
+      '<button onclick="showCategoryBanner(\'all\')" style="margin-top:20px;padding:10px 24px;background:#8b5e83;color:#fff;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;">✕ Clear Filter</button>' +
+      '</div>';
+  } else if (category === 'workwear') {
+    heroContent.style.display = 'none';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.background = 'linear-gradient(135deg, #1c1c1c 0%, #2d2410 60%, #3d2e08 100%)';
+    banner.innerHTML =
+      '<div style="text-align:center;z-index:6;padding:20px;">' +
+      '<span style="font-size:44px;display:block;margin-bottom:10px;">🦺</span>' +
+      '<h2 style="font-family:\'Nunito Sans\',sans-serif;font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:5px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.4);">Work Wear</h2>' +
+      '<div style="width:80px;height:4px;background:repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 10px,#1c1c1c 10px,#1c1c1c 20px);margin:12px auto;"></div>' +
+      '<p style="font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:700;color:rgba(245,158,11,0.8);letter-spacing:2px;text-transform:uppercase;">Built tough · Ready for the site</p>' +
+      '<button onclick="showCategoryBanner(\'all\')" style="margin-top:20px;padding:10px 24px;background:#f59e0b;color:#1c1c1c;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:1px;">✕ Clear Filter</button>' +
+      '</div>';
+  } else {
+    heroContent.style.display = '';
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    document.getElementById('category-filter').value = 'all';
+    filterProducts();
     }
   }
 
