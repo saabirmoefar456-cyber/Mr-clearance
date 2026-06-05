@@ -391,54 +391,54 @@
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  // ── RENDER PRODUCTS ───────────────────────────────────────────
-  function renderProducts() {
+    
+function renderProducts() {
     var products = getProducts();
     var grid = document.getElementById('products-grid');
     if (!grid) return;
     if (products.length === 0) {
-      grid.innerHTML = '';
-      document.getElementById('product-count').textContent = 'No products yet';
-      return;
+        grid.innerHTML = '';
+        document.getElementById('product-count').textContent = 'No products yet';
+        return;
     }
     var html = '';
     for (var i = 0; i < products.length; i++) {
-      var p = products[i];
-      var imgs = getImages(p);
-      var delay = (i * 0.08).toFixed(2);
-      var cid = 'card-' + (p.id || i);
+        var p = products[i];
+        var imgs = getImages(p);
+        var delay = (i * 0.08).toFixed(2);
+        var cid = 'card-' + (p.id || i);
 
-      html += '<div class="product-card" id="' + cid + '" data-name="' + escHtml(p.name) + '" data-price="' + p.price + '" data-category="' + p.category + '" data-img-idx="0" data-imgs=\'' + JSON.stringify(imgs).replace(/'/g,"&#39;") + '\' style="animation-delay:' + delay + 's">';
-      html += '<div class="card-img-wrap" onclick="openLightbox(\'' + cid + '\')">';
-      html += '<img src="' + escHtml(imgs[0]) + '" alt="' + escHtml(p.name) + '" class="card-img" id="img-' + cid + '" loading="lazy" onerror="this.src=\'https://via.placeholder.com/400x300/f5f5f5/e31837?text=No+Image\'"/>';
-      if (imgs.length > 1) {
-        html += '<button class="img-arrow prev" onclick="slideImg(event,\'' + cid + '\',-1,' + JSON.stringify(imgs) + ')">&#8249;</button>';
-        html += '<button class="img-arrow next" onclick="slideImg(event,\'' + cid + '\',1,' + JSON.stringify(imgs) + ')">&#8250;</button>';
-        html += '<div class="img-dots" id="dots-' + cid + '">';
-        for (var d = 0; d < imgs.length; d++) {
-          html += '<span class="img-dot' + (d===0?' active':'') + '" onclick="goToImg(event,\'' + cid + '\',' + d + ',' + JSON.stringify(imgs) + ')"></span>';
+        html += '<div class="product-card" id="' + cid + '" data-name="' + escHtml(p.name) + '" data-price="' + p.price + '" data-category="' + p.category + '" data-img-idx="0" data-imgs=\'' + JSON.stringify(imgs).replace(/'/g,"&#39;") + '\' style="animation-delay:' + delay + 's">';
+        html += '<div class="card-img-wrap" onclick="openProductModal(\'' + (p.id || i) + '\')">';
+        html += '<img src="' + escHtml(imgs[0]) + '" alt="' + escHtml(p.name) + '" class="card-img" id="img-' + cid + '" loading="lazy" onerror="this.src=\'https://via.placeholder.com/400x300/f5f5f5/e31837?text=No+Image\'"/>';
+        if (imgs.length > 1) {
+            html += '<button class="img-arrow prev" onclick="slideImg(event,\'' + cid + '\',-1,' + JSON.stringify(imgs) + ')">&#8249;</button>';
+            html += '<button class="img-arrow next" onclick="slideImg(event,\'' + cid + '\',1,' + JSON.stringify(imgs) + ')">&#8250;</button>';
+            html += '<div class="img-dots" id="dots-' + cid + '">';
+            for (var d = 0; d < imgs.length; d++) {
+                html += '<span class="img-dot' + (d===0?' active':'') + '" onclick="goToImg(event,\'' + cid + '\',' + d + ',' + JSON.stringify(imgs) + ')"></span>';
+            }
+            html += '</div>';
+            html += '<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;pointer-events:none;">📷 ' + imgs.length + '</span>';
         }
+        if (p.badge) html += '<span class="badge-sale">' + escHtml(p.badge) + '</span>';
         html += '</div>';
-        html += '<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;pointer-events:none;">📷 ' + imgs.length + '</span>';
-      }
-      if (p.badge) html += '<span class="badge-sale">' + escHtml(p.badge) + '</span>';
-      html += '</div>';
-      html += '<div class="card-body">';
-      html += '<h3>' + escHtml(p.name) + '</h3>';
-      html += '<p>' + escHtml(p.desc) + '</p>';
-      html += '<span class="price">R ' + p.price.toLocaleString() + '</span>';
-      html += '<div class="qty-row"><div class="qty-control">';
-      html += '<button onclick="changeCardQty(this,-1)">−</button>';
-      html += '<span class="qty-val">1</span>';
-      html += '<button onclick="changeCardQty(this,1)">+</button>';
-      html += '</div>';
-      html += '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button>';
-      html += '</div></div></div>';
+        html += '<div class="card-body">';
+        html += '<h3>' + escHtml(p.name) + '</h3>';
+        html += '<p>' + escHtml(p.desc) + '</p>';
+        html += '<span class="price">R ' + p.price.toLocaleString() + '</span>';
+        html += '<div class="qty-row"><div class="qty-control">';
+        html += '<button onclick="changeCardQty(this,-1)">−</button>';
+        html += '<span class="qty-val">1</span>';
+        html += '<button onclick="changeCardQty(this,1)">+</button>';
+        html += '</div>';
+        html += '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button>';
+        html += '</div></div></div>';
     }
     grid.innerHTML = html;
     document.getElementById('product-count').textContent = 'Showing ' + products.length + ' product' + (products.length !== 1 ? 's' : '');
-  }
+}
+ 
 
   // ── IMAGE GALLERY ─────────────────────────────────────────────
   function slideImg(event, cid, dir, imgs) {
@@ -892,6 +892,333 @@
     }
     update(); setInterval(update, 1000);
   }
+
+// ── PRODUCT MODAL (Temu/Shein style) ──
+var currentModalProduct = null;
+var currentModalImages = [];
+var currentModalImgIndex = 0;
+var currentModalQty = 1;
+var currentSelectedVariant = 'Standard';
+
+function openProductModal(productId) {
+  var products = getProducts();
+  var product = products.find(function(p) { return String(p.id) === String(productId); });
+  if (!product) return;
+  
+  currentModalProduct = product;
+  currentModalImages = getImages(product);
+  currentModalImgIndex = 0;
+  currentModalQty = 1;
+  
+  document.getElementById('modal-product-name').textContent = product.name;
+  document.getElementById('modal-product-price').textContent = 'R ' + product.price.toLocaleString();
+  document.getElementById('modal-product-desc').textContent = product.desc || 'No description available.';
+  document.getElementById('modal-main-img').src = currentModalImages[0] || '';
+  document.getElementById('modal-qty').textContent = '1';
+  
+  var stock = product.stock || 0;
+  var stockEl = document.getElementById('modal-product-stock');
+  if (stock <= 0) {
+    stockEl.textContent = '❌ Out of Stock';
+    stockEl.className = 'modal-stock out-stock';
+  } else if (stock <= 5) {
+    stockEl.textContent = '⚠️ Only ' + stock + ' left!';
+    stockEl.className = 'modal-stock low-stock';
+  } else {
+    stockEl.textContent = '✓ In Stock (' + stock + ' available)';
+    stockEl.className = 'modal-stock in-stock';
+  }
+  
+  // Loyalty points preview
+  var pointsEarn = Math.floor(product.price / 10);
+  document.getElementById('modal-points-earn').textContent = pointsEarn;
+  
+  // Render thumbnails
+  var thumbContainer = document.getElementById('modal-thumbnails');
+  thumbContainer.innerHTML = currentModalImages.map(function(img, idx) {
+    return '<img src="' + img + '" onclick="modalGoToImage(' + idx + ')" class="' + (idx === 0 ? 'active' : '') + '">';
+  }).join('');
+  
+  document.getElementById('product-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProductModal() {
+  document.getElementById('product-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function modalPrevImage() {
+  currentModalImgIndex = (currentModalImgIndex - 1 + currentModalImages.length) % currentModalImages.length;
+  modalUpdateMainImage();
+}
+
+function modalNextImage() {
+  currentModalImgIndex = (currentModalImgIndex + 1) % currentModalImages.length;
+  modalUpdateMainImage();
+}
+
+function modalGoToImage(idx) {
+  currentModalImgIndex = idx;
+  modalUpdateMainImage();
+}
+
+function modalUpdateMainImage() {
+  document.getElementById('modal-main-img').src = currentModalImages[currentModalImgIndex] || '';
+  var thumbs = document.querySelectorAll('#modal-thumbnails img');
+  thumbs.forEach(function(t, i) {
+    t.classList.toggle('active', i === currentModalImgIndex);
+  });
+}
+
+function modalChangeQty(delta) {
+  var newQty = currentModalQty + delta;
+  if (newQty >= 1 && newQty <= 99) {
+    currentModalQty = newQty;
+    document.getElementById('modal-qty').textContent = currentModalQty;
+  }
+}
+
+function modalAddToCart() {
+  if (!currentModalProduct) return;
+  var existing = cart.find(function(i) { return i.name === currentModalProduct.name && i.variant === currentSelectedVariant; });
+  if (existing) {
+    existing.qty += currentModalQty;
+  } else {
+    cart.push({ 
+      name: currentModalProduct.name, 
+      price: currentModalProduct.price, 
+      qty: currentModalQty,
+      variant: currentSelectedVariant,
+      productId: currentModalProduct.id
+    });
+  }
+  updateCartUI();
+  showToast('✅ ' + currentModalQty + 'x ' + currentModalProduct.name + ' added!');
+  closeProductModal();
+  
+  // Check if customer is loyalty member - if not, show popup after 3 adds
+  if (!localStorage.getItem('loyalty_member')) {
+    var addCount = parseInt(localStorage.getItem('temp_add_count') || 0) + 1;
+    localStorage.setItem('temp_add_count', addCount);
+    if (addCount >= 2) {
+      setTimeout(function() { openLoyaltyPopup(); }, 800);
+      localStorage.setItem('temp_add_count', 0);
+    }
+  }
+}
+
+// ── LOYALTY PROGRAM ──
+function openLoyaltyPopup() {
+  document.getElementById('loyalty-popup').classList.add('open');
+}
+
+function closeLoyaltyPopup() {
+  document.getElementById('loyalty-popup').classList.remove('open');
+}
+
+// Initialize loyalty from localStorage
+var loyaltyData = {
+  name: '',
+  phone: '',
+  email: '',
+  birthday: '',
+  points: 0,
+  totalSpent: 0,
+  pointsEarnedTotal: 0,
+  pointsRedeemed: 0,
+  history: []
+};
+
+function loadLoyaltyData() {
+  try {
+    var saved = localStorage.getItem('mrc_loyalty');
+    if (saved) {
+      var data = JSON.parse(saved);
+      loyaltyData = data;
+      updateLoyaltyBadge();
+    }
+  } catch(e) {}
+}
+
+function saveLoyaltyData() {
+  localStorage.setItem('mrc_loyalty', JSON.stringify(loyaltyData));
+  updateLoyaltyBadge();
+}
+
+function updateLoyaltyBadge() {
+  var badge = document.getElementById('loyalty-badge');
+  var pointsSpan = document.getElementById('loyalty-points-badge');
+  if (loyaltyData.points > 0 && loyaltyData.name) {
+    badge.style.display = 'flex';
+    pointsSpan.textContent = loyaltyData.points;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function addLoyaltyPoints(amountSpent, orderDetails) {
+  if (!loyaltyData.name) return;
+  var pointsEarned = Math.floor(amountSpent / 10);
+  loyaltyData.points += pointsEarned;
+  loyaltyData.pointsEarnedTotal += pointsEarned;
+  loyaltyData.totalSpent += amountSpent;
+  loyaltyData.history.unshift({
+    date: new Date().toISOString(),
+    type: 'earned',
+    points: pointsEarned,
+    description: 'Purchase: ' + orderDetails
+  });
+  saveLoyaltyData();
+  showToast('🎉 You earned ' + pointsEarned + ' loyalty points!');
+}
+
+function redeemPoints(points) {
+  if (points > loyaltyData.points) {
+    showToast('❌ Not enough points! You have ' + loyaltyData.points + ' points.');
+    return;
+  }
+  var discount = points;
+  loyaltyData.points -= points;
+  loyaltyData.pointsRedeemed += points;
+  loyaltyData.history.unshift({
+    date: new Date().toISOString(),
+    type: 'redeemed',
+    points: points,
+    description: 'Redeemed ' + points + ' points for R' + points + ' discount'
+  });
+  saveLoyaltyData();
+  
+  // Apply discount to cart
+  window.loyaltyDiscount = discount;
+  updateCartUI();
+  showToast('🎉 Redeemed ' + points + ' points! R' + discount + ' off your order.');
+  closeLoyaltyDashboard();
+}
+
+function openLoyaltyDashboard() {
+  if (!loyaltyData.name) {
+    openLoyaltyPopup();
+    return;
+  }
+  
+  document.getElementById('dashboard-name').textContent = loyaltyData.name;
+  document.getElementById('dashboard-points').textContent = loyaltyData.points;
+  document.getElementById('total-spent').textContent = 'R' + loyaltyData.totalSpent.toLocaleString();
+  document.getElementById('points-earned-total').textContent = loyaltyData.pointsEarnedTotal;
+  document.getElementById('points-redeemed').textContent = loyaltyData.pointsRedeemed;
+  
+  var historyList = document.getElementById('points-history-list');
+  if (loyaltyData.history.length === 0) {
+    historyList.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No activity yet</p>';
+  } else {
+    historyList.innerHTML = loyaltyData.history.slice(0, 20).map(function(h) {
+      var cls = h.type === 'earned' ? 'points-positive' : 'points-negative';
+      var sign = h.type === 'earned' ? '+' : '-';
+      return '<div class="history-item">' +
+        '<span>' + new Date(h.date).toLocaleDateString() + ' - ' + h.description + '</span>' +
+        '<span class="' + cls + '">' + sign + h.points + '</span>' +
+        '</div>';
+    }).join('');
+  }
+  
+  document.getElementById('loyalty-dashboard').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLoyaltyDashboard() {
+  document.getElementById('loyalty-dashboard').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Signup form handler
+document.addEventListener('DOMContentLoaded', function() {
+  loadLoyaltyData();
+  
+  var form = document.getElementById('loyalty-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var name = document.getElementById('loyalty-name').value.trim();
+      var phone = document.getElementById('loyalty-phone').value.trim();
+      var email = document.getElementById('loyalty-email').value.trim();
+      var birthday = document.getElementById('loyalty-birthday').value;
+      
+      if (!name || !phone) {
+        showToast('❌ Please enter your name and phone number');
+        return;
+      }
+      
+      loyaltyData.name = name;
+      loyaltyData.phone = phone;
+      loyaltyData.email = email;
+      loyaltyData.birthday = birthday;
+      
+      // Welcome bonus: 50 points
+      loyaltyData.points += 50;
+      loyaltyData.pointsEarnedTotal += 50;
+      loyaltyData.history.unshift({
+        date: new Date().toISOString(),
+        type: 'earned',
+        points: 50,
+        description: 'Welcome bonus!'
+      });
+      
+      saveLoyaltyData();
+      closeLoyaltyPopup();
+      showToast('🎉 Welcome to Mr Clearance Rewards! You got 50 bonus points!');
+      updateLoyaltyBadge();
+    });
+  }
+});
+
+// Modify the existing submitOrder function to add loyalty points
+var originalSubmitOrder = window.submitOrder;
+window.submitOrder = function() {
+  var cartTotal = cart.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
+  var discount = (window.loyaltyDiscount || 0);
+  var finalTotal = Math.max(0, cartTotal - discount);
+  
+  if (loyaltyData.name && finalTotal > 0) {
+    addLoyaltyPoints(finalTotal, cart.map(function(i) { return i.qty + 'x ' + i.name; }).join(', '));
+    window.loyaltyDiscount = 0;
+  }
+  
+  if (originalSubmitOrder) originalSubmitOrder();
+};
+
+// Update cart total to include loyalty discount
+var originalUpdateCartUI = window.updateCartUI;
+window.updateCartUI = function() {
+  if (originalUpdateCartUI) originalUpdateCartUI();
+  
+  // Apply loyalty discount
+  var subtotal = cart.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
+  var discount = window.loyaltyDiscount || 0;
+  var total = Math.max(0, subtotal - discount);
+  
+  var totalEl = document.getElementById('cart-total');
+  if (totalEl) totalEl.textContent = 'R ' + total.toLocaleString();
+  
+  // Show discount row if discount applied
+  var discRow = document.getElementById('loyalty-discount-row');
+  if (!discRow && discount > 0) {
+    var priceBreakdown = document.querySelector('.price-breakdown');
+    if (priceBreakdown) {
+      var row = document.createElement('div');
+      row.id = 'loyalty-discount-row';
+      row.className = 'price-row';
+      row.innerHTML = '<span>⭐ Loyalty Discount</span><span style="color:#27ae60;">-R ' + discount + '</span>';
+      var totalRow = priceBreakdown.querySelector('.total-row');
+      if (totalRow) priceBreakdown.insertBefore(row, totalRow);
+    }
+  } else if (discRow && discount === 0) {
+    discRow.remove();
+  } else if (discRow && discount > 0) {
+    discRow.querySelector('span:last-child').textContent = '-R ' + discount;
+  }
+};
+    
   </script>
 
   <!-- DELIVERY MODAL -->
