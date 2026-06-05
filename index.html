@@ -1015,6 +1015,142 @@
       You will receive an order confirmation on WhatsApp
     </div>
   </div>
+<!-- PRODUCT DETAIL MODAL -->
+<div id="product-modal" class="product-modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeProductModal()">✕</button>
+    
+    <!-- Image gallery carousel -->
+    <div class="modal-gallery">
+      <div class="modal-gallery-main" id="modal-gallery-main">
+        <button class="modal-gallery-prev" onclick="modalPrevImage()">‹</button>
+        <img id="modal-main-img" src="" alt="Product image">
+        <button class="modal-gallery-next" onclick="modalNextImage()">›</button>
+      </div>
+      <div class="modal-thumbnails" id="modal-thumbnails"></div>
+    </div>
+    
+    <!-- Product info -->
+    <div class="modal-info">
+      <h2 id="modal-product-name"></h2>
+      <div class="modal-price" id="modal-product-price"></div>
+      <div class="modal-stock" id="modal-product-stock"></div>
+      
+      <div class="modal-description">
+        <h4>Description</h4>
+        <p id="modal-product-desc"></p>
+      </div>
+      
+      <!-- Size / Variant selector -->
+      <div class="modal-variants">
+        <h4>Size / Variant</h4>
+        <div class="variant-buttons" id="variant-buttons">
+          <button class="variant-btn active" data-variant="Standard">Standard</button>
+          <button class="variant-btn" data-variant="Large">Large</button>
+          <button class="variant-btn" data-variant="XL">XL</button>
+        </div>
+        <input type="hidden" id="selected-variant" value="Standard">
+      </div>
+      
+      <!-- Quantity -->
+      <div class="modal-quantity">
+        <h4>Quantity</h4>
+        <div class="qty-control-modal">
+          <button onclick="modalChangeQty(-1)">−</button>
+          <span id="modal-qty">1</span>
+          <button onclick="modalChangeQty(1)">+</button>
+        </div>
+      </div>
+      
+      <!-- Add to cart button -->
+      <button class="modal-add-btn" onclick="modalAddToCart()">Add to Cart</button>
+      
+      <!-- Loyalty points info -->
+      <div class="modal-loyalty-info" id="modal-loyalty-info">
+        🎁 Earn <span id="modal-points-earn">0</span> loyalty points on this purchase!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOYALTY PROGRAM POPUP -->
+<div id="loyalty-popup" class="loyalty-popup">
+  <div class="loyalty-popup-content">
+    <button class="loyalty-close" onclick="closeLoyaltyPopup()">✕</button>
+    <div class="loyalty-icon">⭐</div>
+    <h3>Join Mr Clearance Rewards!</h3>
+    <p>Earn points on every purchase and get exclusive discounts!</p>
+    
+    <div class="loyalty-benefits">
+      <div class="benefit-item">🎁 1 point = R1 saved</div>
+      <div class="benefit-item">🎂 Birthday bonus: 100 points</div>
+      <div class="benefit-item">💰 10% off on first signup</div>
+    </div>
+    
+    <form id="loyalty-form">
+      <input type="text" id="loyalty-name" placeholder="Your full name" required>
+      <input type="tel" id="loyalty-phone" placeholder="WhatsApp number" required>
+      <input type="email" id="loyalty-email" placeholder="Email address">
+      <input type="date" id="loyalty-birthday" placeholder="Birthday (for bonus points)">
+      <button type="submit" class="loyalty-submit">Join Rewards →</button>
+    </form>
+    
+    <p class="loyalty-skip" onclick="closeLoyaltyPopup()">No thanks, maybe later</p>
+  </div>
+</div>
+
+<!-- LOYALTY POINTS DISPLAY (small badge on cart) -->
+<div id="loyalty-badge" class="loyalty-badge" onclick="openLoyaltyDashboard()" style="display:none;">
+  <span>⭐</span>
+  <span id="loyalty-points-badge">0</span>
+</div>
+
+<!-- LOYALTY DASHBOARD -->
+<div id="loyalty-dashboard" class="loyalty-dashboard">
+  <div class="dashboard-content">
+    <button class="dashboard-close" onclick="closeLoyaltyDashboard()">✕</button>
+    <div class="dashboard-header">
+      <div class="dashboard-avatar">⭐</div>
+      <h3 id="dashboard-name">Rewards Member</h3>
+      <div class="points-balance">
+        <span class="points-number" id="dashboard-points">0</span>
+        <span class="points-label">Available Points</span>
+      </div>
+    </div>
+    
+    <div class="dashboard-stats">
+      <div class="stat">
+        <span class="stat-value" id="total-spent">R0</span>
+        <span class="stat-label">Total Spent</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="points-earned-total">0</span>
+        <span class="stat-label">Points Earned</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="points-redeemed">0</span>
+        <span class="stat-label">Points Redeemed</span>
+      </div>
+    </div>
+    
+    <div class="redeem-section">
+      <h4>Redeem Points</h4>
+      <div class="redeem-options">
+        <button class="redeem-btn" onclick="redeemPoints(50)">🎁 50 pts → R5 off</button>
+        <button class="redeem-btn" onclick="redeemPoints(100)">🎁 100 pts → R10 off</button>
+        <button class="redeem-btn" onclick="redeemPoints(200)">🎁 200 pts → R20 off</button>
+        <button class="redeem-btn" onclick="redeemPoints(500)">🎁 500 pts → R50 off</button>
+      </div>
+      <p class="redeem-note">*Points can be used on your next purchase</p>
+    </div>
+    
+    <div class="history-section">
+      <h4>Points History</h4>
+      <div id="points-history-list"></div>
+    </div>
+  </div>
+</div>
+  
 
 </body>
 </html>
