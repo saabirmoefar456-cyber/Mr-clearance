@@ -984,13 +984,42 @@ window.uploadImageToStorage = async function(file, productId, index) {
 function handleFileUpload(input) {
   var files = Array.from(input.files);
   if (!files.length) return;
-  for (var i = 0; i < files.length; i++) {
-    if (!files[i].type.startsWith('image/')) continue;
-    currentImageFiles.push({ file: files[i] });
-   }
-   renderPreviews();
-   input.value = '';
-  }
+  showToast('📸 Processing images...');
+  
+  files.forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        // Resize to max 1200px width (good quality, much smaller)
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var maxWidth = 1200;
+        var width = img.width;
+        var height = img.height;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // High quality JPEG (0.85 = 85% quality - looks great)
+        var compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        currentImages.push({ src: compressedBase64 });
+        renderPreviews();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
 
   function toggleUrlInput() {
     var row = document.getElementById('url-input-row');
@@ -1002,11 +1031,21 @@ function addImageFromUrl() {
   var url = urlEl.value.trim();
   if (!url) { showToast('❌ Please paste an image link first'); return; }
   if (!url.startsWith('http')) { showToast('❌ Link must start with http'); return; }
-  currentImageUrls.push(url);
-  urlEl.value = '';
-  document.getElementById('url-input-row').classList.remove('visible');
-  renderPreviews();
-  showToast('✅ Image link added!');
+  
+  // Validate image loads before adding
+  var testImg = new Image();
+  testImg.onload = function() {
+    currentImages.push({ src: url });
+    urlEl.value = '';
+    document.getElementById('url-input-row').classList.remove('visible');
+    renderPreviews();
+    showToast('✅ Image link added!');
+  };
+  testImg.onerror = function() {
+    showToast('❌ That link doesn\'t point to a valid image');
+  };
+  testImg.src = url;
+}
 }
  function renderPreviews() {
   var strip   = document.getElementById('preview-strip');
