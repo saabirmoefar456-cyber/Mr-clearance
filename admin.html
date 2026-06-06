@@ -321,6 +321,8 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot }
       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
     const firebaseConfig = {
       apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
       authDomain: "mr-clearance.firebaseapp.com",
@@ -332,6 +334,17 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
     const colRef = collection(db, 'products');
+    const storage = getStorage(app);
+
+// Helper: upload a single image to Storage and return download URL
+window.uploadImageToStorage = async function(file, productId, index) {
+  const ext = file.type.split('/')[1] || 'jpg';
+  const fileName = `products/${productId}/${Date.now()}_${index}.${ext}`;
+  const storageRef = ref(storage, fileName);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+};
+
     window.fbGetProducts = async function() {
       const snap = await getDocs(colRef);
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -964,24 +977,19 @@
   }
 
   // ── PHOTO UPLOAD STATE ────────────────────────────────────────
-  var currentImages = [];
+  var currentImageFiles = [];      // stores { file: File } for new uploads
+  var currentImageUrls = [];       // stores existing URLs (when editing or from URL paste)
   var editingId = null;
-
-  function handleFileUpload(input) {
-    var files = Array.from(input.files);
-    if (!files.length) return;
-    var loaded = 0;
-    files.forEach(function(file) {
-      if (!file.type.startsWith('image/')) return;
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        currentImages.push({ src: e.target.result });
-        loaded++;
-        if (loaded === files.length) renderPreviews();
-      };
-      reader.readAsDataURL(file);
-    });
-    input.value = '';
+  
+function handleFileUpload(input) {
+  var files = Array.from(input.files);
+  if (!files.length) return;
+  for (var i = 0; i < files.length; i++) {
+    if (!files[i].type.startsWith('image/')) continue;
+    currentImageFiles.push({ file: files[i] });
+   }
+   renderPreviews();
+   input.value = '';
   }
 
   function toggleUrlInput() {
@@ -989,110 +997,160 @@
     row.classList.toggle('visible');
     if (row.classList.contains('visible')) document.getElementById('url-input').focus();
   }
+function addImageFromUrl() {
+  var urlEl = document.getElementById('url-input');
+  var url = urlEl.value.trim();
+  if (!url) { showToast('❌ Please paste an image link first'); return; }
+  if (!url.startsWith('http')) { showToast('❌ Link must start with http'); return; }
+  currentImageUrls.push(url);
+  urlEl.value = '';
+  document.getElementById('url-input-row').classList.remove('visible');
+  renderPreviews();
+  showToast('✅ Image link added!');
+}
+ function renderPreviews() {
+  var strip   = document.getElementById('preview-strip');
+  var addMore = document.getElementById('add-more-btn');
+  var countMsg = document.getElementById('photo-count-msg');
+  strip.querySelectorAll('.preview-thumb-wrap').forEach(function(el){ el.remove(); });
 
-  function addImageFromUrl() {
-    var urlEl = document.getElementById('url-input');
-    var url = urlEl.value.trim();
-    if (!url) { showToast('❌ Please paste an image link first'); return; }
-    if (!url.startsWith('http')) { showToast('❌ Link must start with http'); return; }
-    currentImages.push({ src: url });
-    urlEl.value = '';
-    document.getElementById('url-input-row').classList.remove('visible');
-    renderPreviews();
-    showToast('✅ Image link added!');
-  }
+  // Show image files (using object URL for preview)
+  currentImageFiles.forEach(function(img, idx) {
+    var wrap = document.createElement('div');
+    wrap.className = 'preview-thumb-wrap';
+    var imgEl = document.createElement('img');
+    var objUrl = URL.createObjectURL(img.file);
+    imgEl.src = objUrl;
+    imgEl.alt = 'Photo ' + (idx+1);
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'thumb-remove';
+    removeBtn.innerHTML = '✕';
+    removeBtn.onclick = function(){
+      URL.revokeObjectURL(objUrl);
+      currentImageFiles.splice(idx, 1);
+      renderPreviews();
+    };
+    wrap.appendChild(imgEl);
+    wrap.appendChild(removeBtn);
+    strip.insertBefore(wrap, addMore);
+  });
 
-  function renderPreviews() {
-    var strip   = document.getElementById('preview-strip');
-    var addMore = document.getElementById('add-more-btn');
-    var countMsg = document.getElementById('photo-count-msg');
-    strip.querySelectorAll('.preview-thumb-wrap').forEach(function(el){ el.remove(); });
-    currentImages.forEach(function(img, idx) {
-      var wrap = document.createElement('div');
-      wrap.className = 'preview-thumb-wrap';
-      var imgEl = document.createElement('img');
-      imgEl.src = img.src;
-      imgEl.alt = 'Photo ' + (idx+1);
-      imgEl.onerror = function(){ imgEl.src='https://via.placeholder.com/80x80/f5f5f5/ccc?text=?'; };
-      var removeBtn = document.createElement('button');
-      removeBtn.className = 'thumb-remove';
-      removeBtn.innerHTML = '✕';
-      removeBtn.title = 'Remove this photo';
-      removeBtn.onclick = function(){
-        currentImages.splice(idx, 1);
-        renderPreviews();
-      };
-      wrap.appendChild(imgEl);
-      wrap.appendChild(removeBtn);
-      strip.insertBefore(wrap, addMore);
-    });
-    addMore.style.display = currentImages.length > 0 ? 'flex' : 'none';
-    if (currentImages.length === 0) {
-      countMsg.textContent = 'No photos added yet. Add at least 1 photo.';
-      countMsg.style.color = '#999';
-    } else {
-      countMsg.textContent = '✅ ' + currentImages.length + ' photo' + (currentImages.length!==1?'s':'') + ' added' +
-        (currentImages.length>1 ? ' — customers can swipe through all of them!' : '.');
-      countMsg.style.color = '#27ae60';
-    }
+  // Show existing URLs (from editing or pasted links)
+  currentImageUrls.forEach(function(url, idx) {
+    var wrap = document.createElement('div');
+    wrap.className = 'preview-thumb-wrap';
+    var imgEl = document.createElement('img');
+    imgEl.src = url;
+    imgEl.alt = 'URL Photo ' + (idx+1);
+    imgEl.onerror = function(){ imgEl.src='https://via.placeholder.com/80x80/f5f5f5/ccc?text=?'; };
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'thumb-remove';
+    removeBtn.innerHTML = '✕';
+    removeBtn.onclick = function(){
+      currentImageUrls.splice(idx, 1);
+      renderPreviews();
+    };
+    wrap.appendChild(imgEl);
+    wrap.appendChild(removeBtn);
+    strip.insertBefore(wrap, addMore);
+  });
+
+  var totalCount = currentImageFiles.length + currentImageUrls.length;
+  addMore.style.display = totalCount > 0 ? 'flex' : 'none';
+  if (totalCount === 0) {
+    countMsg.textContent = 'No photos added yet. Add at least 1 photo.';
+    countMsg.style.color = '#999';
+  } else {
+    countMsg.textContent = '✅ ' + totalCount + ' photo' + (totalCount!==1?'s':'') + ' added' +
+      (totalCount>1 ? ' — customers can swipe through all of them!' : '.');
+    countMsg.style.color = '#27ae60';
   }
+}
+
+  
 
   function clearForm() {
-    document.getElementById('f-name').value     = '';
-    document.getElementById('f-price').value    = '';
-    document.getElementById('f-stock').value    = '';
-    document.getElementById('f-badge').value    = '';
-    document.getElementById('f-sizes').value      = '';
-    document.getElementById('f-size-guide').value = '';
-    document.getElementById('f-specs').value      = '';
-    document.getElementById('f-desc').value     = '';
-    document.getElementById('f-category').value = 'footwear';
-    document.getElementById('url-input-row').classList.remove('visible');
-    currentImages = [];
-    renderPreviews();
-    editingId = null;
-    document.getElementById('form-heading').textContent = '➕ Add New Product';
-    document.getElementById('cancel-edit-btn').style.display = 'none';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-stock').value = '';
+  document.getElementById('f-badge').value = '';
+  document.getElementById('f-sizes').value = '';
+  document.getElementById('f-size-guide').value = '';
+  document.getElementById('f-specs').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-category').value = 'footwear';
+  document.getElementById('url-input-row').classList.remove('visible');
+  currentImageFiles = [];
+  currentImageUrls = [];
+  renderPreviews();
+  editingId = null;
+  document.getElementById('form-heading').textContent = '➕ Add New Product';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
   }
 
   function cancelEdit() { clearForm(); showTab('manage'); }
 
   // ── SAVE PRODUCT (Firebase + multi-image) ────────────────────
-  function saveProduct() {
-    var name     = document.getElementById('f-name').value.trim();
-    var price    = parseInt(document.getElementById('f-price').value);
-    var category = document.getElementById('f-category').value;
-    var badge    = document.getElementById('f-badge').value.trim().toUpperCase();
-    var desc     = document.getElementById('f-desc').value.trim();
-    var stock    = parseInt(document.getElementById('f-stock').value) || 0;
-    if (!name)               { showToast('❌ Please enter a product name');    return; }
-    if (!price || price < 1) { showToast('❌ Please enter a valid price');      return; }
-    if (!desc)               { showToast('❌ Please add a short description');  return; }
-    if (currentImages.length === 0) { showToast('❌ Please add at least one photo'); return; }
-    var images = currentImages.map(function(i){ return i.src; });
-    var sizesRaw = document.getElementById('f-sizes').value.trim();
-    var sizes = sizesRaw ? sizesRaw.split('\n').map(function(s){ s=s.trim(); if(!s)return null; var unavail=s.endsWith('❌'); return {label:s.replace('❌','').trim(),unavailable:unavail}; }).filter(Boolean) : [];
-    var sgRaw = document.getElementById('f-size-guide').value.trim();
-    var sizeGuide = sgRaw ? sgRaw.split('\n').map(function(row){ return row.split(',').map(function(c){return c.trim();}); }).filter(function(r){return r.length>0;}) : [];
-    var specsRaw = document.getElementById('f-specs').value.trim();
-    var specs = specsRaw ? specsRaw.split('\n').map(function(s){ var parts=s.split(':'); return parts.length>=2?{key:parts[0].trim(),value:parts.slice(1).join(':').trim()}:null; }).filter(Boolean) : [];
-    var productData = { name:name, price:price, stock:stock, category:category, badge:badge, images:images, desc:desc, sizes:sizes, sizeGuide:sizeGuide, specs:specs };
+async function saveProduct() {
+  var name     = document.getElementById('f-name').value.trim();
+  var price    = parseInt(document.getElementById('f-price').value);
+  var category = document.getElementById('f-category').value;
+  var badge    = document.getElementById('f-badge').value.trim().toUpperCase();
+  var desc     = document.getElementById('f-desc').value.trim();
+  var stock    = parseInt(document.getElementById('f-stock').value) || 0;
+  if (!name)               { showToast('❌ Please enter a product name');    return; }
+  if (!price || price < 1) { showToast('❌ Please enter a valid price');      return; }
+  if (!desc)               { showToast('❌ Please add a short description');  return; }
+  var totalImages = currentImageFiles.length + currentImageUrls.length;
+  if (totalImages === 0) { showToast('❌ Please add at least one photo'); return; }
+
+  showToast('📤 Uploading images... (this may take a moment)');
+
+  var productIdForStorage = editingId ? editingId : 'temp_' + Date.now();
+  var uploadedUrls = [];
+
+  // Upload new files to Storage
+  for (var i = 0; i < currentImageFiles.length; i++) {
+    try {
+      var url = await window.uploadImageToStorage(currentImageFiles[i].file, productIdForStorage, i);
+      uploadedUrls.push(url);
+    } catch(e) {
+      console.error('Upload failed:', e);
+      showToast('❌ Failed to upload an image. Please try again.');
+      return;
+    }
+  }
+  // Add existing URLs (from editing or URL paste)
+  uploadedUrls.push.apply(uploadedUrls, currentImageUrls);
+
+  var sizesRaw = document.getElementById('f-sizes').value.trim();
+  var sizes = sizesRaw ? sizesRaw.split('\n').map(function(s){ s=s.trim(); if(!s)return null; var unavail=s.endsWith('❌'); return {label:s.replace('❌','').trim(),unavailable:unavail}; }).filter(Boolean) : [];
+  var sgRaw = document.getElementById('f-size-guide').value.trim();
+  var sizeGuide = sgRaw ? sgRaw.split('\n').map(function(row){ return row.split(',').map(function(c){return c.trim();}); }).filter(function(r){return r.length>0;}) : [];
+  var specsRaw = document.getElementById('f-specs').value.trim();
+  var specs = specsRaw ? specsRaw.split('\n').map(function(s){ var parts=s.split(':'); return parts.length>=2?{key:parts[0].trim(),value:parts.slice(1).join(':').trim()}:null; }).filter(Boolean) : [];
+
+  var productData = {
+    name: name, price: price, stock: stock, category: category,
+    badge: badge, images: uploadedUrls, desc: desc,
+    sizes: sizes, sizeGuide: sizeGuide, specs: specs
+  };
+
+  try {
     if (editingId !== null) {
-      window.fbUpdateProduct(editingId, productData).then(function(){
-        showToast('✅ Product updated!');
-        loadProductsFromFirebase();
-        clearForm();
-      }).catch(function(){ showToast('❌ Error updating. Try again.'); });
+      await window.fbUpdateProduct(editingId, productData);
+      showToast('✅ Product updated!');
+      loadProductsFromFirebase();
+      clearForm();
     } else {
-      window.fbAddProduct(productData).then(function(){
-        showToast('✅ ' + name + ' added to store!');
-        loadProductsFromFirebase();
-        clearForm();
-      }).catch(function(e){
-        if (e && e.name === 'QuotaExceededError') showToast('⚠️ Storage full! Use smaller photos.');
-        else showToast('❌ Error saving. Try again.');
-        console.error(e);
-      });
+      await window.fbAddProduct(productData);
+      showToast('✅ ' + name + ' added to store!');
+      loadProductsFromFirebase();
+      clearForm();
+    }
+  } catch(e) {
+    console.error('Firestore save error:', e);
+    showToast('❌ Error saving product: ' + (e.message || 'Try again'));
     }
   }
 
@@ -1109,9 +1167,10 @@
     document.getElementById('f-sizes').value      = p.sizes ? p.sizes.map(function(s){ return s.label+(s.unavailable?'❌':''); }).join('\n') : '';
     document.getElementById('f-size-guide').value = p.sizeGuide ? p.sizeGuide.map(function(r){ return r.join(','); }).join('\n') : '';
     document.getElementById('f-specs').value      = p.specs ? p.specs.map(function(s){ return s.key+':'+s.value; }).join('\n') : '';
-    var imgs = p.images || (p.image ? [p.image] : []);
-    currentImages = imgs.map(function(src){ return { src:src }; });
-    renderPreviews();
+  var imgs = p.images || (p.image ? [p.image] : []);
+currentImageFiles = [];
+currentImageUrls = imgs.slice();
+renderPreviews();
     document.getElementById('form-heading').textContent = '✏️ Edit: ' + p.name;
     document.getElementById('cancel-edit-btn').style.display = 'inline-block';
     showTab('add');
