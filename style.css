@@ -119,10 +119,11 @@ body {
 
 /* ── CATEGORY SIDEBAR ── */
 .cat-sidebar {
-  position:fixed; top:0; left:-280px; width:260px; height:100%;
+  position:fixed; top:0; left:-105%; width:80%; max-width:280px; height:100%;
   background:var(--white); border-right:1px solid var(--border);
   z-index:9998; transition:left 0.35s cubic-bezier(.4,0,.2,1);
   box-shadow:4px 0 24px rgba(0,0,0,0.12);
+  overflow-y:auto; overflow-x:hidden;
 }
 .cat-sidebar.open { left:0; }
 .cat-header {
@@ -427,7 +428,8 @@ body {
   .deal-img-wrap { height:180px; }
   .timer-block { min-width:58px; padding:10px 12px; }
   .timer-block span { font-size:28px; }
-  .cart-sidebar { width:100%; right:-100%; }
-  .cat-sidebar { width:78%; }
+  .cart-sidebar { width:92%; max-width:380px; right:-100%; }
+  .cat-sidebar { width:80%; max-width:280px; left:-105%; }
+  .cat-sidebar.open { left:0; }
   .section-header { flex-direction:column; align-items:flex-start; gap:4px; }
 }
