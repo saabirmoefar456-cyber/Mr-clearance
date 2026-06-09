@@ -409,6 +409,12 @@
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     };
+      window.fbListenCustomers = function(callback) {
+      const custRef = collection(db, 'customers');
+      onSnapshot(custRef, snap => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+    };
     window.firebaseReady = true;
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
@@ -476,6 +482,18 @@
       </div>
     </div>
   </div>
+  
+  <!-- CUSTOMERS (Owner only) -->
+    <div class="section-card owner-only" id="customers-card">
+      <h2>👥 Customers</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <span id="customer-count-badge" style="background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;">Loading...</span>
+        <button onclick="loadCustomers()" class="btn-secondary" style="font-size:12px;padding:8px 14px;">🔄 Refresh</button>
+      </div>
+      <div id="customers-list" style="display:flex;flex-direction:column;gap:8px;">
+        <p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">Loading customers...</p>
+      </div>
+    </div>
 
   <!-- ADD PRODUCT TAB -->
   <div class="tab-panel" id="tab-add">
@@ -954,10 +972,11 @@
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display  = 'block';
       document.getElementById('role-badge').textContent = acc.name;
-      if (acc.role === 'owner') {
-        document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'inline-block'; });
+     if (acc.role === 'owner') {
+        document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'block'; });
         loadSettings();
-      }
+        setTimeout(loadCustomers, 1500);
+   }
       if (window.firebaseReady) { loadProductsFromFirebase(); }
       else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); }); }
       showToast('Welcome ' + acc.name + '! 👋');
@@ -1991,7 +2010,35 @@
         return '<div class="sales-row"><span style="font-weight:700;color:var(--text);min-width:120px;font-size:13px;">'+item.name+'</span><div class="sales-bar-wrap"><div class="sales-bar" style="width:'+pct+'%"></div></div><span style="font-weight:800;color:var(--red);font-size:13px;min-width:30px;text-align:center;">'+item.qty+'</span><span style="font-weight:700;color:var(--text-mid);font-size:12px;min-width:70px;text-align:right;">R'+item.value.toLocaleString()+'</span></div>';
       }).join('') + '</div>';
   }
-
+// ── CUSTOMERS ─────────────────────────────────────────────────
+  function loadCustomers() {
+    if (!window.fbListenCustomers) return;
+    window.fbListenCustomers(function(customers) {
+      var list  = document.getElementById('customers-list');
+      var badge = document.getElementById('customer-count-badge');
+      if (!list || !badge) return;
+      badge.textContent = customers.length + ' Customer' + (customers.length !== 1 ? 's' : '');
+      if (customers.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">No customers yet — they appear here when someone creates an account on the store.</p>';
+        return;
+      }
+      list.innerHTML = customers.map(function(c) {
+        var joined  = c.joinedAt  ? new Date(c.joinedAt).toLocaleDateString('en-ZA')  : '—';
+        var lastSeen = c.lastSeen ? new Date(c.lastSeen).toLocaleDateString('en-ZA') : '—';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;">' +
+          '<div style="width:40px;height:40px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;">' + (c.displayName ? c.displayName[0].toUpperCase() : '?') + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:14px;font-weight:800;color:var(--text);">' + (c.displayName || 'No name') + '</div>' +
+            '<div style="font-size:12px;color:var(--text-light);font-weight:600;">' + c.email + '</div>' +
+          '</div>' +
+          '<div style="text-align:right;flex-shrink:0;">' +
+            '<div style="font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;">Joined</div>' +
+            '<div style="font-size:12px;font-weight:800;color:var(--text-mid);">' + joined + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    });
+  }
   function renderInventory() {
     populateInvProductSelect();
     renderHistory();
