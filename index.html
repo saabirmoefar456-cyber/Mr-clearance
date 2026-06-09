@@ -105,6 +105,108 @@
     }
     .pdp-add-btn:hover { background:#c01230; }
 
+/* ── CUSTOMER AUTH ── */
+    #auth-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.6); z-index:400000;
+      align-items:center; justify-content:center;
+    }
+    #auth-overlay.open { display:flex; }
+    #auth-modal {
+      background:#fff; width:94%; max-width:420px;
+      border-radius:16px; padding:32px 28px;
+      position:relative; animation:slideUp 0.3s ease;
+      box-shadow:0 16px 48px rgba(0,0,0,0.2);
+      max-height:90vh; overflow-y:auto;
+    }
+    .auth-logo {
+      text-align:center; margin-bottom:20px;
+    }
+    .auth-logo span {
+      font-size:20px; font-weight:900;
+      color:#e31837; letter-spacing:0.5px;
+    }
+    .auth-title {
+      font-size:20px; font-weight:900; color:#1a1a1a;
+      text-align:center; margin-bottom:6px;
+    }
+    .auth-sub {
+      font-size:13px; font-weight:600; color:#999;
+      text-align:center; margin-bottom:24px; line-height:1.5;
+    }
+    .auth-tabs {
+      display:flex; border:1px solid #e0e0e0;
+      border-radius:8px; overflow:hidden; margin-bottom:20px;
+    }
+    .auth-tab {
+      flex:1; padding:10px; background:#fafafa;
+      border:none; font-family:'Nunito Sans',sans-serif;
+      font-size:14px; font-weight:700; color:#999;
+      cursor:pointer; transition:all 0.2s;
+    }
+    .auth-tab.active { background:#e31837; color:#fff; }
+    .auth-input-group { margin-bottom:14px; }
+    .auth-input-group label {
+      display:block; font-size:11px; font-weight:800;
+      letter-spacing:1px; text-transform:uppercase;
+      color:#555; margin-bottom:6px;
+    }
+    .auth-input-group input {
+      width:100%; background:#f5f5f5; border:2px solid #e0e0e0;
+      color:#1a1a1a; padding:12px 14px; border-radius:8px;
+      font-family:'Nunito Sans',sans-serif; font-size:15px;
+      font-weight:600; outline:none; transition:border-color 0.2s;
+    }
+    .auth-input-group input:focus { border-color:#e31837; background:#fff; }
+    .auth-submit-btn {
+      width:100%; padding:14px; background:#e31837; color:#fff;
+      border:none; border-radius:8px;
+      font-family:'Nunito Sans',sans-serif; font-size:15px;
+      font-weight:800; cursor:pointer; transition:background 0.2s;
+      margin-top:4px;
+    }
+    .auth-submit-btn:hover { background:#c01230; }
+    .auth-error {
+      color:#e31837; font-size:13px; font-weight:700;
+      text-align:center; margin-top:10px; min-height:18px;
+    }
+    .auth-skip {
+      display:block; text-align:center; margin-top:14px;
+      font-size:13px; font-weight:700; color:#999;
+      cursor:pointer; transition:color 0.2s;
+    }
+    .auth-skip:hover { color:#555; }
+    .auth-close {
+      position:absolute; top:14px; right:14px;
+      background:#f5f5f5; border:none; color:#1a1a1a;
+      width:32px; height:32px; border-radius:50%;
+      font-size:16px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+
+    /* Scroll prompt banner */
+    #auth-scroll-prompt {
+      display:none; position:fixed; bottom:80px; left:50%;
+      transform:translateX(-50%); z-index:99000;
+      background:#1a1a1a; color:#fff; border-radius:30px;
+      padding:12px 24px; font-size:13px; font-weight:700;
+      box-shadow:0 4px 20px rgba(0,0,0,0.25);
+      cursor:pointer; white-space:nowrap;
+      animation:fadeUp 0.4s ease;
+      border:2px solid #e31837;
+    }
+    #auth-scroll-prompt span { color:#e31837; }
+
+    /* Navbar user button */
+    .nav-user-btn {
+      background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3);
+      color:#fff; padding:7px 14px; border-radius:6px;
+      font-family:'Nunito Sans',sans-serif; font-size:13px; font-weight:700;
+      cursor:pointer; transition:all 0.2s; white-space:nowrap;
+    }
+    .nav-user-btn:hover { background:rgba(255,255,255,0.3); }
+    .nav-user-btn.logged-in { background:rgba(255,255,255,0.25); border-color:rgba(255,255,255,0.5); }
+    
     /* ── LIGHTBOX ── */
     #lightbox-overlay {
       display:none; position:fixed; inset:0;
@@ -200,6 +302,61 @@
   </div>
   <input type="hidden" id="category-filter" value="all"/>
 
+  <!-- AUTH SCROLL PROMPT -->
+  <div id="auth-scroll-prompt" onclick="openAuthModal()">
+    ✨ <span>Login</span> for a personalised experience
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div id="auth-overlay" onclick="closeAuthIfOutside(event)">
+    <div id="auth-modal">
+      <button class="auth-close" onclick="closeAuth()">✕</button>
+      <div class="auth-logo">
+        <span>MR CLEARANCE</span>
+      </div>
+      <h2 class="auth-title" id="auth-title">Welcome Back 👋</h2>
+      <p class="auth-sub" id="auth-sub">Login to save your cart, track orders and get a faster checkout experience.</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Create Account</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="auth-login-form">
+        <div class="auth-input-group">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="your@email.com"/>
+        </div>
+        <div class="auth-input-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Your password" onkeydown="if(event.key==='Enter')submitLogin()"/>
+        </div>
+        <button class="auth-submit-btn" onclick="submitLogin()">Login to My Account</button>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="auth-register-form" style="display:none;">
+        <div class="auth-input-group">
+          <label>Your Name</label>
+          <input type="text" id="register-name" placeholder="e.g. Aisha"/>
+        </div>
+        <div class="auth-input-group">
+          <label>Email Address</label>
+          <input type="email" id="register-email" placeholder="your@email.com"/>
+        </div>
+        <div class="auth-input-group">
+          <label>Password</label>
+          <input type="password" id="register-password" placeholder="Choose a password (min 6 characters)" onkeydown="if(event.key==='Enter')submitRegister()"/>
+        </div>
+        <button class="auth-submit-btn" onclick="submitRegister()">Create My Account</button>
+      </div>
+
+      <p class="auth-error" id="auth-error"></p>
+      <span class="auth-skip" onclick="closeAuth()">Maybe later — continue browsing</span>
+    </div>
+  </div>
+
   <!-- PRODUCT DETAIL MODAL -->
   <div id="pdp-overlay" onclick="closePdpIfOutside(event)">
     <div id="pdp-modal">
@@ -264,6 +421,7 @@
     </div>
     <div class="nav-right">
       <input type="text" id="search-input" class="nav-search" placeholder="🔍 Search products..." oninput="filterProducts()"/>
+      <button class="nav-user-btn" id="nav-user-btn" onclick="openAuthModal()">👤 Login</button>
       <div class="cart-icon" onclick="toggleCart()">🛒 <span class="cart-count" id="cart-count">0</span></div>
     </div>
   </nav>
@@ -347,6 +505,135 @@
   <footer class="footer"><p>© 2026 Mr Clearance. All rights reserved. | Payments secured by PayFast</p></footer>
 
   <script>
+
+    // ── CUSTOMER AUTH ─────────────────────────────────────────────
+  var authScrollShown = false;
+    
+  // Show scroll prompt after 50% scroll — only once per session
+  window.addEventListener('scroll', function() {
+    if (authScrollShown) return;
+    if (window.mrcUser) return; // already logged in
+    var scrollPct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    if (scrollPct >= 50) {
+      authScrollShown = true;
+      var prompt = document.getElementById('auth-scroll-prompt');
+      prompt.style.display = 'block';
+      setTimeout(function() {
+        prompt.style.animation = 'none';
+        prompt.style.opacity = '1';
+      }, 100);
+      // Auto hide after 8 seconds
+      setTimeout(function() {
+        prompt.style.opacity = '0';
+        prompt.style.transition = 'opacity 0.5s';
+        setTimeout(function(){ prompt.style.display = 'none'; }, 500);
+      }, 8000);
+    }
+  }, { passive: true });
+
+  function openAuthModal() {
+    document.getElementById('auth-scroll-prompt').style.display = 'none';
+    if (window.mrcUser) { showUserMenu(); return; }
+    document.getElementById('auth-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('auth-error').textContent = '';
+  }
+
+  function closeAuth() {
+    document.getElementById('auth-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function closeAuthIfOutside(e) {
+    if (e.target === document.getElementById('auth-overlay')) closeAuth();
+  }
+
+  function switchAuthTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('auth-login-form').style.display    = tab === 'login' ? 'block' : 'none';
+    document.getElementById('auth-register-form').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('auth-error').textContent = '';
+  }
+
+  function submitLogin() {
+    var email    = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+    var errEl    = document.getElementById('auth-error');
+    if (!email || !password) { errEl.textContent = '❌ Please fill in all fields'; return; }
+    errEl.textContent = '⏳ Logging in...';
+    window.fbLogin(email, password).then(function(user) {
+      closeAuth();
+      showToast('✅ Welcome back ' + (user.displayName || user.email.split('@')[0]) + '!');
+    }).catch(function(e) {
+      errEl.textContent = e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
+        ? '❌ Wrong email or password. Try again.'
+        : '❌ ' + (e.message || 'Login failed. Try again.');
+    });
+  }
+
+  function submitRegister() {
+    var name     = document.getElementById('register-name').value.trim();
+    var email    = document.getElementById('register-email').value.trim();
+    var password = document.getElementById('register-password').value;
+    var errEl    = document.getElementById('auth-error');
+    if (!name || !email || !password) { errEl.textContent = '❌ Please fill in all fields'; return; }
+    if (password.length < 6) { errEl.textContent = '❌ Password must be at least 6 characters'; return; }
+    errEl.textContent = '⏳ Creating your account...';
+    window.fbRegister(email, password, name).then(function(user) {
+      closeAuth();
+      showToast('🎉 Welcome to Mr Clearance, ' + name + '!');
+    }).catch(function(e) {
+      errEl.textContent = e.code === 'auth/email-already-in-use'
+        ? '❌ That email is already registered. Try logging in.'
+        : '❌ ' + (e.message || 'Registration failed. Try again.');
+    });
+  }
+
+  function updateNavForLoggedInUser(user) {
+    var btn = document.getElementById('nav-user-btn');
+    if (!btn) return;
+    var name = user.displayName || user.email.split('@')[0];
+    btn.textContent = '👤 ' + name;
+    btn.classList.add('logged-in');
+    btn.onclick = showUserMenu;
+  }
+
+  function updateNavForLoggedOutUser() {
+    var btn = document.getElementById('nav-user-btn');
+    if (!btn) return;
+    btn.textContent = '👤 Login';
+    btn.classList.remove('logged-in');
+    btn.onclick = openAuthModal;
+  }
+
+  function loadCustomerProfile(user) {
+    window.fbGetCustomerProfile(user.uid).then(function(profile) {
+      if (profile) {
+        // Pre-fill checkout name if available
+        var nameEl = document.getElementById('cust-name');
+        if (nameEl && !nameEl.value && profile.displayName) nameEl.value = profile.displayName;
+        // Pre-fill saved address
+        var addrEl = document.getElementById('cust-address');
+        if (addrEl && !addrEl.value && profile.savedAddress) {
+          addrEl.value = profile.savedAddress;
+          checkAddress();
+        }
+      }
+    }).catch(function(){});
+  }
+
+  function showUserMenu() {
+    var user = window.mrcUser;
+    if (!user) { openAuthModal(); return; }
+    var name = user.displayName || user.email.split('@')[0];
+    var confirmed = confirm('Logged in as ' + user.email + '\n\nTap OK to logout, or Cancel to stay logged in.');
+    if (confirmed) {
+      window.fbLogout().then(function() {
+        showToast('👋 You have been logged out.');
+      });
+    }
+  }
   // ── DEFAULTS ──────────────────────────────────────────────────
   var DEFAULT_PRODUCTS = [
     { id:1, name:'Air Max Sneakers', price:1299, category:'footwear', badge:'SALE', images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80','https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&q=80'], desc:'Ultra-light running shoes built for speed and style.', sizes:[{label:'7'},{label:'8'},{label:'9'},{label:'10'},{label:'11'}], specs:[{key:'Material',value:'Mesh & Rubber'},{key:'Sole',value:'Air cushion'}] },
