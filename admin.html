@@ -317,10 +317,12 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <!-- Firebase -->
-  <script type="module">
+<script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
+    // ✅ Added the missing imports: getDocs, addDoc, updateDoc, deleteDoc
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    
     const firebaseConfig = {
       apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
       authDomain: "mr-clearance.firebaseapp.com",
@@ -329,8 +331,14 @@
       messagingSenderId: "427065460022",
       appId: "1:427065460022:web:77f93829d76cd9c2fd5f97"
     };
-   const db   = getFirestore(app);
+    
+    // ✅ FIX: Actually initialize the Firebase app first
+    const app = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
     const auth = getAuth(app);
+
+    // ✅ FIX: Define colRef so the CRUD functions know where to look
+    const colRef = collection(db, 'products');
 
     // Save db and auth globally
     window.mrcDb   = db;
@@ -340,11 +348,11 @@
     onAuthStateChanged(auth, function(user) {
       if (user) {
         window.mrcUser = user;
-        updateNavForLoggedInUser(user);
-        loadCustomerProfile(user);
+        if(typeof updateNavForLoggedInUser === 'function') updateNavForLoggedInUser(user);
+        if(typeof loadCustomerProfile === 'function') loadCustomerProfile(user);
       } else {
         window.mrcUser = null;
-        updateNavForLoggedOutUser();
+        if(typeof updateNavForLoggedOutUser === 'function') updateNavForLoggedOutUser();
       }
     });
 
@@ -358,63 +366,72 @@
         joinedAt: extraData.joinedAt || new Date().toISOString(),
       }, { merge: true });
     };
+    
     window.fbGetCustomerProfile = async function(uid) {
       const snap = await getDoc(doc(db, 'customers', uid));
       return snap.exists() ? snap.data() : null;
     };
+    
     window.fbRegister = async function(email, password, name) {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await window.fbSaveCustomer(cred.user, { name, joinedAt: new Date().toISOString() });
       return cred.user;
     };
+    
     window.fbLogin = async function(email, password) {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       await window.fbSaveCustomer(cred.user, {});
       return cred.user;
     };
+    
     window.fbLogout = async function() {
       await signOut(auth);
     };
 
-    onSnapshot(collection(db, 'products'), function(snap) {
     // Helper: strip oversized base64 images — Firestore has 1MB doc limit
     function sanitiseImages(images) {
       return (images || []).map(function(src) {
-        // If it's a base64 string over ~500KB, warn and skip it
         if (typeof src === 'string' && src.startsWith('data:') && src.length > 600000) {
-          return null; // will be filtered out
+          return null; 
         }
         return src;
       }).filter(Boolean);
     }
 
+    // ✅ FIX: Removed the broken onSnapshot wrapper
     window.fbGetProducts = async function() {
       const snap = await getDocs(colRef);
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     };
+    
     window.fbAddProduct = async function(product) {
       const safe = Object.assign({}, product, { images: sanitiseImages(product.images) });
       const docRef = await addDoc(colRef, safe);
       return docRef.id;
     };
+    
     window.fbUpdateProduct = async function(id, product) {
       const safe = product.images ? Object.assign({}, product, { images: sanitiseImages(product.images) }) : product;
       await updateDoc(doc(db, 'products', id), safe);
     };
+    
     window.fbDeleteProduct = async function(id) {
       await deleteDoc(doc(db, 'products', id));
     };
+    
     window.fbListen = function(callback) {
       return onSnapshot(colRef, snap => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     };
-      window.fbListenCustomers = function(callback) {
+    
+    window.fbListenCustomers = function(callback) {
       const custRef = collection(db, 'customers');
       onSnapshot(custRef, snap => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     };
+
     window.firebaseReady = true;
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
