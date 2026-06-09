@@ -319,8 +319,8 @@
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot }
-      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     const firebaseConfig = {
       apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
       authDomain: "mr-clearance.firebaseapp.com",
@@ -329,9 +329,54 @@
       messagingSenderId: "427065460022",
       appId: "1:427065460022:web:77f93829d76cd9c2fd5f97"
     };
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-    const colRef = collection(db, 'products');
+   const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Save db and auth globally
+    window.mrcDb   = db;
+    window.mrcAuth = auth;
+
+    // Listen for auth state changes
+    onAuthStateChanged(auth, function(user) {
+      if (user) {
+        window.mrcUser = user;
+        updateNavForLoggedInUser(user);
+        loadCustomerProfile(user);
+      } else {
+        window.mrcUser = null;
+        updateNavForLoggedOutUser();
+      }
+    });
+
+    // Firebase helpers
+    window.fbSaveCustomer = async function(user, extraData) {
+      await setDoc(doc(db, 'customers', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: extraData.name || '',
+        lastSeen: new Date().toISOString(),
+        joinedAt: extraData.joinedAt || new Date().toISOString(),
+      }, { merge: true });
+    };
+    window.fbGetCustomerProfile = async function(uid) {
+      const snap = await getDoc(doc(db, 'customers', uid));
+      return snap.exists() ? snap.data() : null;
+    };
+    window.fbRegister = async function(email, password, name) {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await window.fbSaveCustomer(cred.user, { name, joinedAt: new Date().toISOString() });
+      return cred.user;
+    };
+    window.fbLogin = async function(email, password) {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      await window.fbSaveCustomer(cred.user, {});
+      return cred.user;
+    };
+    window.fbLogout = async function() {
+      await signOut(auth);
+    };
+
+    onSnapshot(collection(db, 'products'), function(snap) {
     // Helper: strip oversized base64 images — Firestore has 1MB doc limit
     function sanitiseImages(images) {
       return (images || []).map(function(src) {
