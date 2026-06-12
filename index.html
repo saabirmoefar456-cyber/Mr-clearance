@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Mr Clearance — Shop Online</title>
   <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     /* ── PRODUCT DETAIL MODAL (Temu/Shein style) ── */
@@ -844,6 +845,44 @@
     var confirmed = confirm('Logged in as ' + user.email + '\n\nTap OK to logout, Cancel to stay logged in.');
     if (confirmed) window.fbLogout().then(function(){ showToast('👋 You have been logged out.'); });
   }
+    // ── EMAILJS SETUP ─────────────────────────────────────────────
+  // Replace these 3 values with your own from emailjs.com
+  var EMAILJS_PUBLIC_KEY  = 'n_H76QVzjLAjQ82vF';
+  var EMAILJS_SERVICE_ID  = 'py8t3yc';
+  var EMAILJS_TEMPLATE_ID = 'template_75qtc96';
+
+  // Initialise EmailJS
+  (function() {
+    if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    else window.addEventListener('load', function() {
+      if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    });
+  })();
+
+  function sendOrderConfirmationEmail(params) {
+    // Only send if customer is logged in and has email
+    var userEmail = window.mrcUser ? window.mrcUser.email : null;
+    if (!userEmail) return; // not logged in — skip email
+    if (typeof emailjs === 'undefined') return;
+    var templateParams = {
+      customer_name:        params.name,
+      customer_email:       userEmail,
+      order_number:         params.orderNumber,
+      items_list:           params.itemsList,
+      subtotal:             'R ' + params.cartTotal.toLocaleString(),
+      delivery_fee:         params.deliveryFee > 0 ? 'R ' + params.deliveryFee.toLocaleString() : 'FREE',
+      grand_total:          'R ' + params.grandTotal.toLocaleString(),
+      fulfilment:           params.deliveryInfo,
+      collection_or_delivery: params.selectedFulfilment === 'collection'
+        ? 'Please collect from: 368 Imam Haron Road, Lansdowne\nMonday – Saturday, 9am – 5pm'
+        : 'We will contact you on WhatsApp to confirm your delivery time and details.',
+      store_name:           'Mr Clearance',
+      store_url:            'webuyanything.xyz'
+    };
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+      .then(function() { showToast('📧 Confirmation email sent to ' + userEmail); })
+      .catch(function(e) { console.warn('Email send failed:', e); });
+  }
   // ── DEFAULTS ──────────────────────────────────────────────────
   var DEFAULT_PRODUCTS = [
     { id:1, name:'Air Max Sneakers', price:1299, category:'footwear', badge:'SALE', images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80','https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&q=80'], desc:'Ultra-light running shoes built for speed and style.', sizes:[{label:'7'},{label:'8'},{label:'9'},{label:'10'},{label:'11'}], specs:[{key:'Material',value:'Mesh & Rubber'},{key:'Sole',value:'Air cushion'}] },
@@ -1135,10 +1174,26 @@
   var selectedFulfilment='delivery', withinRange=false, currentOrderNumber='';
   var NEARBY_SUBURBS=['lansdowne','crawford','athlone','belgravia','claremont','kenwyn','rondebosch','wetton','wynberg','plumstead','ottery','hanover park','gatesville','penlyn','kewtown','silvertown','bridgetown'];
   function generateOrderNumber(){ return 'MRC-'+Date.now().toString().slice(-6)+Math.floor(Math.random()*100); }
-  function openDelivery(){
+ function openDelivery(){
     if(cart.length===0){showToast('🛒 Add items to your cart first!');return;}
     currentOrderNumber=generateOrderNumber();
     document.getElementById('order-number-display').textContent=currentOrderNumber;
+
+    // Auto-fill customer details from profile if logged in
+    if (window.mrcUser) {
+      var nameEl = document.getElementById('cust-name');
+      var addrEl = document.getElementById('cust-address');
+      if (nameEl && !nameEl.value) nameEl.value = window.mrcUser.displayName || '';
+      if (window.fbGetCustomerProfile) {
+        window.fbGetCustomerProfile(window.mrcUser.uid).then(function(profile) {
+          if (profile && profile.savedAddress && addrEl && !addrEl.value) {
+            addrEl.value = profile.savedAddress;
+            checkAddress();
+          }
+        }).catch(function(){});
+      }
+    }
+
     updateModalSummary();
     document.getElementById('delivery-overlay').style.display='block';
     document.getElementById('delivery-modal').style.display='block';
@@ -1177,27 +1232,123 @@
     var feeEl=document.getElementById('modal-delivery-fee');
     if(selectedFulfilment==='collection'){feeEl.textContent='FREE';feeEl.style.color='#27ae60';}else{feeEl.textContent=deliveryFee>0?'R '+deliveryFee:'TBC';feeEl.style.color='#1a1a1a';}
   }
-  function submitOrder(){
-    var name=document.getElementById('cust-name').value.trim(), whatsapp=document.getElementById('cust-whatsapp').value.trim(), notes=document.getElementById('cust-notes').value.trim();
-    if(!name){showToast('❌ Please enter your name');return;}
-    if(!whatsapp){showToast('❌ Please enter your WhatsApp number');return;}
+ function submitOrder(){
+    var name     = document.getElementById('cust-name').value.trim();
+    var whatsapp = document.getElementById('cust-whatsapp').value.trim();
+    var notes    = document.getElementById('cust-notes').value.trim();
+
+    // Auto-fill from logged in customer profile
+    if (!name && window.mrcUser && window.mrcUser.displayName) {
+      name = window.mrcUser.displayName;
+      document.getElementById('cust-name').value = name;
+    }
+
+    if (!name)     { showToast('❌ Please enter your name'); return; }
+    if (!whatsapp) { showToast('❌ Please enter your WhatsApp number'); return; }
+
     var address='', deliveryInfo='', deliveryFee=0;
-    if(selectedFulfilment==='delivery'){
-      address=document.getElementById('cust-address').value.trim();
-      if(!address){showToast('❌ Please enter your delivery address');return;}
-      if(withinRange){deliveryFee=DELIVERY_FEE;deliveryInfo='🚚 Local Delivery (R'+DELIVERY_FEE+')';}
-      else{var paxiEl=document.getElementById('paxi-option');if(!paxiEl.value){showToast('❌ Please select a PAXI option');return;}var parts=paxiEl.value.split('|');deliveryFee=parseFloat(parts[1]);deliveryInfo='📦 PAXI: '+parts[0]+' (R'+deliveryFee+')';}
-    }else{deliveryInfo='🏪 Collection from '+STORE_ADDR;address=STORE_ADDR;deliveryFee=0;}
-    var subtotal=cart.reduce(function(s,i){return s+i.price*i.qty;},0), discount=Math.round(subtotal*discountPct/100), cartTotal=subtotal-discount, grandTotal=cartTotal+deliveryFee;
-    var itemsList=cart.map(function(i){return i.qty+'x '+i.name+' @ R'+i.price.toLocaleString();}).join('%0A');
-    var ownerMsg='🛒 *NEW ORDER — '+currentOrderNumber+'*%0A━━━━━━━━━━━━━━━━━━━━%0A*Customer:* '+name+'%0A*WhatsApp:* '+whatsapp+'%0A*Address:* '+address+'%0A*Fulfilment:* '+deliveryInfo+'%0A━━━━━━━━━━━━━━━━━━━━%0A*Items:*%0A'+itemsList+'%0A━━━━━━━━━━━━━━━━━━━━%0A*Subtotal:* R'+cartTotal.toLocaleString()+'%0A*Delivery:* R'+deliveryFee.toLocaleString()+'%0A*TOTAL: R'+grandTotal.toLocaleString()+'*%0A'+(notes?'📝 *Notes:* '+notes:'')+'%0A━━━━━━━━━━━━━━━━━━━━';
-    var cleanWA=whatsapp.replace(/^0/,'27').replace(/\s/g,'');
-    var custMsg='✅ *Order Confirmed — Mr Clearance*%0A━━━━━━━━━━━━━━━━━━━━%0A*Order No:* '+currentOrderNumber+'%0A*Name:* '+name+'%0A*Fulfilment:* '+deliveryInfo+'%0A━━━━━━━━━━━━━━━━━━━━%0A*Your Items:*%0A'+itemsList+'%0A━━━━━━━━━━━━━━━━━━━━%0A*Total to Pay: R'+grandTotal.toLocaleString()+'*%0A'+(selectedFulfilment==='collection'?'📍 *Collect at:* '+STORE_ADDR+'%0AMon–Sat, 9am–5pm':'🚚 We will contact you to confirm delivery time')+'%0A%0AThank you for shopping with Mr Clearance! 🛍️';
-    window.open('https://wa.me/'+OWNER_WHATSAPP+'?text='+ownerMsg,'_blank');
-    setTimeout(function(){window.open('https://wa.me/'+cleanWA+'?text='+custMsg,'_blank');},1500);
-    showToast('✅ Order '+currentOrderNumber+' sent via WhatsApp!');
+    if (selectedFulfilment==='delivery') {
+      address = document.getElementById('cust-address').value.trim();
+      if (!address) { showToast('❌ Please enter your delivery address'); return; }
+      if (withinRange) {
+        deliveryFee  = DELIVERY_FEE;
+        deliveryInfo = '🚚 Local Delivery (R'+DELIVERY_FEE+')';
+      } else {
+        var paxiEl = document.getElementById('paxi-option');
+        if (!paxiEl.value) { showToast('❌ Please select a PAXI option'); return; }
+        var parts   = paxiEl.value.split('|');
+        deliveryFee  = parseFloat(parts[1]);
+        deliveryInfo = '📦 PAXI: '+parts[0]+' (R'+deliveryFee+')';
+      }
+    } else {
+      deliveryInfo = '🏪 Collection from '+STORE_ADDR;
+      address      = STORE_ADDR;
+      deliveryFee  = 0;
+    }
+
+    var subtotal   = cart.reduce(function(s,i){ return s+i.price*i.qty; }, 0);
+    var discount   = Math.round(subtotal*discountPct/100);
+    var cartTotal  = subtotal-discount;
+    var grandTotal = cartTotal+deliveryFee;
+    var itemsList  = cart.map(function(i){ return i.qty+'x '+i.name+' @ R'+i.price.toLocaleString(); }).join('%0A');
+    var itemsPlain = cart.map(function(i){ return i.qty+'x '+i.name+' @ R'+i.price.toLocaleString(); }).join('\n');
+
+    // ── WHATSAPP — Owner message ──
+    var ownerMsg =
+      '🛒 *NEW ORDER — '+currentOrderNumber+'*%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Customer:* '+name+'%0A'+
+      '*WhatsApp:* '+whatsapp+'%0A'+
+      '*Email:* '+(window.mrcUser ? window.mrcUser.email : 'Guest')+'%0A'+
+      '*Address:* '+address+'%0A'+
+      '*Fulfilment:* '+deliveryInfo+'%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Items:*%0A'+itemsList+'%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Subtotal:* R'+cartTotal.toLocaleString()+'%0A'+
+      '*Delivery:* R'+deliveryFee.toLocaleString()+'%0A'+
+      '*TOTAL: R'+grandTotal.toLocaleString()+'*%0A'+
+      (notes ? '📝 *Notes:* '+notes : '')+'%0A'+
+      '━━━━━━━━━━━━━━━━━━━━';
+
+    // ── WHATSAPP — Customer message ──
+    var cleanWA  = whatsapp.replace(/^0/,'27').replace(/\s/g,'');
+    var custMsg  =
+      '✅ *Order Confirmed — Mr Clearance*%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Order No:* '+currentOrderNumber+'%0A'+
+      '*Name:* '+name+'%0A'+
+      '*Fulfilment:* '+deliveryInfo+'%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Your Items:*%0A'+itemsList+'%0A'+
+      '━━━━━━━━━━━━━━━━━━━━%0A'+
+      '*Total to Pay: R'+grandTotal.toLocaleString()+'*%0A'+
+      (selectedFulfilment==='collection'
+        ? '📍 *Collect at:* '+STORE_ADDR+'%0AMon–Sat, 9am–5pm'
+        : '🚚 We will contact you to confirm delivery time')+
+      '%0A%0AThank you for shopping with Mr Clearance! 🛍️';
+
+    // Open WhatsApp for owner
+    window.open('https://wa.me/'+OWNER_WHATSAPP+'?text='+ownerMsg, '_blank');
+
+    // Open WhatsApp for customer after short delay
+    setTimeout(function(){
+      window.open('https://wa.me/'+cleanWA+'?text='+custMsg, '_blank');
+    }, 1500);
+
+    // ── EMAIL — Send confirmation to logged-in customer ──
+    sendOrderConfirmationEmail({
+      name:              name,
+      orderNumber:       currentOrderNumber,
+      itemsList:         itemsPlain,
+      cartTotal:         cartTotal,
+      deliveryFee:       deliveryFee,
+      grandTotal:        grandTotal,
+      deliveryInfo:      deliveryInfo,
+      selectedFulfilment: selectedFulfilment
+    });
+
+    // ── Save address to customer profile if logged in ──
+    if (window.mrcUser && window.mrcDb && address && address !== STORE_ADDR) {
+      try {
+        var { doc, setDoc } = window.mrcFirestoreFns || {};
+        if (window.mrcDb && window.mrcUser) {
+          import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js')
+            .then(function(m) {
+              m.setDoc(m.doc(window.mrcDb, 'customers', window.mrcUser.uid),
+                { savedAddress: address, lastSeen: new Date().toISOString() },
+                { merge: true }
+              );
+            }).catch(function(){});
+        }
+      } catch(e) {}
+    }
+
+    showToast('✅ Order '+currentOrderNumber+' confirmed!');
+    cart = [];
+    updateCartUI();
     closeDelivery();
-  }
+   }
 
   // ── CATEGORY ──────────────────────────────────────────────────
   function toggleCatMenu(){ document.getElementById('cat-sidebar').classList.toggle('open'); document.getElementById('cat-overlay').classList.toggle('open'); }
