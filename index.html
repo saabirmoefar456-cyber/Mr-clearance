@@ -852,13 +852,13 @@
   var EMAILJS_TEMPLATE_ID = 'template_75qtc96';
 
   // Initialise EmailJS
-  (function() {
-    if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-    else window.addEventListener('load', function() {
-      if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-    });
+ (function initEJS() {
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    } else {
+      setTimeout(initEJS, 300);
+    }
   })();
-
   function sendOrderConfirmationEmail(params) {
     // Only send if customer is logged in and has email
     var userEmail = window.mrcUser ? window.mrcUser.email : null;
