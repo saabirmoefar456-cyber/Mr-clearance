@@ -550,7 +550,8 @@
         <input type="hidden" name="notify_url" value="https://webuyanything.xyz/notify"/>
         <input type="hidden" name="item_name" id="pf-item-name" value="Mr Clearance Order"/>
         <input type="hidden" name="amount" id="pf-amount" value="0.00"/>
-        <button type="button" class="checkout-btn" onclick="openDelivery()">🚚 Checkout &amp; Delivery</button>
+       <button type="button" class="checkout-btn" onclick="openDelivery()">🚚 Checkout &amp; Delivery</button>
+       <button type="button" class="checkout-btn" onclick="openPayfast()" style="margin-top:10px;background:#1a1a1a;">💳 Pay Now with PayFast</button>
       </form>
       <p class="payment-icons">All major bank cards accepted</p>
     </div>
@@ -1237,6 +1238,16 @@
     document.getElementById('modal-total').textContent='R '+grandTotal.toLocaleString();
     var feeEl=document.getElementById('modal-delivery-fee');
     if(selectedFulfilment==='collection'){feeEl.textContent='FREE';feeEl.style.color='#27ae60';}else{feeEl.textContent=deliveryFee>0?'R '+deliveryFee:'TBC';feeEl.style.color='#1a1a1a';}
+  }
+    function openPayfast() {
+  if (cart.length === 0) { showToast('🛒 Add items to your cart first!'); return; }
+  var total = cart.reduce(function(s,i){ return s + i.price * i.qty; }, 0);
+  var discount = Math.round(total * discountPct / 100);
+  var finalTotal = total - discount;
+  var itemName = cart.map(function(i){ return i.qty + 'x ' + i.name; }).join(', ');
+  document.getElementById('pf-amount').value    = finalTotal.toFixed(2);
+  document.getElementById('pf-item-name').value = itemName;
+  document.getElementById('payfast-form').submit();
   }
  function submitOrder(){
     var name     = document.getElementById('cust-name').value.trim();
