@@ -473,10 +473,11 @@ body {
 }
 
 /* ── AD SLOTS ──────────────────────────────────────────────────
-   Holds either a self-promo banner (default) or a third-party ad
-   unit (e.g. an AdSense <ins> block) once approved. The outer
-   .ad-slot frame and "Sponsored" label stay constant either way,
-   so swapping ad-slot-N-inner's contents never breaks the layout. */
+   Holds either a self-promo banner (default, image-led product
+   spotlight) or a third-party ad unit (e.g. an AdSense <ins>
+   block) once approved. The outer .ad-slot frame and "Sponsored"
+   label stay constant either way, so swapping ad-slot-N-inner's
+   contents never breaks the layout. */
 .ad-slot {
   max-width:1280px; margin:8px auto 0; padding:0 24px;
   display:flex; flex-direction:column; align-items:center; gap:6px;
@@ -490,29 +491,46 @@ body {
   background:var(--kraft); border:1px solid var(--kraft-dark);
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
+
+/* Image-led promo card */
 .ad-promo {
-  width:100%; display:flex; align-items:center; gap:16px;
-  padding:18px 24px; flex-wrap:wrap; justify-content:center; text-align:center;
+  width:100%; display:flex; align-items:stretch; min-height:140px;
+  cursor:pointer; transition:box-shadow 0.2s; position:relative;
+}
+.ad-promo:hover { box-shadow:inset 0 0 0 2px var(--red); }
+.ad-promo-img-wrap {
+  width:160px; flex-shrink:0; background:#fff; overflow:hidden; position:relative;
+}
+.ad-promo-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+.ad-promo-content {
+  flex:1; display:flex; flex-direction:column; justify-content:center;
+  padding:18px 24px; gap:6px; min-width:0;
 }
 .ad-promo-tag {
-  font-family:var(--font-tag); font-size:11px; font-weight:700; letter-spacing:1.5px;
+  font-family:var(--font-tag); font-size:10px; font-weight:700; letter-spacing:1.5px;
   color:#fff; background:var(--ink); text-transform:uppercase;
-  padding:5px 12px; border-radius:var(--radius-sm); flex-shrink:0;
+  padding:4px 10px; border-radius:var(--radius-sm); flex-shrink:0; width:fit-content;
 }
 .ad-promo-text {
-  font-family:var(--font-tag); font-size:16px; font-weight:600; color:var(--ink);
-  letter-spacing:0.2px;
+  font-family:var(--font-display); font-size:18px; color:var(--ink);
+  letter-spacing:-0.2px; line-height:1.2;
 }
+.ad-promo-price-row { display:flex; align-items:baseline; gap:8px; }
+.ad-promo-price { font-family:var(--font-display); font-size:20px; color:var(--red); }
+.ad-promo-price-was { font-family:var(--font-tag); font-size:13px; color:var(--text-light); text-decoration:line-through; }
 .ad-promo-btn {
   font-family:var(--font-tag); font-size:12px; font-weight:700; letter-spacing:0.5px;
   color:#fff; background:var(--red); border:none; text-transform:uppercase;
   padding:9px 18px; border-radius:var(--radius-sm); cursor:pointer; flex-shrink:0;
-  transition:background 0.2s;
+  transition:background 0.2s; width:fit-content; margin-top:4px;
 }
 .ad-promo-btn:hover { background:var(--red-dark); }
 
 @media (max-width:600px) {
   .ad-slot { padding:0 12px; }
-  .ad-promo { padding:14px 16px; gap:10px; }
-  .ad-promo-text { font-size:13px; }
+  .ad-promo { min-height:120px; }
+  .ad-promo-img-wrap { width:110px; }
+  .ad-promo-content { padding:12px 14px; gap:4px; }
+  .ad-promo-text { font-size:14px; }
+  .ad-promo-price { font-size:17px; }
 }
