@@ -6,7 +6,7 @@
   <title>Mr Clearance — Shop Online</title>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
   <style>
     /* ── PRODUCT DETAIL MODAL (Temu/Shein style) ── */
     #pdp-overlay {
@@ -571,6 +571,19 @@
     <div class="hero-skew"></div>
   </section>
 
+  <!-- AD SLOT 2 — between Hero and Products.
+       Default: self-promo banner. Swap inner content for an AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-2">
+    <span class="ad-slot-label">Sponsored</span>
+    <div class="ad-slot-inner" id="ad-slot-2-inner">
+      <div class="ad-promo">
+        <span class="ad-promo-tag">New In</span>
+        <strong class="ad-promo-text">Fresh stock just landed — Work Wear &amp; Aprons</strong>
+        <button class="ad-promo-btn" onclick="selectCat('workwear')">Shop Now →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- PRODUCTS -->
   <section class="products-section">
     <div class="section-header">
@@ -580,6 +593,19 @@
     <div class="products-grid" id="products-grid"></div>
     <p class="no-results" id="no-results" style="display:none;">😕 No products found. Try a different search.</p>
   </section>
+
+  <!-- AD SLOT 1 — between Products and Deals.
+       Default: self-promo banner. Swap inner content for an AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-1">
+    <span class="ad-slot-label">Sponsored</span>
+    <div class="ad-slot-inner" id="ad-slot-1-inner">
+      <div class="ad-promo">
+        <span class="ad-promo-tag">This Week</span>
+        <strong class="ad-promo-text">Free local delivery on orders over R500</strong>
+        <button class="ad-promo-btn" onclick="document.querySelector('.deals-section').scrollIntoView({behavior:'smooth'})">See Deals →</button>
+      </div>
+    </div>
+  </div>
 
   <!-- DEALS -->
   <section class="deals-section" id="deals">
@@ -937,7 +963,7 @@
         html += '<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;pointer-events:none;">📷 ' + imgs.length + '</span>';
       }
       if (p.badge) html += '<span class="badge-sale">' + escHtml(p.badge) + '</span>';
-      if (hasSizes) html += '<span style="position:absolute;top:8px;right:8px;background:rgba(227,24,55,0.9);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;pointer-events:none;">SIZES</span>';
+      if (hasSizes) html += '<span style="position:absolute;top:10px;right:10px;background:var(--ink);color:#fff;font-family:var(--font-tag);font-size:9px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;pointer-events:none;text-transform:uppercase;">Sizes</span>';
       html += '</div>';
       html += '<div class="card-body">';
       html += '<h3>' + escHtml(p.name) + '</h3>';
