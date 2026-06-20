@@ -1,10 +1,10 @@
 /* =============================================
    style.css — MR CLEARANCE
-   Takealot-inspired White & Red Theme
-   Font: Nunito Sans
+   Clearance-tag / warehouse-deal visual identity
+   Display: Archivo Black + Oswald · Body: Nunito Sans
    ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&display=swap');
 
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -15,21 +15,30 @@
   --red-soft:   rgba(227,24,55,0.08);
   --red-border: rgba(227,24,55,0.22);
 
+  --ink:        #161614;
+  --kraft:      #e8dcc4;
+  --kraft-dark: #cfbf99;
+  --paper:      #faf8f3;
+  --stamp-green:#2f7a4d;
+
   --white:      #ffffff;
-  --bg:         #f4f4f4;
+  --bg:         #f6f4ef;
   --bg-card:    #ffffff;
-  --border:     #e0e0e0;
-  --border-dark:#cccccc;
+  --border:     #e0ddd2;
+  --border-dark:#cfc8b8;
 
   --text:       #1a1a1a;
-  --text-mid:   #555555;
-  --text-light: #999999;
+  --text-mid:   #5a5650;
+  --text-light: #97917f;
 
-  --shadow-sm:  0 1px 4px rgba(0,0,0,0.08);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.13);
-  --radius:     6px;
-  --radius-sm:  3px;
+  --font-display: 'Archivo Black', 'Nunito Sans', sans-serif;
+  --font-tag:     'Oswald', 'Nunito Sans', sans-serif;
+
+  --shadow-sm:  0 1px 4px rgba(22,22,20,0.10);
+  --shadow-md:  0 4px 16px rgba(22,22,20,0.12);
+  --shadow-lg:  0 10px 32px rgba(22,22,20,0.16);
+  --radius:     4px;
+  --radius-sm:  2px;
 }
 
 html, body { overflow-x:hidden; max-width:100%; width:100%; }
@@ -74,17 +83,17 @@ body {
   display:flex; align-items:center; justify-content:space-between;
   padding:0 24px; height:64px; background:var(--red);
   position:sticky; top:0; z-index:1000;
-  box-shadow:0 2px 8px rgba(0,0,0,0.15); gap:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15), 0 3px 0 var(--ink); gap:16px;
 }
 .nav-left  { display:flex; align-items:center; gap:12px; flex-shrink:0; }
 .nav-center{ flex:1; display:flex; justify-content:center; }
 .nav-right { display:flex; align-items:center; gap:12px; flex-shrink:0; }
 
-.nav-logo { font-size:21px; font-weight:900; color:#fff; letter-spacing:0.5px; text-transform:uppercase; }
-.nav-logo span { color:#ffd0d8; }
+.nav-logo { font-family:var(--font-display); font-size:18px; color:#fff; letter-spacing:0.5px; text-transform:uppercase; }
+.nav-logo span { color:var(--kraft); }
 
 .nav-links { list-style:none; display:flex; gap:28px; }
-.nav-links a { color:rgba(255,255,255,0.88); text-decoration:none; font-size:14px; font-weight:700; transition:color 0.2s; }
+.nav-links a { color:rgba(255,255,255,0.88); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase; font-family:var(--font-tag); transition:color 0.2s; }
 .nav-links a:hover { color:#fff; }
 
 .nav-search {
@@ -150,9 +159,10 @@ body {
 @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
 .hero {
-  min-height:420px; background:linear-gradient(135deg,#e31837 0%,#c01230 50%,#8b0a1f 100%);
+  min-height:420px; background:linear-gradient(160deg,#c01230 0%,#8b0a1f 100%);
   display:flex; align-items:center; justify-content:center;
-  position:relative; overflow:hidden; padding:40px 24px;
+  position:relative; overflow:hidden; padding:48px 24px;
+  border-bottom:4px solid var(--ink);
 }
 .hero::before {
   content:''; position:absolute; inset:0;
@@ -167,31 +177,35 @@ body {
 .hero-blob { display:none; }
 .hero-content { text-align:center; z-index:1; animation:fadeUp 0.8s ease 0.2s both; }
 .hero-badge {
-  display:inline-block; font-size:11px; font-weight:800; letter-spacing:2px;
-  color:rgba(255,255,255,0.85); text-transform:uppercase;
-  background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25);
-  padding:5px 16px; border-radius:20px; margin-bottom:20px;
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-tag); font-size:12px; font-weight:700; letter-spacing:2px;
+  color:var(--ink); text-transform:uppercase;
+  background:var(--kraft); border:1px solid rgba(22,22,20,0.15);
+  padding:7px 18px 7px 14px; margin-bottom:24px;
+  clip-path:polygon(0% 50%,4% 0%,100% 0%,100% 100%,4% 100%);
+  box-shadow:0 3px 0 rgba(22,22,20,0.2);
 }
-.hero-title { font-size:clamp(34px,6vw,68px); font-weight:900; color:#fff; line-height:1.1; margin-bottom:16px; letter-spacing:-0.5px; }
-.hero-accent { color:#ffd0d8; }
+.hero-badge::before { content:'●'; color:var(--red); font-size:8px; }
+.hero-title { font-family:var(--font-display); font-size:clamp(36px,6.5vw,72px); color:#fff; line-height:1.05; margin-bottom:18px; letter-spacing:-0.5px; text-transform:uppercase; }
+.hero-accent { color:var(--kraft); }
 .hero-subtitle { font-size:17px; font-weight:600; color:rgba(255,255,255,0.82); margin-bottom:32px; }
 .hero-btns { display:flex; gap:12px; justify-content:center; }
 .cta-btn {
-  padding:14px 44px; font-family:'Nunito Sans',sans-serif; font-size:14px; font-weight:800;
-  letter-spacing:1px; text-transform:uppercase; background:#fff; color:var(--red);
+  padding:14px 44px; font-family:var(--font-tag); font-size:14px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase; background:var(--kraft); color:var(--ink);
   border:none; border-radius:var(--radius); cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,0.2); transition:transform 0.2s,box-shadow 0.2s;
+  box-shadow:0 4px 0 var(--ink); transition:transform 0.15s,box-shadow 0.15s;
 }
-.cta-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.cta-btn:hover { transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
 
 /* ── SECTION HEADER ── */
 .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
-.section-title { font-size:20px; font-weight:900; color:var(--text); position:relative; padding-left:14px; }
+.section-title { font-family:var(--font-display); font-size:19px; color:var(--text); position:relative; padding-left:14px; text-transform:uppercase; letter-spacing:0.3px; }
 .section-title::before {
   content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
   width:4px; height:80%; background:var(--red); border-radius:2px;
 }
-.product-count { font-size:13px; color:var(--text-light); font-weight:600; }
+.product-count { font-size:13px; color:var(--text-light); font-weight:600; font-family:var(--font-tag); }
 
 /* ── PRODUCTS SECTION ── */
 .products-section { padding:40px 24px; max-width:1280px; margin:0 auto; }
@@ -232,8 +246,10 @@ body {
 .badge-sale {
   position:absolute; top:10px; left:10px;
   background:var(--red); color:#fff;
-  font-size:10px; font-weight:800; letter-spacing:1px;
-  padding:3px 9px; border-radius:var(--radius-sm); z-index:3; text-transform:uppercase;
+  font-family:var(--font-tag); font-size:10px; font-weight:700; letter-spacing:1px;
+  padding:4px 10px 4px 8px; z-index:3; text-transform:uppercase;
+  clip-path:polygon(0% 50%,18% 0%,100% 0%,100% 100%,18% 100%);
+  box-shadow:0 2px 0 rgba(22,22,20,0.25);
 }
 
 /* Card body */
@@ -246,7 +262,7 @@ body {
   font-size:12px; color:var(--text-light); line-height:1.5; margin-bottom:10px;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-.price { display:block; font-size:20px; font-weight:900; color:var(--red); margin-bottom:10px; letter-spacing:-0.5px; }
+.price { display:block; font-family:var(--font-display); font-size:19px; color:var(--red); margin-bottom:10px; letter-spacing:-0.3px; }
 
 .qty-row { display:flex; align-items:center; gap:8px; }
 .qty-control { display:flex; align-items:center; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; background:#fafafa; }
@@ -279,7 +295,7 @@ body {
   display:flex; justify-content:space-between; align-items:center;
   padding:18px 20px; background:var(--red);
 }
-.cart-header h3 { font-size:16px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.5px; }
+.cart-header h3 { font-family:var(--font-tag); font-size:16px; font-weight:600; color:#fff; text-transform:uppercase; letter-spacing:1px; }
 .cart-header button {
   background:rgba(255,255,255,0.2); border:none; color:#fff;
   width:30px; height:30px; border-radius:4px; cursor:pointer; font-size:14px;
@@ -326,8 +342,8 @@ body {
 .cart-footer { padding:14px 18px 20px; border-top:1px solid var(--border); background:#fff; }
 .price-breakdown { margin-bottom:14px; }
 .price-row { display:flex; justify-content:space-between; font-size:14px; font-weight:600; color:var(--text-mid); padding:4px 0; }
-.total-row { font-size:16px; font-weight:900; color:var(--text); border-top:2px solid var(--border); padding-top:10px; margin-top:6px; }
-.total-row span:last-child { color:var(--red); }
+.total-row { font-size:15px; font-weight:700; color:var(--text); border-top:2px solid var(--border); padding-top:10px; margin-top:6px; font-family:var(--font-tag); text-transform:uppercase; letter-spacing:0.3px; }
+.total-row span:last-child { color:var(--red); font-family:var(--font-display); font-size:19px; letter-spacing:-0.3px; text-transform:none; }
 .checkout-btn {
   width:100%; padding:14px; background:var(--red); color:#fff; border:none;
   border-radius:var(--radius); font-family:'Nunito Sans',sans-serif;
@@ -342,15 +358,15 @@ body {
 /* ── DEALS SECTION ── */
 .deals-section { padding:48px 24px; max-width:1280px; margin:0 auto; }
 .deals-header { text-align:center; margin-bottom:36px; }
-.deals-title { font-size:clamp(22px,4vw,36px); font-weight:900; color:var(--text); letter-spacing:-0.5px; margin-bottom:8px; }
+.deals-title { font-family:var(--font-display); font-size:clamp(22px,4vw,34px); color:var(--text); letter-spacing:-0.3px; margin-bottom:8px; text-transform:uppercase; }
 .deals-title::after { content:''; display:block; width:56px; height:3px; background:var(--red); margin:12px auto 0; border-radius:2px; }
 .deals-subtitle { font-size:14px; color:var(--text-light); font-weight:600; }
 
 .deals-timer-wrap { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:10px; }
 .timer-label { font-size:11px; font-weight:800; letter-spacing:2px; color:var(--red); text-transform:uppercase; }
 .deals-timer { display:flex; align-items:center; gap:8px; }
-.timer-block { background:var(--text); border-radius:var(--radius); padding:12px 18px; text-align:center; min-width:72px; }
-.timer-block span { display:block; font-size:36px; font-weight:900; color:#fff; line-height:1; letter-spacing:-1px; }
+.timer-block { background:var(--ink); border-radius:var(--radius); padding:12px 18px; text-align:center; min-width:72px; }
+.timer-block span { display:block; font-family:var(--font-display); font-size:34px; color:#fff; line-height:1; letter-spacing:-1px; }
 .timer-block label { font-size:9px; color:rgba(255,255,255,0.5); letter-spacing:2px; text-transform:uppercase; margin-top:4px; display:block; font-weight:700; }
 .timer-sep { font-size:28px; font-weight:900; color:var(--text); margin-bottom:14px; }
 
@@ -360,7 +376,7 @@ body {
   overflow:hidden; position:relative; transition:box-shadow 0.25s,transform 0.25s;
 }
 .deal-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-3px); }
-.deal-badge { position:absolute; top:10px; left:10px; background:var(--red); color:#fff; font-size:10px; font-weight:800; letter-spacing:1px; padding:3px 10px; border-radius:var(--radius-sm); z-index:3; text-transform:uppercase; }
+.deal-badge { position:absolute; top:10px; left:10px; background:var(--red); color:#fff; font-family:var(--font-tag); font-size:10px; font-weight:700; letter-spacing:1px; padding:4px 10px 4px 8px; z-index:3; text-transform:uppercase; clip-path:polygon(0% 50%,18% 0%,100% 0%,100% 100%,18% 100%); box-shadow:0 2px 0 rgba(22,22,20,0.25); }
 .deal-img-wrap { height:220px; overflow:hidden; background:#fafafa; border-bottom:1px solid #f0f0f0; }
 .deal-img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s; }
 .deal-card:hover .deal-img { transform:scale(1.04); }
@@ -369,7 +385,7 @@ body {
 .deal-body p { font-size:13px; color:var(--text-light); margin-bottom:12px; line-height:1.5; }
 .deal-price-wrap { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
 .deal-old-price { font-size:13px; color:var(--text-light); text-decoration:line-through; font-weight:600; }
-.deal-price { font-size:24px; font-weight:900; color:var(--red); letter-spacing:-0.5px; }
+.deal-price { font-family:var(--font-display); font-size:22px; color:var(--red); letter-spacing:-0.3px; }
 .deal-qty-row { display:flex; align-items:center; gap:8px; }
 
 /* ── FOOTER ── */
@@ -454,4 +470,49 @@ body {
 @media (max-width:360px) {
   .nav-search { width:60px; font-size:11px; padding:6px 6px; }
   .nav-logo { font-size:13px; }
+}
+
+/* ── AD SLOTS ──────────────────────────────────────────────────
+   Holds either a self-promo banner (default) or a third-party ad
+   unit (e.g. an AdSense <ins> block) once approved. The outer
+   .ad-slot frame and "Sponsored" label stay constant either way,
+   so swapping ad-slot-N-inner's contents never breaks the layout. */
+.ad-slot {
+  max-width:1280px; margin:8px auto 0; padding:0 24px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.ad-slot-label {
+  font-family:var(--font-tag); font-size:10px; font-weight:600; letter-spacing:2px;
+  color:var(--text-light); text-transform:uppercase; align-self:flex-start; margin-left:2px;
+}
+.ad-slot-inner {
+  width:100%; min-height:84px; border-radius:var(--radius);
+  background:var(--kraft); border:1px solid var(--kraft-dark);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ad-promo {
+  width:100%; display:flex; align-items:center; gap:16px;
+  padding:18px 24px; flex-wrap:wrap; justify-content:center; text-align:center;
+}
+.ad-promo-tag {
+  font-family:var(--font-tag); font-size:11px; font-weight:700; letter-spacing:1.5px;
+  color:#fff; background:var(--ink); text-transform:uppercase;
+  padding:5px 12px; border-radius:var(--radius-sm); flex-shrink:0;
+}
+.ad-promo-text {
+  font-family:var(--font-tag); font-size:16px; font-weight:600; color:var(--ink);
+  letter-spacing:0.2px;
+}
+.ad-promo-btn {
+  font-family:var(--font-tag); font-size:12px; font-weight:700; letter-spacing:0.5px;
+  color:#fff; background:var(--red); border:none; text-transform:uppercase;
+  padding:9px 18px; border-radius:var(--radius-sm); cursor:pointer; flex-shrink:0;
+  transition:background 0.2s;
+}
+.ad-promo-btn:hover { background:var(--red-dark); }
+
+@media (max-width:600px) {
+  .ad-slot { padding:0 12px; }
+  .ad-promo { padding:14px 16px; gap:10px; }
+  .ad-promo-text { font-size:13px; }
 }
