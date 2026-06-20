@@ -159,6 +159,14 @@
       font-weight:600; outline:none; transition:border-color 0.2s;
     }
     .auth-input-group input:focus { border-color:#e31837; background:#fff; }
+    .pw-field-wrap { position:relative; }
+    .pw-field-wrap input { padding-right:44px !important; }
+    .pw-toggle-btn {
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; font-size:16px;
+      padding:6px; line-height:1; opacity:0.55; transition:opacity 0.15s;
+    }
+    .pw-toggle-btn:hover { opacity:1; }
     .auth-submit-btn {
       width:100%; padding:14px; background:#e31837; color:#fff;
       border:none; border-radius:8px;
@@ -339,15 +347,8 @@
   <div class="cat-overlay" id="cat-overlay" onclick="toggleCatMenu()"></div>
   <div class="cat-sidebar" id="cat-sidebar">
     <div class="cat-header"><h3>Categories</h3><button onclick="toggleCatMenu()">✕</button></div>
-    <ul class="cat-list">
+    <ul class="cat-list" id="cat-list">
       <li onclick="selectCat('all')">🛍️ All Products</li>
-      <li onclick="selectCat('footwear')">👟 Footwear</li>
-      <li onclick="selectCat('electronics')">💻 Electronics</li>
-      <li onclick="selectCat('accessories')">⌚ Accessories</li>
-      <li onclick="selectCat('homeware')">🏠 Homeware</li>
-      <li onclick="selectCat('clothing')">👕 Clothing</li>
-      <li onclick="selectCat('aprons')" style="color:#8B5E83;font-style:italic;">🎀 Aprons</li>
-      <li onclick="selectCat('workwear')" style="color:#B8780A;font-weight:900;">🦺 Work Wear</li>
     </ul>
   </div>
   <input type="hidden" id="category-filter" value="all"/>
@@ -380,7 +381,10 @@
         </div>
         <div class="auth-input-group">
           <label>Password</label>
-          <input type="password" id="login-password" placeholder="Your password" onkeydown="if(event.key==='Enter')submitLogin()"/>
+          <div class="pw-field-wrap">
+            <input type="password" id="login-password" placeholder="Your password" onkeydown="if(event.key==='Enter')submitLogin()"/>
+            <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('login-password', this)" aria-label="Show password">👁️</button>
+          </div>
         </div>
         <button class="auth-submit-btn" onclick="submitLogin()">Login to My Account</button>
       </div>
@@ -397,7 +401,10 @@
         </div>
         <div class="auth-input-group">
           <label>Password</label>
-          <input type="password" id="register-password" placeholder="Choose a password (min 6 characters)" onkeydown="if(event.key==='Enter')submitRegister()"/>
+          <div class="pw-field-wrap">
+            <input type="password" id="register-password" placeholder="Choose a password (min 6 characters)" onkeydown="if(event.key==='Enter')submitRegister()"/>
+            <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('register-password', this)" aria-label="Show password">👁️</button>
+          </div>
         </div>
         <button class="auth-submit-btn" onclick="submitRegister()">Create My Account</button>
       </div>
@@ -406,56 +413,6 @@
       <span class="auth-skip" onclick="closeAuth()">Maybe later — continue browsing</span>
     </div>
   </div>
-<!-- AUTH SCROLL PROMPT -->
-<div id="auth-scroll-prompt" onclick="openAuthModal()" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99000;background:#1a1a1a;color:#fff;border-radius:30px;padding:12px 24px;font-size:13px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,0.25);cursor:pointer;white-space:nowrap;border:2px solid #e31837;font-family:'Nunito Sans',sans-serif;">
-  ✨ <span style="color:#e31837;">Login</span> for a personalised experience
-</div>
-
-<!-- AUTH MODAL -->
-<div id="auth-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400000;align-items:center;justify-content:center;" onclick="closeAuthIfOutside(event)">
-  <div id="auth-modal" style="background:#fff;width:94%;max-width:420px;border-radius:16px;padding:32px 28px;position:relative;box-shadow:0 16px 48px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;font-family:'Nunito Sans',sans-serif;">
-    <button onclick="closeAuth()" style="position:absolute;top:14px;right:14px;background:#f5f5f5;border:none;color:#1a1a1a;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>
-    <div style="text-align:center;margin-bottom:20px;">
-      <span style="font-size:20px;font-weight:900;color:#e31837;">MR CLEARANCE</span>
-    </div>
-    <h2 style="font-size:20px;font-weight:900;color:#1a1a1a;text-align:center;margin-bottom:6px;" id="auth-title">Welcome Back 👋</h2>
-    <p style="font-size:13px;font-weight:600;color:#999;text-align:center;margin-bottom:24px;line-height:1.5;">Login to save your cart and get a faster checkout.</p>
-    <div style="display:flex;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px;background:#e31837;color:#fff;border:none;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Login</button>
-      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;padding:10px;background:#fafafa;color:#999;border:none;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Create Account</button>
-    </div>
-    <!-- LOGIN FORM -->
-    <div id="auth-login-form">
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px;">Email Address</label>
-        <input type="email" id="login-email" placeholder="your@email.com" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;" onfocus="this.style.borderColor='#e31837'" onblur="this.style.borderColor='#e0e0e0'"/>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px;">Password</label>
-        <input type="password" id="login-password" placeholder="Your password" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;" onfocus="this.style.borderColor='#e31837'" onblur="this.style.borderColor='#e0e0e0'" onkeydown="if(event.key==='Enter')submitLogin()"/>
-      </div>
-      <button onclick="submitLogin()" style="width:100%;padding:14px;background:#e31837;color:#fff;border:none;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">Login to My Account</button>
-    </div>
-    <!-- REGISTER FORM -->
-    <div id="auth-register-form" style="display:none;">
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px;">Your Name</label>
-        <input type="text" id="register-name" placeholder="e.g. Aisha" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;" onfocus="this.style.borderColor='#e31837'" onblur="this.style.borderColor='#e0e0e0'"/>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px;">Email Address</label>
-        <input type="email" id="register-email" placeholder="your@email.com" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;" onfocus="this.style.borderColor='#e31837'" onblur="this.style.borderColor='#e0e0e0'"/>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:6px;">Password</label>
-        <input type="password" id="register-password" placeholder="Min 6 characters" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;" onfocus="this.style.borderColor='#e31837'" onblur="this.style.borderColor='#e0e0e0'" onkeydown="if(event.key==='Enter')submitRegister()"/>
-      </div>
-      <button onclick="submitRegister()" style="width:100%;padding:14px;background:#e31837;color:#fff;border:none;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">Create My Account</button>
-    </div>
-    <p id="auth-error" style="color:#e31837;font-size:13px;font-weight:700;text-align:center;margin-top:10px;min-height:18px;"></p>
-    <span onclick="closeAuth()" style="display:block;text-align:center;margin-top:14px;font-size:13px;font-weight:700;color:#999;cursor:pointer;">Maybe later — continue browsing</span>
-  </div>
-</div>
   <!-- PRODUCT DETAIL MODAL -->
   <div id="pdp-overlay" onclick="closePdpIfOutside(event)">
     <div id="pdp-modal">
@@ -572,16 +529,11 @@
   </section>
 
   <!-- AD SLOT 2 — between Hero and Products.
-       Default: self-promo banner. Swap inner content for an AdSense <ins> tag once approved. -->
-  <div class="ad-slot" id="ad-slot-2">
+       Default: self-promo banner managed from the admin panel (Ads tab).
+       Swap ad-slot-2-inner's contents for an AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-2" style="display:none;">
     <span class="ad-slot-label">Sponsored</span>
-    <div class="ad-slot-inner" id="ad-slot-2-inner">
-      <div class="ad-promo">
-        <span class="ad-promo-tag">New In</span>
-        <strong class="ad-promo-text">Fresh stock just landed — Work Wear &amp; Aprons</strong>
-        <button class="ad-promo-btn" onclick="selectCat('workwear')">Shop Now →</button>
-      </div>
-    </div>
+    <div class="ad-slot-inner" id="ad-slot-2-inner"></div>
   </div>
 
   <!-- PRODUCTS -->
@@ -595,16 +547,11 @@
   </section>
 
   <!-- AD SLOT 1 — between Products and Deals.
-       Default: self-promo banner. Swap inner content for an AdSense <ins> tag once approved. -->
-  <div class="ad-slot" id="ad-slot-1">
+       Default: self-promo banner managed from the admin panel (Ads tab).
+       Swap ad-slot-1-inner's contents for an AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-1" style="display:none;">
     <span class="ad-slot-label">Sponsored</span>
-    <div class="ad-slot-inner" id="ad-slot-1-inner">
-      <div class="ad-promo">
-        <span class="ad-promo-tag">This Week</span>
-        <strong class="ad-promo-text">Free local delivery on orders over R500</strong>
-        <button class="ad-promo-btn" onclick="document.querySelector('.deals-section').scrollIntoView({behavior:'smooth'})">See Deals →</button>
-      </div>
-    </div>
+    <div class="ad-slot-inner" id="ad-slot-1-inner"></div>
   </div>
 
   <!-- DEALS -->
@@ -637,134 +584,6 @@
 
   <script>
 
-    // ── CUSTOMER AUTH ─────────────────────────────────────────────
-  var authScrollShown = false;
-    
-  // Show scroll prompt after 50% scroll — only once per session
-  window.addEventListener('scroll', function() {
-    if (authScrollShown) return;
-    if (window.mrcUser) return; // already logged in
-    var scrollPct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
-    if (scrollPct >= 50) {
-      authScrollShown = true;
-      var prompt = document.getElementById('auth-scroll-prompt');
-      prompt.style.display = 'block';
-      setTimeout(function() {
-        prompt.style.animation = 'none';
-        prompt.style.opacity = '1';
-      }, 100);
-      // Auto hide after 8 seconds
-      setTimeout(function() {
-        prompt.style.opacity = '0';
-        prompt.style.transition = 'opacity 0.5s';
-        setTimeout(function(){ prompt.style.display = 'none'; }, 500);
-      }, 8000);
-    }
-  }, { passive: true });
-
-  function openAuthModal() {
-    document.getElementById('auth-scroll-prompt').style.display = 'none';
-    if (window.mrcUser) { showUserMenu(); return; }
-    document.getElementById('auth-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('auth-error').textContent = '';
-  }
-
-  function closeAuth() {
-    document.getElementById('auth-overlay').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function closeAuthIfOutside(e) {
-    if (e.target === document.getElementById('auth-overlay')) closeAuth();
-  }
-
-  function switchAuthTab(tab) {
-    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-    document.getElementById('auth-login-form').style.display    = tab === 'login' ? 'block' : 'none';
-    document.getElementById('auth-register-form').style.display = tab === 'register' ? 'block' : 'none';
-    document.getElementById('auth-error').textContent = '';
-  }
-
-  function submitLogin() {
-    var email    = document.getElementById('login-email').value.trim();
-    var password = document.getElementById('login-password').value;
-    var errEl    = document.getElementById('auth-error');
-    if (!email || !password) { errEl.textContent = '❌ Please fill in all fields'; return; }
-    errEl.textContent = '⏳ Logging in...';
-    window.fbLogin(email, password).then(function(user) {
-      closeAuth();
-      showToast('✅ Welcome back ' + (user.displayName || user.email.split('@')[0]) + '!');
-    }).catch(function(e) {
-      errEl.textContent = e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
-        ? '❌ Wrong email or password. Try again.'
-        : '❌ ' + (e.message || 'Login failed. Try again.');
-    });
-  }
-
-  function submitRegister() {
-    var name     = document.getElementById('register-name').value.trim();
-    var email    = document.getElementById('register-email').value.trim();
-    var password = document.getElementById('register-password').value;
-    var errEl    = document.getElementById('auth-error');
-    if (!name || !email || !password) { errEl.textContent = '❌ Please fill in all fields'; return; }
-    if (password.length < 6) { errEl.textContent = '❌ Password must be at least 6 characters'; return; }
-    errEl.textContent = '⏳ Creating your account...';
-    window.fbRegister(email, password, name).then(function(user) {
-      closeAuth();
-      showToast('🎉 Welcome to Mr Clearance, ' + name + '!');
-    }).catch(function(e) {
-      errEl.textContent = e.code === 'auth/email-already-in-use'
-        ? '❌ That email is already registered. Try logging in.'
-        : '❌ ' + (e.message || 'Registration failed. Try again.');
-    });
-  }
-
-  function updateNavForLoggedInUser(user) {
-    var btn = document.getElementById('nav-user-btn');
-    if (!btn) return;
-    var name = user.displayName || user.email.split('@')[0];
-    btn.textContent = '👤 ' + name;
-    btn.classList.add('logged-in');
-    btn.onclick = showUserMenu;
-  }
-
-  function updateNavForLoggedOutUser() {
-    var btn = document.getElementById('nav-user-btn');
-    if (!btn) return;
-    btn.textContent = '👤 Login';
-    btn.classList.remove('logged-in');
-    btn.onclick = openAuthModal;
-  }
-
-  function loadCustomerProfile(user) {
-    window.fbGetCustomerProfile(user.uid).then(function(profile) {
-      if (profile) {
-        // Pre-fill checkout name if available
-        var nameEl = document.getElementById('cust-name');
-        if (nameEl && !nameEl.value && profile.displayName) nameEl.value = profile.displayName;
-        // Pre-fill saved address
-        var addrEl = document.getElementById('cust-address');
-        if (addrEl && !addrEl.value && profile.savedAddress) {
-          addrEl.value = profile.savedAddress;
-          checkAddress();
-        }
-      }
-    }).catch(function(){});
-  }
-
-  function showUserMenu() {
-    var user = window.mrcUser;
-    if (!user) { openAuthModal(); return; }
-    var name = user.displayName || user.email.split('@')[0];
-    var confirmed = confirm('Logged in as ' + user.email + '\n\nTap OK to logout, or Cancel to stay logged in.');
-    if (confirmed) {
-      window.fbLogout().then(function() {
-        showToast('👋 You have been logged out.');
-      });
-    }
-  }
     // ── CUSTOMER AUTH ─────────────────────────────────────────────
   var authScrollShown = false;
 
@@ -1129,10 +948,18 @@
   // ── LOADER ────────────────────────────────────────────────────
   function hideLoader() { var l = document.getElementById('loader'); if (l) { l.style.opacity='0'; setTimeout(function(){ l.style.display='none'; }, 600); } }
   setTimeout(hideLoader, 2000);
-  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); };
+  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderAds(); renderCategorySidebar(); };
 
   // ── TOAST ─────────────────────────────────────────────────────
   function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2800); }
+  function togglePwVisibility(inputId, btn) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? '👁️' : '🙈';
+    btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  }
 
   // ── SEARCH & FILTER ───────────────────────────────────────────
   function filterProducts() {
@@ -1394,6 +1221,29 @@
    }
 
   // ── CATEGORY ──────────────────────────────────────────────────
+  var DEFAULT_CATEGORIES_SITE = [
+    { key:'footwear',    name:'Footwear',    icon:'👟' },
+    { key:'electronics', name:'Electronics', icon:'💻' },
+    { key:'accessories', name:'Accessories', icon:'⌚' },
+    { key:'homeware',    name:'Homeware',    icon:'🏠' },
+    { key:'clothing',    name:'Clothing',    icon:'👕' },
+    { key:'aprons',      name:'Aprons',      icon:'🎀' },
+    { key:'workwear',    name:'Work Wear',   icon:'🦺' }
+  ];
+  function renderCategorySidebar() {
+    var cats = [];
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+      cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
+    } catch(e) { cats = DEFAULT_CATEGORIES_SITE; }
+    var list = document.getElementById('cat-list');
+    if (!list) return;
+    list.innerHTML = '<li onclick="selectCat(\'all\')">🛍️ All Products</li>' +
+      cats.map(function(c){
+        return '<li onclick="selectCat(\'' + c.key + '\')">' + (c.icon||'') + ' ' + escHtml(c.name) + '</li>';
+      }).join('');
+  }
+
   function toggleCatMenu(){ document.getElementById('cat-sidebar').classList.toggle('open'); document.getElementById('cat-overlay').classList.toggle('open'); }
   function selectCat(category){
     document.getElementById('category-filter').value = category;
@@ -1445,6 +1295,41 @@
         '<div class="deal-qty-row"><div class="qty-control"><button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button></div>' +
         '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button></div></div></div>';
     }).join('');
+  }
+
+  // ── AD SLOTS ──────────────────────────────────────────────────
+  // Banners are managed from the admin panel (Ads tab) and stored
+  // under 'mrc_ads' in localStorage, keyed by slot: {1: {...}, 2: {...}}.
+  // Each banner: { tag, headline, price, originalPrice, link, image }
+  function renderAds() {
+    var ads = {};
+    try { ads = JSON.parse(localStorage.getItem('mrc_ads') || '{}'); } catch(e) {}
+    renderAdSlot(1, ads['1']);
+    renderAdSlot(2, ads['2']);
+  }
+
+  function renderAdSlot(slotNum, ad) {
+    var slotEl  = document.getElementById('ad-slot-' + slotNum);
+    var innerEl = document.getElementById('ad-slot-' + slotNum + '-inner');
+    if (!slotEl || !innerEl) return;
+    if (!ad || !ad.headline) { slotEl.style.display = 'none'; innerEl.innerHTML = ''; return; }
+    slotEl.style.display = 'flex';
+    var hasPrice = ad.price !== undefined && ad.price !== null && ad.price !== '';
+    var hasOrig  = ad.originalPrice && Number(ad.originalPrice) > Number(ad.price);
+    var link     = ad.link ? escHtml(ad.link) : '';
+    var clickAttr = link
+      ? 'onclick="' + (link.indexOf('#') === 0 || link.indexOf('http') === 0 ? "window.location.href='" + link + "'" : "selectCat('" + link + "')") + '"'
+      : '';
+    innerEl.innerHTML =
+      '<div class="ad-promo" ' + clickAttr + '>' +
+        (ad.image ? '<div class="ad-promo-img-wrap"><img src="' + escHtml(ad.image) + '" alt="' + escHtml(ad.headline) + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"/></div>' : '') +
+        '<div class="ad-promo-content">' +
+          (ad.tag ? '<span class="ad-promo-tag">' + escHtml(ad.tag) + '</span>' : '') +
+          '<strong class="ad-promo-text">' + escHtml(ad.headline) + '</strong>' +
+          (hasPrice ? '<div class="ad-promo-price-row">' + (hasOrig ? '<span class="ad-promo-price-was">R ' + Number(ad.originalPrice).toLocaleString() + '</span>' : '') + '<span class="ad-promo-price">R ' + Number(ad.price).toLocaleString() + '</span></div>' : '') +
+          '<button class="ad-promo-btn" type="button">' + (ad.btnText ? escHtml(ad.btnText) : 'Shop Now →') + '</button>' +
+        '</div>' +
+      '</div>';
   }
 
   // ── DEALS TIMER ───────────────────────────────────────────────
