@@ -550,8 +550,7 @@
         <input type="hidden" name="notify_url" value="https://webuyanything.xyz/notify"/>
         <input type="hidden" name="item_name" id="pf-item-name" value="Mr Clearance Order"/>
         <input type="hidden" name="amount" id="pf-amount" value="0.00"/>
-       <button type="button" class="checkout-btn" onclick="openDelivery()">🚚 Checkout &amp; Delivery</button>
-       <button type="button" class="checkout-btn" onclick="openPayfast()" style="margin-top:10px;background:#1a1a1a;">💳 Pay Now with PayFast</button>
+       <button type="button" class="checkout-btn" onclick="openDelivery()">🚚 Checkout &amp; Pay</button>
       </form>
       <p class="payment-icons">All major bank cards accepted</p>
     </div>
@@ -1239,16 +1238,6 @@
     var feeEl=document.getElementById('modal-delivery-fee');
     if(selectedFulfilment==='collection'){feeEl.textContent='FREE';feeEl.style.color='#27ae60';}else{feeEl.textContent=deliveryFee>0?'R '+deliveryFee:'TBC';feeEl.style.color='#1a1a1a';}
   }
-    function openPayfast() {
-  if (cart.length === 0) { showToast('🛒 Add items to your cart first!'); return; }
-  var total = cart.reduce(function(s,i){ return s + i.price * i.qty; }, 0);
-  var discount = Math.round(total * discountPct / 100);
-  var finalTotal = total - discount;
-  var itemName = cart.map(function(i){ return i.qty + 'x ' + i.name; }).join(', ');
-  document.getElementById('pf-amount').value    = finalTotal.toFixed(2);
-  document.getElementById('pf-item-name').value = itemName;
-  document.getElementById('payfast-form').submit();
-  }
  function submitOrder(){
     var name     = document.getElementById('cust-name').value.trim();
     var whatsapp = document.getElementById('cust-whatsapp').value.trim();
@@ -1361,10 +1350,21 @@
       } catch(e) {}
     }
 
-    showToast('✅ Order '+currentOrderNumber+' confirmed!');
+    showToast('✅ Order '+currentOrderNumber+' confirmed! Taking you to PayFast...');
+
     cart = [];
     updateCartUI();
     closeDelivery();
+
+    // ── PAYFAST — redirect to pay the full amount (items + delivery) ──
+    // Set these AFTER updateCartUI(), since updateCartUI() also writes to
+    // these same fields using the (now-empty) cart and would zero them out.
+    document.getElementById('pf-amount').value    = grandTotal.toFixed(2);
+    document.getElementById('pf-item-name').value = currentOrderNumber + ' — ' + itemsPlain.replace(/\n/g, ', ');
+
+    setTimeout(function(){
+      document.getElementById('payfast-form').submit();
+    }, 1800);
    }
 
   // ── CATEGORY ──────────────────────────────────────────────────
@@ -1488,8 +1488,8 @@
       <div style="display:flex;justify-content:space-between;font-size:13px;color:#555;padding:4px 0;font-weight:600;"><span>Delivery</span><span id="modal-delivery-fee">R0</span></div>
       <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:#1a1a1a;padding-top:10px;border-top:2px solid #e0e0e0;margin-top:6px;"><span>Total</span><span id="modal-total" style="color:#e31837;">R0</span></div>
     </div>
-    <button onclick="submitOrder()" style="width:100%;padding:16px;background:#e31837;color:#fff;border:none;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;" onmouseover="this.style.background='#c01230'" onmouseout="this.style.background='#e31837'">📱 Confirm Order via WhatsApp</button>
-    <div style="text-align:center;font-size:12px;color:#999;margin-top:10px;font-weight:600;">You will receive an order confirmation on WhatsApp</div>
+    <button id="confirm-order-btn" onclick="submitOrder()" style="width:100%;padding:16px;background:#e31837;color:#fff;border:none;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;" onmouseover="this.style.background='#c01230'" onmouseout="this.style.background='#e31837'">✅ Confirm &amp; Pay with PayFast</button>
+    <div style="text-align:center;font-size:12px;color:#999;margin-top:10px;font-weight:600;">You'll get a WhatsApp confirmation, then we'll take you to PayFast to pay</div>
   </div>
 
 </body>
