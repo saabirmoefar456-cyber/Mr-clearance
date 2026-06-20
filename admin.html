@@ -35,10 +35,16 @@
     .login-box input{width:100%;background:#f5f5f5;border:2px solid var(--border);
       color:var(--text);padding:14px 16px;border-radius:10px;
       font-family:'Nunito Sans',sans-serif;font-size:18px;font-weight:700;
-      text-align:center;letter-spacing:4px;outline:none;margin-bottom:14px;
+      text-align:center;letter-spacing:4px;outline:none;
       transition:border-color 0.2s,box-shadow 0.2s;}
     .login-box input:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft);}
     .login-box input::placeholder{letter-spacing:1px;color:#bbb;font-size:15px;}
+    .pw-field-wrap{position:relative;margin-bottom:14px;}
+    .pw-field-wrap input{padding-right:46px;margin-bottom:0;}
+    .pw-toggle-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+      background:none;border:none;cursor:pointer;font-size:17px;padding:6px;
+      line-height:1;opacity:0.55;transition:opacity 0.15s;}
+    .pw-toggle-btn:hover{opacity:1;}
     .login-btn{width:100%;padding:15px;background:var(--red);color:#fff;border:none;
       border-radius:10px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;
       letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background 0.2s,transform 0.15s;}
@@ -449,7 +455,10 @@
       <button class="role-btn" onclick="selectRole('mum')" id="role-mum">👩 Mum</button>
       <button class="role-btn" onclick="selectRole('dad')" id="role-dad">👨 Dad</button>
     </div>
-    <input type="password" id="password-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()"/>
+    <div class="pw-field-wrap">
+      <input type="password" id="password-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()"/>
+      <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('password-input', this)" aria-label="Show password">👁️</button>
+    </div>
     <button class="login-btn" onclick="login()">🔓 Login</button>
     <p class="login-error" id="login-error"></p>
     <p class="login-hint" id="login-hint">Owner access selected</p>
@@ -476,6 +485,8 @@
     <button class="tab-btn" onclick="showTab('inventory')">📋 Inventory</button>
     <button class="tab-btn" onclick="showTab('barcodes')">🏷️ Barcodes</button>
     <button class="tab-btn" onclick="showTab('deals')">🔥 Daily Deals</button>
+    <button class="tab-btn" onclick="showTab('ads')">📢 Ads</button>
+    <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
     <button class="tab-btn owner-only" onclick="showTab('settings')" id="settings-tab">⚙️ Settings</button>
   </div>
 
@@ -532,13 +543,6 @@
       <div class="form-group">
         <label>Category *</label>
         <select id="f-category">
-          <option value="footwear">👟 Footwear</option>
-          <option value="electronics">💻 Electronics</option>
-          <option value="accessories">⌚ Accessories</option>
-          <option value="homeware">🏠 Homeware</option>
-          <option value="clothing">👕 Clothing</option>
-          <option value="aprons">🎀 Aprons</option>
-          <option value="workwear">🦺 Work Wear</option>
         </select>
       </div>
       <div class="form-group">
@@ -853,13 +857,6 @@
       <div class="form-group">
         <label>Category</label>
         <select id="d-category">
-          <option value="homeware">🏠 Homeware</option>
-          <option value="footwear">👟 Footwear</option>
-          <option value="electronics">💻 Electronics</option>
-          <option value="accessories">⌚ Accessories</option>
-          <option value="clothing">👕 Clothing</option>
-          <option value="aprons">🎀 Aprons</option>
-          <option value="workwear">🦺 Work Wear</option>
         </select>
       </div>
       <div class="form-group">
@@ -922,6 +919,125 @@
     </div>
   </div>
 
+  <!-- ADS (PROMO BANNERS) -->
+  <div class="tab-panel" id="tab-ads">
+    <div class="section-card">
+      <h2>📢 Add / Edit a Promo Banner</h2>
+      <div class="info-box">
+        <strong>How it works:</strong> Promo banners appear as "Sponsored" spots on the store — one between the hero and Featured Products, one between Featured Products and Daily Deals. You have <strong>2 slots</strong> total. Use these to promote your own products, or swap a slot for a Google AdSense unit later. Leave a slot empty to hide it from the store.
+      </div>
+
+      <div class="form-group">
+        <label>Banner Slot *</label>
+        <select id="ad-slot-select">
+          <option value="1">Slot 1 — Between Products &amp; Daily Deals</option>
+          <option value="2">Slot 2 — Between Hero &amp; Featured Products</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Small Tag (optional)</label>
+        <input type="text" id="ad-tag" placeholder="e.g. This Week, New In, Limited Stock" maxlength="24"/>
+      </div>
+      <div class="form-group">
+        <label>Headline *</label>
+        <input type="text" id="ad-headline" placeholder="e.g. Pro Headphones — Noise Cancelling" maxlength="80"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Price (R) — optional</label>
+          <input type="number" id="ad-price" placeholder="e.g. 2499" min="1"/>
+        </div>
+        <div class="form-group">
+          <label>Original Price (R) — optional</label>
+          <input type="number" id="ad-original-price" placeholder="e.g. 3200" min="1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Links To *</label>
+        <select id="ad-link">
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Button Text (optional)</label>
+        <input type="text" id="ad-btn-text" placeholder="Defaults to 'Shop Now →'" maxlength="24"/>
+      </div>
+
+      <!-- Banner Photo Upload -->
+      <div class="form-group">
+        <div class="photo-section">
+          <p class="photo-section-title">📸 Banner Photo *</p>
+          <div class="photo-buttons">
+            <button type="button" class="photo-btn photo-btn-gallery" title="Upload from gallery" onclick="triggerImgurUpload('ad-imgur-gallery')">
+              <input type="file" id="ad-imgur-gallery" accept="image/*" style="display:none" onchange="uploadAdToImgur(this)"/>
+              <span class="btn-icon">📱</span>
+              <span>Upload from<br/>Gallery</span>
+            </button>
+            <button type="button" class="photo-btn photo-btn-camera" title="Take a photo" onclick="triggerImgurUpload('ad-imgur-camera')">
+              <input type="file" id="ad-imgur-camera" accept="image/*" capture="environment" style="display:none" onchange="uploadAdToImgur(this)"/>
+              <span class="btn-icon">📷</span>
+              <span>Take a<br/>Photo</span>
+            </button>
+            <button type="button" class="photo-btn photo-btn-url" onclick="toggleAdUrlInput()" title="Paste image link">
+              <span class="btn-icon">🔗</span>
+              <span>Paste Image<br/>Link</span>
+            </button>
+          </div>
+          <div class="url-input-row" id="ad-url-input-row">
+            <input type="url" id="ad-url-input" placeholder="Paste image link here e.g. https://..."/>
+            <button class="url-add-btn" onclick="addAdImageFromUrl()">Add</button>
+          </div>
+          <div id="ad-preview-wrap" style="margin-top:10px;display:none;">
+            <div style="position:relative;width:100px;height:100px;">
+              <img id="ad-preview-img" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--border);" alt="Banner preview"/>
+              <button onclick="clearAdImage()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+          </div>
+          <p id="ad-photo-msg" style="font-size:12px;color:#999;font-weight:700;margin-top:10px;">No photo added yet.</p>
+        </div>
+      </div>
+
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveAd()">💾 Save Banner</button>
+        <button class="btn-secondary" onclick="clearAdForm()">Clear Form</button>
+      </div>
+    </div>
+
+    <!-- CURRENT AD SLOTS -->
+    <div class="section-card">
+      <h2>📋 Current Promo Banners</h2>
+      <div id="ads-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="tab-panel" id="tab-categories">
+    <div class="section-card">
+      <h2>🗂️ Add / Edit a Category</h2>
+      <div class="info-box">
+        <strong>How it works:</strong> Categories show up in the store's sidebar menu, and in the category dropdowns when adding products, deals, or ad banners. Changing a category's name or icon here updates it everywhere automatically.
+      </div>
+      <div class="form-group">
+        <label>Icon (emoji)</label>
+        <input type="text" id="cat-icon" placeholder="e.g. 👟" maxlength="4" style="width:90px;text-align:center;font-size:20px;"/>
+      </div>
+      <div class="form-group">
+        <label>Category Name *</label>
+        <input type="text" id="cat-name" placeholder="e.g. Footwear" maxlength="30"/>
+      </div>
+      <p style="font-size:12px;color:var(--text-light);font-weight:600;margin:-6px 0 14px;">Key: <code id="cat-key-preview" style="background:#f5f5f5;padding:2px 6px;border-radius:4px;">—</code> (used internally, generated automatically from the name)</p>
+      <input type="hidden" id="cat-key-edit" value=""/>
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveCategory()">💾 Save Category</button>
+        <button class="btn-secondary" onclick="clearCategoryForm()">Clear Form</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>📋 Current Categories <span id="categories-count" style="font-size:12px;color:var(--text-light);font-weight:700;"></span></h2>
+      <div id="categories-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
   <!-- SETTINGS (OWNER ONLY) -->
   <div class="tab-panel" id="tab-settings">
     <div class="section-card">
@@ -970,6 +1086,15 @@
   var selectedUser = 'owner';
   var loggedInUser = null;
 
+  function togglePwVisibility(inputId, btn) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? '👁️' : '🙈';
+    btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  }
+
   function selectRole(user) {
     selectedUser = user;
     document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -989,6 +1114,7 @@
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display  = 'block';
       document.getElementById('role-badge').textContent = acc.name;
+      populateAllCategoryDropdowns();
      if (acc.role === 'owner') {
         document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'block'; });
         loadSettings();
@@ -1018,13 +1144,15 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','add','manage','inventory','barcodes','deals','settings'];
+    var names = ['dashboard','add','manage','inventory','barcodes','deals','ads','categories','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
-    if (tab === 'manage')    renderProductList();
-    if (tab === 'dashboard') renderDashboard();
-    if (tab === 'deals')     renderDealsList();
-    if (tab === 'barcodes')  renderBarcodeGrid();
-    if (tab === 'inventory') renderInventory();
+    if (tab === 'manage')     renderProductList();
+    if (tab === 'dashboard')  renderDashboard();
+    if (tab === 'deals')      renderDealsList();
+    if (tab === 'ads')        renderAdsList();
+    if (tab === 'categories') renderCategoriesList();
+    if (tab === 'barcodes')   renderBarcodeGrid();
+    if (tab === 'inventory')  renderInventory();
   }
 
   // ── FIREBASE ──────────────────────────────────────────────────
@@ -1573,6 +1701,391 @@
     (deals.length > 0 ?
       '<button class="btn-secondary" style="margin-top:12px;border-color:var(--red-border);color:var(--red);width:100%;" onclick="clearAllDeals()">🗑️ Clear All Deals</button>'
     : '');
+  }
+
+  // ── ADS (PROMO BANNERS) ───────────────────────────────────────
+  // Stored in localStorage under 'mrc_ads' keyed by slot: {"1":{...},"2":{...}}
+  // Each banner: { tag, headline, price, originalPrice, link, btnText, image }
+  var adCurrentImage = '';
+
+  function getAds() {
+    try { return JSON.parse(localStorage.getItem('mrc_ads') || '{}'); } catch(e) { return {}; }
+  }
+  function saveAds(ads) { localStorage.setItem('mrc_ads', JSON.stringify(ads)); }
+
+  function uploadAdToImgur(input) {
+    var file = input.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    document.getElementById('ad-photo-msg').textContent = '⏳ Uploading...';
+    document.getElementById('ad-photo-msg').style.color = '#f59e0b';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var MAX = 1200, w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; } }
+        else       { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+        var formData = new FormData();
+        formData.append('image', base64);
+        formData.append('type', 'base64');
+        fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
+          body: formData
+        })
+        .then(function(res){ return res.json(); })
+        .then(function(data){
+          if (data && data.data && data.data.link) {
+            adCurrentImage = data.data.link;
+            showAdPreview(adCurrentImage);
+            showToast('✅ Banner photo uploaded!');
+          } else {
+            document.getElementById('ad-photo-msg').textContent = '❌ Upload failed. Try again.';
+            document.getElementById('ad-photo-msg').style.color = '#e31837';
+          }
+        })
+        .catch(function(){
+          document.getElementById('ad-photo-msg').textContent = '❌ Error. Check internet and try again.';
+          document.getElementById('ad-photo-msg').style.color = '#e31837';
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  function toggleAdUrlInput() {
+    var row = document.getElementById('ad-url-input-row');
+    row.classList.toggle('visible');
+    if (row.classList.contains('visible')) document.getElementById('ad-url-input').focus();
+  }
+
+  function addAdImageFromUrl() {
+    var url = document.getElementById('ad-url-input').value.trim();
+    if (!url || !url.startsWith('http')) { showToast('❌ Please paste a valid image link'); return; }
+    adCurrentImage = url;
+    document.getElementById('ad-url-input').value = '';
+    document.getElementById('ad-url-input-row').classList.remove('visible');
+    showAdPreview(adCurrentImage);
+    showToast('✅ Image link added!');
+  }
+
+  function showAdPreview(src) {
+    var wrap = document.getElementById('ad-preview-wrap');
+    var img  = document.getElementById('ad-preview-img');
+    img.src = src;
+    wrap.style.display = 'block';
+    document.getElementById('ad-photo-msg').textContent = '✅ Photo added!';
+    document.getElementById('ad-photo-msg').style.color = '#27ae60';
+  }
+
+  function clearAdImage() {
+    adCurrentImage = '';
+    document.getElementById('ad-preview-wrap').style.display = 'none';
+    document.getElementById('ad-photo-msg').textContent = 'No photo added yet.';
+    document.getElementById('ad-photo-msg').style.color = '#999';
+  }
+
+  function clearAdForm() {
+    document.getElementById('ad-slot-select').value      = '1';
+    document.getElementById('ad-tag').value               = '';
+    document.getElementById('ad-headline').value          = '';
+    document.getElementById('ad-price').value             = '';
+    document.getElementById('ad-original-price').value    = '';
+    document.getElementById('ad-link').value              = '';
+    document.getElementById('ad-btn-text').value          = '';
+    document.getElementById('ad-url-input-row').classList.remove('visible');
+    clearAdImage();
+  }
+
+  function saveAd() {
+    var slot          = document.getElementById('ad-slot-select').value;
+    var tag           = document.getElementById('ad-tag').value.trim();
+    var headline      = document.getElementById('ad-headline').value.trim();
+    var price         = parseInt(document.getElementById('ad-price').value) || null;
+    var originalPrice = parseInt(document.getElementById('ad-original-price').value) || null;
+    var link          = document.getElementById('ad-link').value;
+    var btnText       = document.getElementById('ad-btn-text').value.trim();
+
+    if (!headline)       { showToast('❌ Please enter a headline');           return; }
+    if (!link)           { showToast('❌ Please choose where it links to');   return; }
+    if (!adCurrentImage) { showToast('❌ Please add a banner photo');         return; }
+
+    var ads = getAds();
+    ads[slot] = {
+      tag: tag, headline: headline, price: price, originalPrice: originalPrice,
+      link: link, btnText: btnText, image: adCurrentImage
+    };
+    saveAds(ads);
+    renderAdsList();
+    clearAdForm();
+    showToast('✅ Banner saved to Slot ' + slot + '!');
+  }
+
+  function editAd(slot) {
+    var ads = getAds();
+    var a = ads[slot];
+    if (!a) return;
+    document.getElementById('ad-slot-select').value   = slot;
+    document.getElementById('ad-tag').value            = a.tag || '';
+    document.getElementById('ad-headline').value       = a.headline || '';
+    document.getElementById('ad-price').value          = a.price || '';
+    document.getElementById('ad-original-price').value = a.originalPrice || '';
+    document.getElementById('ad-link').value           = a.link || '';
+    document.getElementById('ad-btn-text').value       = a.btnText || '';
+    adCurrentImage = a.image;
+    showAdPreview(a.image);
+    window.scrollTo({ top:0, behavior:'smooth' });
+    showToast('✏️ Editing Slot ' + slot);
+  }
+
+  function deleteAd(slot, btn) {
+    if (btn.getAttribute('data-confirming') === 'true') {
+      var ads = getAds();
+      delete ads[slot];
+      saveAds(ads);
+      renderAdsList();
+      showToast('🗑️ Banner removed from Slot ' + slot + '!');
+    } else {
+      btn.setAttribute('data-confirming', 'true');
+      btn.textContent = '⚠️ Tap again';
+      btn.style.background = 'var(--red)';
+      btn.style.color = '#fff';
+      setTimeout(function(){
+        btn.setAttribute('data-confirming', 'false');
+        btn.textContent = '🗑️ Delete';
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 3000);
+    }
+  }
+
+  function getAdLinkLabel(link) {
+    if (link === 'all') return '🛍️ All Products';
+    if (link === '#deals') return '🔥 Daily Deals Section';
+    var cat = getCategories().find(function(c){ return c.key === link; });
+    return cat ? (cat.icon||'') + ' ' + cat.name : link;
+  }
+
+  function renderAdsList() {
+    var ads  = getAds();
+    var list = document.getElementById('ads-list');
+    var slots = ['1','2'];
+    var slotLabels = { '1':'Slot 1 — Between Products & Deals', '2':'Slot 2 — Between Hero & Products' };
+    list.innerHTML = slots.map(function(slot) {
+      var a = ads[slot];
+      if (!a) {
+        return '<div class="product-item"><div class="product-item-main">' +
+          '<div class="product-info"><div class="product-name" style="color:var(--text-light);">' + slotLabels[slot] + ' — empty</div>' +
+          '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">This slot is hidden on the store until you add a banner.</div></div>' +
+          '</div></div>';
+      }
+      var hasOrig = a.originalPrice && a.originalPrice > a.price;
+      return '<div class="product-item">' +
+        '<div class="product-item-main">' +
+          '<img class="product-thumb" src="' + a.image + '" alt="' + a.headline + '" style="object-fit:cover;" onerror="this.src=\'https://via.placeholder.com/60x60/f5f5f5/ccc?text=?\'"/>' +
+          '<div class="product-info">' +
+            '<div class="product-name">' + a.headline + '</div>' +
+            '<div class="product-meta">' +
+              (a.price ? '<span class="product-price">R ' + a.price.toLocaleString() + '</span>' : '') +
+              (hasOrig ? '<span style="font-size:12px;color:#999;text-decoration:line-through;font-weight:600;">R ' + a.originalPrice.toLocaleString() + '</span>' : '') +
+              '<span class="product-cat">' + getAdLinkLabel(a.link) + '</span>' +
+              '<span class="product-badge-label">' + slotLabels[slot] + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="item-actions">' +
+            '<button class="btn-edit-item" onclick="editAd(\'' + slot + '\')">✏️ Edit</button>' +
+            '<button class="btn-delete-item" data-confirming="false" onclick="deleteAd(\'' + slot + '\', this)">🗑️ Delete</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── CATEGORIES ────────────────────────────────────────────────
+  // Single source of truth for categories, stored under 'mrc_categories'.
+  // Structure: [ { key:'footwear', name:'Footwear', icon:'👟' }, ... ]
+  // Seeded once from the store's original hardcoded list so nothing
+  // breaks for sites that already have products using these keys.
+  var DEFAULT_CATEGORIES = [
+    { key:'footwear',    name:'Footwear',    icon:'👟' },
+    { key:'electronics', name:'Electronics', icon:'💻' },
+    { key:'accessories', name:'Accessories', icon:'⌚' },
+    { key:'homeware',    name:'Homeware',    icon:'🏠' },
+    { key:'clothing',    name:'Clothing',    icon:'👕' },
+    { key:'aprons',      name:'Aprons',      icon:'🎀' },
+    { key:'workwear',    name:'Work Wear',   icon:'🦺' }
+  ];
+
+  function getCategories() {
+    var raw = localStorage.getItem('mrc_categories');
+    if (!raw) { saveCategories(DEFAULT_CATEGORIES); return DEFAULT_CATEGORIES.slice(); }
+    try {
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CATEGORIES.slice();
+    } catch(e) { return DEFAULT_CATEGORIES.slice(); }
+  }
+  function saveCategories(cats) { localStorage.setItem('mrc_categories', JSON.stringify(cats)); }
+
+  function slugifyCategory(name) {
+    return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // Live key preview as the admin types a category name
+  document.addEventListener('DOMContentLoaded', function() {
+    var nameInput = document.getElementById('cat-name');
+    if (nameInput) {
+      nameInput.addEventListener('input', function() {
+        var preview = document.getElementById('cat-key-preview');
+        var editingKey = document.getElementById('cat-key-edit').value;
+        preview.textContent = editingKey || slugifyCategory(nameInput.value) || '—';
+      });
+    }
+  });
+
+  function clearCategoryForm() {
+    document.getElementById('cat-icon').value = '';
+    document.getElementById('cat-name').value = '';
+    document.getElementById('cat-key-edit').value = '';
+    document.getElementById('cat-key-preview').textContent = '—';
+  }
+
+  function saveCategory() {
+    var icon = document.getElementById('cat-icon').value.trim() || '🏷️';
+    var name = document.getElementById('cat-name').value.trim();
+    var editingKey = document.getElementById('cat-key-edit').value;
+    if (!name) { showToast('❌ Please enter a category name'); return; }
+
+    var cats = getCategories();
+    if (editingKey) {
+      var idx = cats.findIndex(function(c){ return c.key === editingKey; });
+      if (idx === -1) { showToast('❌ Could not find that category to update'); return; }
+      cats[idx].name = name;
+      cats[idx].icon = icon;
+      saveCategories(cats);
+      clearCategoryForm();
+      renderCategoriesList();
+      populateAllCategoryDropdowns();
+      showToast('✅ Category updated!');
+      return;
+    }
+
+    var key = slugifyCategory(name);
+    if (!key) { showToast('❌ Please enter a valid category name'); return; }
+    if (cats.some(function(c){ return c.key === key; })) {
+      showToast('❌ A category with that name already exists');
+      return;
+    }
+    cats.push({ key:key, name:name, icon:icon });
+    saveCategories(cats);
+    clearCategoryForm();
+    renderCategoriesList();
+    populateAllCategoryDropdowns();
+    showToast('✅ Category added!');
+  }
+
+  function editCategory(key) {
+    var cats = getCategories();
+    var c = cats.find(function(x){ return x.key === key; });
+    if (!c) return;
+    document.getElementById('cat-icon').value = c.icon || '';
+    document.getElementById('cat-name').value = c.name;
+    document.getElementById('cat-key-edit').value = c.key;
+    document.getElementById('cat-key-preview').textContent = c.key;
+    window.scrollTo({ top:0, behavior:'smooth' });
+    showToast('✏️ Editing "' + c.name + '"');
+  }
+
+  function countProductsInCategory(key) {
+    try {
+      var products = getProducts() || [];
+      return products.filter(function(p){ return p.category === key; }).length;
+    } catch(e) { return 0; }
+  }
+
+  function deleteCategory(key, btn) {
+    var inUse = countProductsInCategory(key);
+    if (btn.getAttribute('data-confirming') === 'true') {
+      var cats = getCategories().filter(function(c){ return c.key !== key; });
+      saveCategories(cats);
+      renderCategoriesList();
+      populateAllCategoryDropdowns();
+      showToast('🗑️ Category deleted!');
+    } else {
+      btn.setAttribute('data-confirming', 'true');
+      btn.textContent = inUse > 0 ? '⚠️ ' + inUse + ' product(s) use this — tap again' : '⚠️ Tap again';
+      btn.style.background = 'var(--red)';
+      btn.style.color = '#fff';
+      setTimeout(function(){
+        btn.setAttribute('data-confirming', 'false');
+        btn.textContent = '🗑️ Delete';
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 4000);
+    }
+  }
+
+  function renderCategoriesList() {
+    var cats = getCategories();
+    var list = document.getElementById('categories-list');
+    document.getElementById('categories-count').textContent = '(' + cats.length + ')';
+    if (cats.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:20px;">No categories yet.</p>';
+      return;
+    }
+    list.innerHTML = cats.map(function(c) {
+      var inUse = countProductsInCategory(c.key);
+      return '<div class="product-item"><div class="product-item-main">' +
+        '<div style="width:44px;height:44px;border-radius:8px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">' + (c.icon||'🏷️') + '</div>' +
+        '<div class="product-info">' +
+          '<div class="product-name">' + escAdminHtml(c.name) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">Key: <code>' + c.key + '</code>' + (inUse > 0 ? ' · ' + inUse + ' product(s)' : ' · unused') + '</div>' +
+        '</div>' +
+        '<div class="item-actions">' +
+          '<button class="btn-edit-item" onclick="editCategory(\'' + c.key + '\')">✏️ Edit</button>' +
+          '<button class="btn-delete-item" data-confirming="false" onclick="deleteCategory(\'' + c.key + '\', this)">🗑️ Delete</button>' +
+        '</div>' +
+      '</div></div>';
+    }).join('');
+  }
+
+  // Renders <option> tags for a category <select>, optionally preserving
+  // any non-category special options already in the list (e.g. "All Products").
+  function buildCategoryOptionsHtml(includeAll, allLabel) {
+    var cats = getCategories();
+    var html = '';
+    if (includeAll) html += '<option value="all">' + (allLabel || '🛍️ All Products') + '</option>';
+    html += cats.map(function(c){ return '<option value="' + c.key + '">' + (c.icon||'') + ' ' + escAdminHtml(c.name) + '</option>'; }).join('');
+    return html;
+  }
+
+  function populateAllCategoryDropdowns() {
+    var fCat = document.getElementById('f-category');
+    if (fCat) { var fVal = fCat.value; fCat.innerHTML = buildCategoryOptionsHtml(false); if (fVal) fCat.value = fVal; }
+
+    var dCat = document.getElementById('d-category');
+    if (dCat) { var dVal = dCat.value; dCat.innerHTML = buildCategoryOptionsHtml(false); if (dVal) dCat.value = dVal; }
+
+    var adLink = document.getElementById('ad-link');
+    if (adLink) {
+      var adVal = adLink.value;
+      var html = '<option value="">-- Choose where it links to --</option>' +
+                 buildCategoryOptionsHtml(true) +
+                 '<option value="#deals">🔥 Daily Deals Section</option>';
+      adLink.innerHTML = html;
+      if (adVal) adLink.value = adVal;
+    }
+  }
+
+  function escAdminHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
   }
 
   // ── BARCODES & SCANNER ───────────────────────────────────────
