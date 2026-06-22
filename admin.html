@@ -1285,6 +1285,29 @@
     });
   }
 
+  var IMGBB_API_KEY = '7acd3d62fb89be596203401a38b71df4';
+
+  // Uploads a JPEG data URL to ImgBB and returns the resulting public image URL.
+  // Used instead of Imgur (which some networks/ISPs block) and instead of
+  // Firebase Storage (which requires the paid Blaze plan).
+  function uploadImageToHost(dataUrl) {
+    var base64 = dataUrl.split(',')[1];
+    var formData = new FormData();
+    formData.append('image', base64);
+    return fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_API_KEY, {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (data && data.success && data.data && data.data.url) {
+        return data.data.url;
+      }
+      var msg = (data && data.error && data.error.message) ? data.error.message : 'Unknown upload error';
+      throw new Error(msg);
+    });
+  }
+
   function uploadToImgur(input) {
     var files = Array.from(input.files);
     if (!files.length) return;
@@ -1315,21 +1338,11 @@
           else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
-          // Upload to Imgur using fetch
-          var formData = new FormData();
-          formData.append('image', base64);
-          formData.append('type', 'base64');
-          fetch('https://api.imgur.com/3/image', {
-            method: 'POST',
-            headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
-            body: formData
-          })
-          .then(function(res){ return res.json(); })
-          .then(function(data){
-            if (data && data.data && data.data.link) {
-              currentImages.push({ src: data.data.link });
+          // Upload to ImgBB (free, no card needed, works on networks that block Imgur)
+          uploadImageToHost(dataUrl).then(function(url){
+              currentImages.push({ src: url });
               done++;
               var pct = Math.round((done / total) * 100);
               progressBar.style.width = pct + '%';
@@ -1342,15 +1355,11 @@
                   showToast('✅ ' + total + ' photo' + (total > 1 ? 's' : '') + ' uploaded!');
                 }, 800);
               }
-            } else {
-              done++;
-              showToast('❌ Upload failed. Try the 🔗 Paste Link option instead.');
-              if (done === total) progressWrap.style.display = 'none';
-            }
           })
-          .catch(function(){
+          .catch(function(err){
             done++;
-            showToast('❌ Upload error. Check internet and try again.');
+            console.error('Image upload failed:', err);
+            showToast('❌ Upload error: ' + (err && err.message ? err.message : 'unknown') + '. Try the 🔗 Paste Link option instead.');
             if (done === total) progressWrap.style.display = 'none';
           });
         };
@@ -1636,28 +1645,15 @@
         else       { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-       var base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
-        var formData = new FormData();
-        formData.append('image', base64);
-        formData.append('type', 'base64');
-        fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
-          body: formData
-        })
-        .then(function(res){ return res.json(); })
-        .then(function(data){
-          if (data && data.data && data.data.link) {
-            dealCurrentImage = data.data.link;
+       var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        uploadImageToHost(dataUrl).then(function(url){
+            dealCurrentImage = url;
             showDealPreview(dealCurrentImage);
             showToast('✅ Deal photo uploaded!');
-          } else {
-            document.getElementById('d-photo-msg').textContent = '❌ Upload failed. Try again.';
-            document.getElementById('d-photo-msg').style.color = '#e31837';
-          }
         })
-        .catch(function(){
-          document.getElementById('d-photo-msg').textContent = '❌ Error. Check internet and try again.';
+        .catch(function(err){
+          console.error('Deal image upload failed:', err);
+          document.getElementById('d-photo-msg').textContent = '❌ Error: ' + (err && err.message ? err.message : 'unknown') + '. Try the 🔗 Paste Link option.';
           document.getElementById('d-photo-msg').style.color = '#e31837';
         });
       };
@@ -1907,28 +1903,15 @@
         else       { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
-        var formData = new FormData();
-        formData.append('image', base64);
-        formData.append('type', 'base64');
-        fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
-          body: formData
-        })
-        .then(function(res){ return res.json(); })
-        .then(function(data){
-          if (data && data.data && data.data.link) {
-            adCurrentImage = data.data.link;
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        uploadImageToHost(dataUrl).then(function(url){
+            adCurrentImage = url;
             showAdPreview(adCurrentImage);
             showToast('✅ Banner photo uploaded!');
-          } else {
-            document.getElementById('ad-photo-msg').textContent = '❌ Upload failed. Try again.';
-            document.getElementById('ad-photo-msg').style.color = '#e31837';
-          }
         })
-        .catch(function(){
-          document.getElementById('ad-photo-msg').textContent = '❌ Error. Check internet and try again.';
+        .catch(function(err){
+          console.error('Ad image upload failed:', err);
+          document.getElementById('ad-photo-msg').textContent = '❌ Error: ' + (err && err.message ? err.message : 'unknown') + '. Try the 🔗 Paste Link option.';
           document.getElementById('ad-photo-msg').style.color = '#e31837';
         });
       };
