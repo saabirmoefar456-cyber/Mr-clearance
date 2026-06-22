@@ -1240,13 +1240,15 @@
     if (window.heic2any) return Promise.resolve();
     if (_heic2anyLoadPromise) return _heic2anyLoadPromise;
     _heic2anyLoadPromise = new Promise(function(resolve, reject) {
+      var timedOut = false;
+      var timer = setTimeout(function(){ timedOut = true; reject(new Error('Timed out loading HEIC converter')); }, 8000);
       var script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
-      script.onload = function(){ resolve(); };
-      script.onerror = function(){ reject(new Error('Could not load HEIC converter')); };
+      script.onload = function(){ if (!timedOut) { clearTimeout(timer); resolve(); } };
+      script.onerror = function(){ if (!timedOut) { clearTimeout(timer); _heic2anyLoadPromise = null; reject(new Error('Could not load HEIC converter')); } };
       document.head.appendChild(script);
     });
-    return _heic2anyLoadPromise;
+    return _heic2anyLoadPromise.catch(function(err){ _heic2anyLoadPromise = null; throw err; });
   }
 
   function isLikelyHeic(file) {
