@@ -438,6 +438,26 @@
       });
     };
 
+    // ── SHARED STORE DATA (categories, ads, deals) ─────────────────
+    // These are managed as whole lists/objects rather than individual
+    // documents, so each lives in one Firestore doc under 'store_data'.
+    // This is what makes them sync across every device — phone, laptop,
+    // any browser — instead of being stuck in one device's localStorage.
+    window.fbGetStoreData = async function(key) {
+      const snap = await getDoc(doc(db, 'store_data', key));
+      return snap.exists() ? snap.data().value : null;
+    };
+
+    window.fbSaveStoreData = async function(key, value) {
+      await setDoc(doc(db, 'store_data', key), { value: value, updatedAt: new Date().toISOString() });
+    };
+
+    window.fbListenStoreData = function(key, callback) {
+      return onSnapshot(doc(db, 'store_data', key), snap => {
+        callback(snap.exists() ? snap.data().value : null);
+      });
+    };
+
     window.firebaseReady = true;
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
@@ -1208,10 +1228,53 @@
     document.getElementById(inputId).click();
   }
 
+  // ── HEIC/HEIF HANDLING ──────────────────────────────────────────
+  // iPhones often save photos as HEIC by default. Browsers (including
+  // Safari itself) can't reliably decode HEIC into a canvas — the upload
+  // can silently produce a blank/corrupt image that "looks fine" on the
+  // uploading phone (which may preview the original file natively) but
+  // is broken everywhere else, including on a laptop. We detect HEIC
+  // files and convert them to JPEG first, before any further processing.
+  var _heic2anyLoadPromise = null;
+  function ensureHeic2Any() {
+    if (window.heic2any) return Promise.resolve();
+    if (_heic2anyLoadPromise) return _heic2anyLoadPromise;
+    _heic2anyLoadPromise = new Promise(function(resolve, reject) {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+      script.onload = function(){ resolve(); };
+      script.onerror = function(){ reject(new Error('Could not load HEIC converter')); };
+      document.head.appendChild(script);
+    });
+    return _heic2anyLoadPromise;
+  }
+
+  function isLikelyHeic(file) {
+    var type = (file.type || '').toLowerCase();
+    var name = (file.name || '').toLowerCase();
+    return type === 'image/heic' || type === 'image/heif' ||
+           name.endsWith('.heic') || name.endsWith('.heif');
+  }
+
+  // Returns a Promise resolving to a browser-safe image File/Blob.
+  // Converts HEIC/HEIF to JPEG first; passes through any other image type unchanged.
+  function prepareImageFile(file) {
+    if (!isLikelyHeic(file)) return Promise.resolve(file);
+    return ensureHeic2Any().then(function() {
+      return window.heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+    }).then(function(converted) {
+      // heic2any can return a single Blob or an array (for multi-image HEIC containers) — use the first result.
+      return Array.isArray(converted) ? converted[0] : converted;
+    }).catch(function(err) {
+      console.error('HEIC conversion failed:', err);
+      throw new Error('heic-conversion-failed');
+    });
+  }
+
   function uploadToImgur(input) {
     var files = Array.from(input.files);
     if (!files.length) return;
-    var total = files.filter(function(f){ return f.type.startsWith('image/'); }).length;
+    var total = files.filter(function(f){ return f.type.startsWith('image/') || isLikelyHeic(f); }).length;
     var done  = 0;
 
     // Show progress
@@ -1223,8 +1286,9 @@
     progressMsg.textContent = 'Uploading 0 of ' + total + '...';
 
     files.forEach(function(file) {
-      if (!file.type.startsWith('image/')) return;
+      if (!file.type.startsWith('image/') && !isLikelyHeic(file)) return;
 
+      prepareImageFile(file).then(function(safeFile) {
       // Compress before upload
       var reader = new FileReader();
       reader.onload = function(e) {
@@ -1278,7 +1342,12 @@
         };
         img.src = e.target.result;
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(safeFile);
+      }).catch(function(){
+        done++;
+        showToast('❌ Could not convert ' + (file.name || 'a photo') + ' (HEIC). Try the 🔗 Paste Link option, or change your phone to save photos as JPEG.');
+        if (done === total) progressWrap.style.display = 'none';
+      });
     });
     input.value = '';
   }
@@ -1486,17 +1555,51 @@
   // Each deal: { id, name, price, originalPrice, category, desc, image }
   var dealEditingId = null;
   var dealCurrentImage = '';
+  var cachedDeals = null;
 
   function getDeals() {
+    if (cachedDeals) return cachedDeals;
     try { return JSON.parse(localStorage.getItem('mrc_deals') || '[]'); } catch(e) { return []; }
   }
-  function saveDeals(deals) { localStorage.setItem('mrc_deals', JSON.stringify(deals)); }
+
+  function saveDeals(deals) {
+    cachedDeals = deals;
+    localStorage.setItem('mrc_deals', JSON.stringify(deals));
+    if (window.fbSaveStoreData) {
+      window.fbSaveStoreData('deals', deals).catch(function(){
+        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      });
+    }
+  }
+
+  function initDealsSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('deals', function(deals) {
+        if (Array.isArray(deals) && deals.length) {
+          cachedDeals = deals;
+        } else if (!cachedDeals) {
+          var localRaw = localStorage.getItem('mrc_deals');
+          var localDeals = null;
+          try { localDeals = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
+          cachedDeals = Array.isArray(localDeals) ? localDeals : [];
+          if (cachedDeals.length && window.fbSaveStoreData) window.fbSaveStoreData('deals', cachedDeals).catch(function(){});
+        }
+        localStorage.setItem('mrc_deals', JSON.stringify(cachedDeals));
+        if (document.getElementById('tab-deals') && document.getElementById('tab-deals').classList.contains('active')) {
+          renderDealsList();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initDealsSync(); }
+  else { window.addEventListener('firebase-ready', initDealsSync); }
 
   function uploadDealToImgur(input) {
     var file = input.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || (!file.type.startsWith('image/') && !isLikelyHeic(file))) return;
     document.getElementById('d-photo-msg').textContent = '⏳ Uploading...';
     document.getElementById('d-photo-msg').style.color = '#f59e0b';
+    prepareImageFile(file).then(function(safeFile) {
     var reader = new FileReader();
     reader.onload = function(e) {
       var img = new Image();
@@ -1534,7 +1637,11 @@
       };
       img.src = e.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(safeFile);
+    }).catch(function(){
+      document.getElementById('d-photo-msg').textContent = '❌ Could not convert this HEIC photo. Try the 🔗 Paste Link option.';
+      document.getElementById('d-photo-msg').style.color = '#e31837';
+    });
     input.value = '';
   }
   function handleDealFileUpload(input) { uploadDealToImgur(input); }
@@ -1704,20 +1811,54 @@
   }
 
   // ── ADS (PROMO BANNERS) ───────────────────────────────────────
-  // Stored in localStorage under 'mrc_ads' keyed by slot: {"1":{...},"2":{...}}
-  // Each banner: { tag, headline, price, originalPrice, link, btnText, image }
+  // Synced via Firebase (store_data/ads), same approach as categories,
+  // so a banner added on any device shows up on every device.
   var adCurrentImage = '';
+  var cachedAds = null;
 
   function getAds() {
+    if (cachedAds) return cachedAds;
     try { return JSON.parse(localStorage.getItem('mrc_ads') || '{}'); } catch(e) { return {}; }
   }
-  function saveAds(ads) { localStorage.setItem('mrc_ads', JSON.stringify(ads)); }
+
+  function saveAds(ads) {
+    cachedAds = ads;
+    localStorage.setItem('mrc_ads', JSON.stringify(ads));
+    if (window.fbSaveStoreData) {
+      window.fbSaveStoreData('ads', ads).catch(function(){
+        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      });
+    }
+  }
+
+  function initAdsSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('ads', function(ads) {
+        if (ads && typeof ads === 'object' && Object.keys(ads).length) {
+          cachedAds = ads;
+        } else if (!cachedAds) {
+          var localRaw = localStorage.getItem('mrc_ads');
+          var localAds = null;
+          try { localAds = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
+          cachedAds = (localAds && typeof localAds === 'object') ? localAds : {};
+          if (Object.keys(cachedAds).length && window.fbSaveStoreData) window.fbSaveStoreData('ads', cachedAds).catch(function(){});
+        }
+        localStorage.setItem('mrc_ads', JSON.stringify(cachedAds));
+        if (document.getElementById('tab-ads') && document.getElementById('tab-ads').classList.contains('active')) {
+          renderAdsList();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initAdsSync(); }
+  else { window.addEventListener('firebase-ready', initAdsSync); }
 
   function uploadAdToImgur(input) {
     var file = input.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || (!file.type.startsWith('image/') && !isLikelyHeic(file))) return;
     document.getElementById('ad-photo-msg').textContent = '⏳ Uploading...';
     document.getElementById('ad-photo-msg').style.color = '#f59e0b';
+    prepareImageFile(file).then(function(safeFile) {
     var reader = new FileReader();
     reader.onload = function(e) {
       var img = new Image();
@@ -1755,7 +1896,11 @@
       };
       img.src = e.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(safeFile);
+    }).catch(function(){
+      document.getElementById('ad-photo-msg').textContent = '❌ Could not convert this HEIC photo. Try the 🔗 Paste Link option.';
+      document.getElementById('ad-photo-msg').style.color = '#e31837';
+    });
     input.value = '';
   }
 
@@ -1908,10 +2053,11 @@
   }
 
   // ── CATEGORIES ────────────────────────────────────────────────
-  // Single source of truth for categories, stored under 'mrc_categories'.
-  // Structure: [ { key:'footwear', name:'Footwear', icon:'👟' }, ... ]
-  // Seeded once from the store's original hardcoded list so nothing
-  // breaks for sites that already have products using these keys.
+  // Synced via Firebase (store_data/categories) so adding a category on
+  // one device — phone or laptop — shows up on every device immediately,
+  // not just the one that added it. localStorage is kept only as an
+  // instant local cache so the UI has something to show before Firebase
+  // finishes its first load.
   var DEFAULT_CATEGORIES = [
     { key:'footwear',    name:'Footwear',    icon:'👟' },
     { key:'electronics', name:'Electronics', icon:'💻' },
@@ -1921,16 +2067,53 @@
     { key:'aprons',      name:'Aprons',      icon:'🎀' },
     { key:'workwear',    name:'Work Wear',   icon:'🦺' }
   ];
+  var cachedCategories = null;
 
   function getCategories() {
+    if (cachedCategories) return cachedCategories;
     var raw = localStorage.getItem('mrc_categories');
-    if (!raw) { saveCategories(DEFAULT_CATEGORIES); return DEFAULT_CATEGORIES.slice(); }
+    if (!raw) return DEFAULT_CATEGORIES.slice();
     try {
       var parsed = JSON.parse(raw);
       return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CATEGORIES.slice();
     } catch(e) { return DEFAULT_CATEGORIES.slice(); }
   }
-  function saveCategories(cats) { localStorage.setItem('mrc_categories', JSON.stringify(cats)); }
+
+  function saveCategories(cats) {
+    cachedCategories = cats;
+    localStorage.setItem('mrc_categories', JSON.stringify(cats));
+    if (window.fbSaveStoreData) {
+      window.fbSaveStoreData('categories', cats).catch(function(){
+        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      });
+    }
+  }
+
+  function initCategoriesSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('categories', function(cats) {
+        if (Array.isArray(cats) && cats.length) {
+          cachedCategories = cats;
+        } else if (!cachedCategories) {
+          // No cloud data yet — migrate whatever this device already has
+          // locally (so a category added before this update isn't lost),
+          // falling back to the hardcoded defaults only if there's nothing.
+          var localRaw = localStorage.getItem('mrc_categories');
+          var localCats = null;
+          try { localCats = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
+          cachedCategories = (Array.isArray(localCats) && localCats.length) ? localCats : DEFAULT_CATEGORIES.slice();
+          if (window.fbSaveStoreData) window.fbSaveStoreData('categories', cachedCategories).catch(function(){});
+        }
+        localStorage.setItem('mrc_categories', JSON.stringify(cachedCategories));
+        populateAllCategoryDropdowns();
+        if (document.getElementById('tab-categories') && document.getElementById('tab-categories').classList.contains('active')) {
+          renderCategoriesList();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initCategoriesSync(); }
+  else { window.addEventListener('firebase-ready', initCategoriesSync); }
 
   function slugifyCategory(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
