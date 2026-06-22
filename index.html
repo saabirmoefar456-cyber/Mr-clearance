@@ -297,6 +297,27 @@
     if (typeof renderProducts === 'function') { renderProducts(); if (typeof filterProducts === 'function') filterProducts(); }
   });
 
+  // Categories / Ads / Deals listeners — these are admin-managed lists
+  // that need to reach every customer's device, not just the one the
+  // admin used to set them, so they're synced via Firebase too.
+  onSnapshot(doc(db, 'store_data', 'categories'), function(snap) {
+    var cats = snap.exists() ? snap.data().value : null;
+    if (Array.isArray(cats) && cats.length) localStorage.setItem('mrc_categories', JSON.stringify(cats));
+    if (typeof renderCategorySidebar === 'function') renderCategorySidebar();
+  });
+
+  onSnapshot(doc(db, 'store_data', 'ads'), function(snap) {
+    var ads = snap.exists() ? snap.data().value : null;
+    localStorage.setItem('mrc_ads', JSON.stringify(ads && typeof ads === 'object' ? ads : {}));
+    if (typeof renderAds === 'function') renderAds();
+  });
+
+  onSnapshot(doc(db, 'store_data', 'deals'), function(snap) {
+    var deals = snap.exists() ? snap.data().value : null;
+    localStorage.setItem('mrc_deals', JSON.stringify(Array.isArray(deals) ? deals : []));
+    if (typeof renderDeals === 'function') renderDeals();
+  });
+
   // Auth state listener
   onAuthStateChanged(auth, function(user) {
     window.mrcUser = user || null;
