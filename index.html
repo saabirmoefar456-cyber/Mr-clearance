@@ -772,7 +772,7 @@
   function getImages(p) {
     if (p.images && Array.isArray(p.images) && p.images.length > 0) return p.images;
     if (p.image) return [p.image];
-    return ['https://via.placeholder.com/400x300/f5f5f5/e31837?text=No+Image'];
+    return ['data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E'];
   }
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -793,7 +793,7 @@
       var hasSizes = p.sizes && p.sizes.length > 0;
       html += '<div class="product-card" id="' + cid + '" data-name="' + escHtml(p.name) + '" data-price="' + p.price + '" data-category="' + (p.category||'') + '" data-id="' + (p.id||i) + '" data-img-idx="0" data-imgs=\'' + JSON.stringify(imgs).replace(/'/g,"&#39;") + '\' style="animation-delay:' + delay + 's">';
       html += '<div class="card-img-wrap" onclick="openPdp(\'' + (p.id||i) + '\')">';
-      html += '<img src="' + escHtml(imgs[0]) + '" alt="' + escHtml(p.name) + '" class="card-img" id="img-' + cid + '" loading="lazy" onerror="this.src=\'https://via.placeholder.com/400x300/f5f5f5/e31837?text=No+Image\'"/>';
+      html += '<img src="' + escHtml(imgs[0]) + '" alt="' + escHtml(p.name) + '" class="card-img" id="img-' + cid + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/>';
       if (imgs.length > 1) {
         html += '<button class="img-arrow prev" onclick="slideImg(event,\'' + cid + '\',-1,' + JSON.stringify(imgs) + ')">&#8249;</button>';
         html += '<button class="img-arrow next" onclick="slideImg(event,\'' + cid + '\',1,' + JSON.stringify(imgs) + ')">&#8250;</button>';
@@ -1281,20 +1281,18 @@
       heroBanner.style.display = 'flex'; heroBanner.style.alignItems = 'center'; heroBanner.style.justifyContent = 'center';
       heroBanner.style.background = 'linear-gradient(135deg,#f5e6ee 0%,#ede0f0 50%,#f0e8d8 100%)';
       heroContent.style.display = 'none';
-      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:40px;display:block;margin-bottom:10px;">🎀</span><h2 style="font-family:Georgia,serif;font-size:clamp(28px,5vw,52px);font-weight:700;letter-spacing:3px;color:#6b3d6b;margin-bottom:8px;">Aprons</h2><div style="width:60px;height:1px;background:#c9a0c0;margin:12px auto;"></div><p style="font-size:14px;font-weight:600;color:#8b5e83;letter-spacing:1px;">Elegantly crafted · Every stitch, a statement</p><button onclick="showCategoryBanner(\'all\')" style="margin-top:20px;padding:10px 24px;background:#8b5e83;color:#fff;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✕ Clear Filter</button></div>';
+      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:40px;display:block;margin-bottom:10px;">🎀</span><h2 style="font-family:Georgia,serif;font-size:clamp(28px,5vw,52px);font-weight:700;letter-spacing:3px;color:#6b3d6b;margin-bottom:8px;">Aprons</h2><div style="width:60px;height:1px;background:#c9a0c0;margin:12px auto;"></div><p style="font-size:14px;font-weight:600;color:#8b5e83;letter-spacing:1px;">Elegantly crafted · Every stitch, a statement</p><button onclick="selectCat(\'all\')" style="margin-top:20px;padding:10px 24px;background:#8b5e83;color:#fff;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✕ Clear Filter</button></div>';
     } else if (category === 'workwear') {
       banner.className = 'visible';
       banner.innerHTML = '';
       heroBanner.style.display = 'flex'; heroBanner.style.alignItems = 'center'; heroBanner.style.justifyContent = 'center';
       heroBanner.style.background = 'linear-gradient(135deg,#1c1c1c 0%,#2d2410 60%,#3d2e08 100%)';
       heroContent.style.display = 'none';
-      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:44px;display:block;margin-bottom:10px;">🦺</span><h2 style="font-family:\'Nunito Sans\',sans-serif;font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:5px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.4);">Work Wear</h2><div style="width:80px;height:4px;background:repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 10px,#1c1c1c 10px,#1c1c1c 20px);margin:12px auto;"></div><p style="font-size:13px;font-weight:700;color:rgba(245,158,11,0.8);letter-spacing:2px;text-transform:uppercase;">Built tough · Ready for the site</p><button onclick="showCategoryBanner(\'all\')" style="margin-top:20px;padding:10px 24px;background:#f59e0b;color:#1c1c1c;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:900;cursor:pointer;">✕ Clear Filter</button></div>';
+      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:44px;display:block;margin-bottom:10px;">🦺</span><h2 style="font-family:\'Nunito Sans\',sans-serif;font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:5px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.4);">Work Wear</h2><div style="width:80px;height:4px;background:repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 10px,#1c1c1c 10px,#1c1c1c 20px);margin:12px auto;"></div><p style="font-size:13px;font-weight:700;color:rgba(245,158,11,0.8);letter-spacing:2px;text-transform:uppercase;">Built tough · Ready for the site</p><button onclick="selectCat(\'all\')" style="margin-top:20px;padding:10px 24px;background:#f59e0b;color:#1c1c1c;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:900;cursor:pointer;">✕ Clear Filter</button></div>';
     } else {
       banner.className = ''; banner.innerHTML = '';
       heroBanner.style.display = 'none'; heroBanner.innerHTML = '';
       heroContent.style.display = '';
-      document.getElementById('category-filter').value = 'all';
-      filterProducts();
     }
   }
 
@@ -1310,7 +1308,7 @@
       var hasOrig = d.originalPrice && d.originalPrice > d.price;
       return '<div class="deal-card product-card" data-name="' + escHtml(d.name) + '" data-price="' + d.price + '" data-category="' + (d.category||'') + '">' +
         '<div class="deal-badge">SPECIAL</div>' +
-        '<div class="deal-img-wrap"><img src="' + escHtml(d.image||'') + '" alt="' + escHtml(d.name) + '" class="deal-img" loading="lazy" onerror="this.src=\'https://via.placeholder.com/400x220/f5f5f5/e31837?text=No+Image\'"/></div>' +
+        '<div class="deal-img-wrap"><img src="' + escHtml(d.image||'') + '" alt="' + escHtml(d.name) + '" class="deal-img" loading="lazy" onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22220%22%20viewBox%3D%220%200%20400%20220%22%3E%3Crect%20width%3D%22400%22%20height%3D%22220%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/></div>' +
         '<div class="deal-body"><h3>' + escHtml(d.name) + '</h3><p>' + escHtml(d.desc||'') + '</p>' +
         '<div class="deal-price-wrap">' + (hasOrig?'<span class="deal-old-price">R '+d.originalPrice.toLocaleString()+'</span>':'') + '<span class="deal-price">R ' + d.price.toLocaleString() + '</span></div>' +
         '<div class="deal-qty-row"><div class="qty-control"><button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button></div>' +
