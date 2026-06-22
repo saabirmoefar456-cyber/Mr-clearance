@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Mr Clearance — Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --red:#e31837; --red-dark:#c01230; --red-soft:rgba(227,24,55,0.08);
@@ -15,6 +15,11 @@
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html,body{overflow-x:hidden;max-width:100%;}
     body{font-family:'Nunito Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    @keyframes catFade  { from{opacity:0} to{opacity:1} }
+    @keyframes catSlide  { from{opacity:0;transform:translateX(-30px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes catZoom   { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+    @keyframes catBounce { 0%{opacity:0;transform:translateY(-25px)} 60%{opacity:1;transform:translateY(6px)} 100%{transform:translateY(0)} }
 
     /* ── LOGIN ── */
     #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -1054,6 +1059,82 @@
       </div>
       <p style="font-size:12px;color:var(--text-light);font-weight:600;margin:-6px 0 14px;">Key: <code id="cat-key-preview" style="background:#f5f5f5;padding:2px 6px;border-radius:4px;">—</code> (used internally, generated automatically from the name)</p>
       <input type="hidden" id="cat-key-edit" value=""/>
+
+      <div class="info-box" style="background:#f3e8ff;border-color:#c4a3f0;color:#5b21b6;">
+        <strong style="color:#7c3aed;">🎨 Theme this category (optional):</strong> Give this category its own colors, fonts, and animation. Customers will see this whenever they browse it.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Page Background Color</label>
+          <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">The area behind the products — not the white product cards themselves.</p>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="cat-bg-color" value="#ffffff" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+            <button type="button" class="btn-secondary" style="padding:8px 10px;font-size:12px;" onclick="clearThemeField('cat-bg-color','#ffffff')">Reset</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Accent Color (prices, buttons)</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="cat-accent-color" value="#e31837" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+            <button type="button" class="btn-secondary" style="padding:8px 10px;font-size:12px;" onclick="clearThemeField('cat-accent-color','#e31837')">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Product Name Color</label>
+        <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">Shows on a white card, so avoid white or very pale colors.</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="color" id="cat-text-color" value="#1a1a1a" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+          <button type="button" class="btn-secondary" style="padding:8px 10px;font-size:12px;" onclick="clearThemeField('cat-text-color','#1a1a1a')">Reset</button>
+        </div>
+        <p id="cat-contrast-warning" style="display:none;font-size:12px;color:#c01230;font-weight:700;margin-top:6px;">⚠️ This color will be very hard to read on the white product card. Pick something darker.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Font</label>
+        <select id="cat-font-family" onchange="previewCategoryTheme()">
+          <option value="">Default (Nunito Sans)</option>
+          <option value="'Archivo Black',sans-serif">Archivo Black — Bold &amp; Punchy</option>
+          <option value="'Playfair Display',serif">Playfair Display — Elegant</option>
+          <option value="'Poppins',sans-serif">Poppins — Clean &amp; Modern</option>
+          <option value="'Fredoka',sans-serif">Fredoka — Playful &amp; Round</option>
+          <option value="'Bebas Neue',sans-serif">Bebas Neue — Tall &amp; Bold</option>
+          <option value="'Space Mono',monospace">Space Mono — Techy</option>
+          <option value="'Caveat',cursive">Caveat — Handwritten</option>
+          <option value="'Oswald',sans-serif">Oswald — Condensed</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Text Size: <span id="cat-font-size-display">Normal</span></label>
+        <input type="range" id="cat-font-size" min="0.85" max="1.4" step="0.05" value="1" style="width:100%;" oninput="document.getElementById('cat-font-size-display').textContent = catFontSizeLabel(this.value)"/>
+      </div>
+
+      <div class="form-group">
+        <label>Entrance Animation</label>
+        <select id="cat-animation" onchange="previewCategoryTheme()">
+          <option value="none">None (instant)</option>
+          <option value="fade">Fade In</option>
+          <option value="slide">Slide In</option>
+          <option value="zoom">Zoom In</option>
+          <option value="bounce">Bounce In</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Live Preview</label>
+        <div id="cat-theme-preview" style="border:2px solid var(--border);border-radius:10px;padding:20px;background:#fff;transition:background 0.3s;">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;max-width:200px;">
+            <strong id="cat-preview-name" style="display:block;font-size:15px;margin-bottom:6px;">Sample Product</strong>
+            <span id="cat-preview-price" style="display:block;font-size:19px;font-weight:800;color:#e31837;margin-bottom:10px;">R 299</span>
+            <span style="display:inline-block;background:#e31837;color:#fff;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:700;" id="cat-preview-btn">Add to Cart</span>
+          </div>
+        </div>
+        <button type="button" class="btn-secondary" style="margin-top:8px;width:auto;padding:8px 14px;font-size:12px;" onclick="previewCategoryTheme()">🔄 Update Preview</button>
+      </div>
+
       <div class="btn-actions">
         <button class="btn-primary" onclick="saveCategory()">💾 Save Category</button>
         <button class="btn-secondary" onclick="clearCategoryForm()">Clear Form</button>
@@ -2173,13 +2254,84 @@
     document.getElementById('cat-name').value = '';
     document.getElementById('cat-key-edit').value = '';
     document.getElementById('cat-key-preview').textContent = '—';
+    document.getElementById('cat-bg-color').value = '#ffffff';
+    document.getElementById('cat-accent-color').value = '#e31837';
+    document.getElementById('cat-text-color').value = '#1a1a1a';
+    document.getElementById('cat-font-family').value = '';
+    document.getElementById('cat-font-size').value = '1';
+    document.getElementById('cat-font-size-display').textContent = 'Normal';
+    document.getElementById('cat-animation').value = 'none';
+    previewCategoryTheme();
+  }
+
+  function clearThemeField(inputId, defaultVal) {
+    document.getElementById(inputId).value = defaultVal;
+    previewCategoryTheme();
+  }
+
+  function catFontSizeLabel(val) {
+    val = parseFloat(val);
+    if (val <= 0.9)  return 'Small';
+    if (val >= 1.3)  return 'Extra Large';
+    if (val >= 1.15) return 'Large';
+    if (val <= 0.95) return 'Slightly Small';
+    return 'Normal';
+  }
+
+  function getThemeFromForm() {
+    return {
+      bgColor: document.getElementById('cat-bg-color').value,
+      accentColor: document.getElementById('cat-accent-color').value,
+      textColor: document.getElementById('cat-text-color').value,
+      fontFamily: document.getElementById('cat-font-family').value,
+      fontSizeScale: parseFloat(document.getElementById('cat-font-size').value),
+      animationStyle: document.getElementById('cat-animation').value
+    };
+  }
+
+  function colorLuminance(hex) {
+    var c = hex.replace('#','');
+    var r = parseInt(c.substr(0,2),16)/255, g = parseInt(c.substr(2,2),16)/255, b = parseInt(c.substr(4,2),16)/255;
+    return 0.2126*r + 0.7152*g + 0.0722*b;
+  }
+
+  function previewCategoryTheme() {
+    var theme = getThemeFromForm();
+    var preview = document.getElementById('cat-theme-preview');
+    var name = document.getElementById('cat-preview-name');
+    var price = document.getElementById('cat-preview-price');
+    var btn = document.getElementById('cat-preview-btn');
+    preview.style.background = theme.bgColor;
+    name.style.color = theme.textColor;
+    name.style.fontFamily = theme.fontFamily || "'Nunito Sans',sans-serif";
+    name.style.fontSize = (15 * theme.fontSizeScale) + 'px';
+    price.style.color = theme.accentColor;
+    price.style.fontSize = (19 * theme.fontSizeScale) + 'px';
+    btn.style.background = theme.accentColor;
+
+    // Product names sit on a white card, so warn if the chosen color would be hard to read there.
+    var warning = document.getElementById('cat-contrast-warning');
+    if (warning) warning.style.display = (colorLuminance(theme.textColor) > 0.85) ? 'block' : 'none';
+
+    if (theme.animationStyle !== 'none') {
+      var card = preview.querySelector('div');
+      card.style.animation = 'none';
+      void card.offsetWidth;
+      var map = { fade:'catFade 0.5s ease both', slide:'catSlide 0.45s ease both', zoom:'catZoom 0.4s ease both', bounce:'catBounce 0.55s cubic-bezier(.34,1.56,.64,1) both' };
+      card.style.animation = map[theme.animationStyle] || '';
+    }
   }
 
   function saveCategory() {
     var icon = document.getElementById('cat-icon').value.trim() || '🏷️';
     var name = document.getElementById('cat-name').value.trim();
     var editingKey = document.getElementById('cat-key-edit').value;
+    var theme = getThemeFromForm();
     if (!name) { showToast('❌ Please enter a category name'); return; }
+    if (colorLuminance(theme.textColor) > 0.85) {
+      showToast('❌ Product Name Color is too pale to read on a white card — please pick something darker first.');
+      return;
+    }
 
     var cats = getCategories();
     if (editingKey) {
@@ -2187,6 +2339,7 @@
       if (idx === -1) { showToast('❌ Could not find that category to update'); return; }
       cats[idx].name = name;
       cats[idx].icon = icon;
+      cats[idx].theme = theme;
       saveCategories(cats);
       clearCategoryForm();
       renderCategoriesList();
@@ -2201,7 +2354,7 @@
       showToast('❌ A category with that name already exists');
       return;
     }
-    cats.push({ key:key, name:name, icon:icon });
+    cats.push({ key:key, name:name, icon:icon, theme:theme });
     saveCategories(cats);
     clearCategoryForm();
     renderCategoriesList();
@@ -2217,6 +2370,17 @@
     document.getElementById('cat-name').value = c.name;
     document.getElementById('cat-key-edit').value = c.key;
     document.getElementById('cat-key-preview').textContent = c.key;
+
+    var theme = c.theme || {};
+    document.getElementById('cat-bg-color').value = theme.bgColor || '#ffffff';
+    document.getElementById('cat-accent-color').value = theme.accentColor || '#e31837';
+    document.getElementById('cat-text-color').value = theme.textColor || '#1a1a1a';
+    document.getElementById('cat-font-family').value = theme.fontFamily || '';
+    document.getElementById('cat-font-size').value = theme.fontSizeScale || 1;
+    document.getElementById('cat-font-size-display').textContent = catFontSizeLabel(theme.fontSizeScale || 1);
+    document.getElementById('cat-animation').value = theme.animationStyle || 'none';
+    previewCategoryTheme();
+
     window.scrollTo({ top:0, behavior:'smooth' });
     showToast('✏️ Editing "' + c.name + '"');
   }
