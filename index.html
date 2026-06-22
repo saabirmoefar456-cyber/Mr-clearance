@@ -6,7 +6,7 @@
   <title>Mr Clearance — Shop Online</title>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
   <style>
     /* ── PRODUCT DETAIL MODAL (Temu/Shein style) ── */
     #pdp-overlay {
@@ -997,6 +997,79 @@
     });
     document.getElementById('product-count').textContent = 'Showing ' + visible + ' product' + (visible !== 1 ? 's' : '');
     document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    applyCategoryTheme(category);
+  }
+
+  // ── CATEGORY THEMING ─────────────────────────────────────────────
+  // Each category can have its own colors, fonts, and entrance animation,
+  // set from Admin → Categories. Stored per-category alongside name/icon.
+  function getCategoryTheme(key) {
+    var cats = [];
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+      cats = Array.isArray(raw) ? raw : [];
+    } catch(e) {}
+    var cat = cats.find(function(c){ return c.key === key; });
+    return (cat && cat.theme) ? cat.theme : null;
+  }
+
+  function applyCategoryTheme(categoryKey) {
+    var section = document.querySelector('.products-section');
+    var styleTag = document.getElementById('category-theme-style');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'category-theme-style';
+      document.head.appendChild(styleTag);
+    }
+
+    var theme = (categoryKey && categoryKey !== 'all') ? getCategoryTheme(categoryKey) : null;
+
+    // Remove any previous animation classes before applying new ones
+    document.querySelectorAll('#products-grid .product-card').forEach(function(card){
+      card.classList.remove('cat-anim-fade','cat-anim-slide','cat-anim-zoom','cat-anim-bounce');
+    });
+
+    if (!theme) {
+      styleTag.textContent = '';
+      if (section) section.style.removeProperty('--cat-bg');
+      return;
+    }
+
+    var css = '';
+    if (section) {
+      if (theme.bgColor) section.style.setProperty('--cat-bg', theme.bgColor);
+      else section.style.removeProperty('--cat-bg');
+    }
+
+    css += '.products-section { background: var(--cat-bg, transparent); transition: background 0.4s ease; }';
+
+    if (theme.accentColor) {
+      css += '#products-grid .product-card .price { color: ' + theme.accentColor + ' !important; }';
+      css += '#products-grid .product-card .add-btn { background: ' + theme.accentColor + ' !important; }';
+      css += '#products-grid .product-card:hover { border-color: ' + theme.accentColor + ' !important; }';
+    }
+    if (theme.textColor) {
+      css += '#products-grid .product-card h3 { color: ' + theme.textColor + ' !important; }';
+    }
+    if (theme.fontFamily) {
+      css += '#products-grid .product-card h3 { font-family: ' + theme.fontFamily + ' !important; }';
+    }
+    if (theme.fontSizeScale) {
+      css += '#products-grid .product-card h3 { font-size: calc(15px * ' + theme.fontSizeScale + ') !important; }';
+      css += '#products-grid .product-card .price { font-size: calc(19px * ' + theme.fontSizeScale + ') !important; }';
+    }
+    styleTag.textContent = css;
+
+    if (theme.animationStyle && theme.animationStyle !== 'none') {
+      var animClass = 'cat-anim-' + theme.animationStyle;
+      document.querySelectorAll('#products-grid .product-card').forEach(function(card, idx){
+        if (card.style.display === 'none') return;
+        card.classList.remove(animClass);
+        void card.offsetWidth; // restart animation
+        card.style.animationDelay = (idx * 0.05) + 's';
+        card.classList.add(animClass);
+      });
+    }
   }
 
   function changeCardQty(btn, change) { var el = btn.parentElement.querySelector('.qty-val'); el.textContent = Math.max(1, parseInt(el.textContent) + change); }
