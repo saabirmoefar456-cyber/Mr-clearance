@@ -931,6 +931,10 @@
       <div class="info-box" style="background:#fff8e1;border-color:#f9a825;color:#7d6300;">
         <strong style="color:#f57f17;">⏰ Remember:</strong> These deals reset every day at midnight. Swap them out each morning to keep your store fresh!
       </div>
+      <div id="deals-sync-retry" style="display:none;background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:700;color:#7d6300;margin-bottom:10px;">⚠️ Your last change saved on this device only — it hasn't reached the cloud yet, so other phones/laptops won't see it until it does.</p>
+        <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryDealsSync()">🔄 Retry Cloud Sync</button>
+      </div>
       <div id="deals-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       <div id="deals-empty-state" style="display:none;text-align:center;padding:40px 20px;color:var(--text-light);">
         <div style="font-size:36px;margin-bottom:10px;">🏷️</div>
@@ -1025,6 +1029,10 @@
     <!-- CURRENT AD SLOTS -->
     <div class="section-card">
       <h2>📋 Current Promo Banners</h2>
+      <div id="ads-sync-retry" style="display:none;background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:700;color:#7d6300;margin-bottom:10px;">⚠️ Your last change saved on this device only — it hasn't reached the cloud yet, so other phones/laptops won't see it until it does.</p>
+        <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryAdsSync()">🔄 Retry Cloud Sync</button>
+      </div>
       <div id="ads-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </div>
@@ -1054,6 +1062,10 @@
 
     <div class="section-card">
       <h2>📋 Current Categories <span id="categories-count" style="font-size:12px;color:var(--text-light);font-weight:700;"></span></h2>
+      <div id="categories-sync-retry" style="display:none;background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:700;color:#7d6300;margin-bottom:10px;">⚠️ Your last change saved on this device only — it hasn't reached the cloud yet, so other phones/laptops won't see it until it does.</p>
+        <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryCategoriesSync()">🔄 Retry Cloud Sync</button>
+      </div>
       <div id="categories-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </div>
@@ -1568,10 +1580,22 @@
     cachedDeals = deals;
     localStorage.setItem('mrc_deals', JSON.stringify(deals));
     if (window.fbSaveStoreData) {
-      window.fbSaveStoreData('deals', deals).catch(function(){
-        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      window.fbSaveStoreData('deals', deals).then(function(){
+        var el = document.getElementById('deals-sync-retry');
+        if (el) el.style.display = 'none';
+      }).catch(function(err){
+        console.error('Deals cloud sync failed:', err);
+        showToast('⚠️ Saved on this device only. Cloud sync error: ' + (err && err.code ? err.code : 'unknown') + '. Tap "Retry Cloud Sync" below.');
+        var el = document.getElementById('deals-sync-retry');
+        if (el) el.style.display = 'block';
       });
     }
+  }
+
+  function retryDealsSync() {
+    var el = document.getElementById('deals-sync-retry');
+    if (el) el.style.display = 'none';
+    saveDeals(getDeals());
   }
 
   function initDealsSync() {
@@ -1827,10 +1851,22 @@
     cachedAds = ads;
     localStorage.setItem('mrc_ads', JSON.stringify(ads));
     if (window.fbSaveStoreData) {
-      window.fbSaveStoreData('ads', ads).catch(function(){
-        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      window.fbSaveStoreData('ads', ads).then(function(){
+        var el = document.getElementById('ads-sync-retry');
+        if (el) el.style.display = 'none';
+      }).catch(function(err){
+        console.error('Ads cloud sync failed:', err);
+        showToast('⚠️ Saved on this device only. Cloud sync error: ' + (err && err.code ? err.code : 'unknown') + '. Tap "Retry Cloud Sync" below.');
+        var el = document.getElementById('ads-sync-retry');
+        if (el) el.style.display = 'block';
       });
     }
+  }
+
+  function retryAdsSync() {
+    var el = document.getElementById('ads-sync-retry');
+    if (el) el.style.display = 'none';
+    saveAds(getAds());
   }
 
   function initAdsSync() {
@@ -2085,10 +2121,26 @@
     cachedCategories = cats;
     localStorage.setItem('mrc_categories', JSON.stringify(cats));
     if (window.fbSaveStoreData) {
-      window.fbSaveStoreData('categories', cats).catch(function(){
-        showToast('⚠️ Saved locally, but could not sync to the cloud — check your internet connection.');
+      window.fbSaveStoreData('categories', cats).then(function(){
+        var el = document.getElementById('categories-sync-retry');
+        if (el) el.style.display = 'none';
+      }).catch(function(err){
+        console.error('Category cloud sync failed:', err);
+        showToast('⚠️ Saved on this device only. Cloud sync error: ' + (err && err.code ? err.code : 'unknown') + '. Tap "Retry Cloud Sync" below.');
+        showCategoriesSyncRetry();
       });
     }
+  }
+
+  function showCategoriesSyncRetry() {
+    var el = document.getElementById('categories-sync-retry');
+    if (el) el.style.display = 'block';
+  }
+
+  function retryCategoriesSync() {
+    var el = document.getElementById('categories-sync-retry');
+    if (el) el.style.display = 'none';
+    saveCategories(getCategories());
   }
 
   function initCategoriesSync() {
