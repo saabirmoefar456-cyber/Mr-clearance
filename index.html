@@ -1351,23 +1351,39 @@
     var banner = document.getElementById('category-banner');
     var heroBanner = document.getElementById('hero-banner-slot');
     var heroContent = document.getElementById('hero-default-content');
-    if (category === 'aprons') {
-      banner.className = 'visible';
-      banner.innerHTML = '';
-      heroBanner.style.display = 'flex'; heroBanner.style.alignItems = 'center'; heroBanner.style.justifyContent = 'center';
-      heroBanner.style.background = 'linear-gradient(135deg,#f5e6ee 0%,#ede0f0 50%,#f0e8d8 100%)';
+    var theme = (category && category !== 'all') ? getCategoryTheme(category) : null;
+    var hasHero = theme && theme.heroEnabled && theme.heroTitle;
+
+    if (hasHero) {
+      banner.className = ''; banner.innerHTML = '';
+      heroBanner.style.display = 'flex';
+      heroBanner.style.alignItems = 'center';
+      heroBanner.style.justifyContent = 'center';
+
+      if (theme.heroBgImage) {
+        heroBanner.style.backgroundImage = 'url(' + theme.heroBgImage + ')';
+        heroBanner.style.backgroundSize = 'cover';
+        heroBanner.style.backgroundPosition = 'center';
+        heroBanner.style.backgroundColor = theme.heroBgColor || '#1a1a1a';
+      } else {
+        heroBanner.style.backgroundImage = 'none';
+        heroBanner.style.background = theme.heroBgColor || 'linear-gradient(135deg,#1a1a1a 0%,#333 100%)';
+      }
       heroContent.style.display = 'none';
-      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:40px;display:block;margin-bottom:10px;">🎀</span><h2 style="font-family:Georgia,serif;font-size:clamp(28px,5vw,52px);font-weight:700;letter-spacing:3px;color:#6b3d6b;margin-bottom:8px;">Aprons</h2><div style="width:60px;height:1px;background:#c9a0c0;margin:12px auto;"></div><p style="font-size:14px;font-weight:600;color:#8b5e83;letter-spacing:1px;">Elegantly crafted · Every stitch, a statement</p><button onclick="selectCat(\'all\')" style="margin-top:20px;padding:10px 24px;background:#8b5e83;color:#fff;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✕ Clear Filter</button></div>';
-    } else if (category === 'workwear') {
-      banner.className = 'visible';
-      banner.innerHTML = '';
-      heroBanner.style.display = 'flex'; heroBanner.style.alignItems = 'center'; heroBanner.style.justifyContent = 'center';
-      heroBanner.style.background = 'linear-gradient(135deg,#1c1c1c 0%,#2d2410 60%,#3d2e08 100%)';
-      heroContent.style.display = 'none';
-      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;"><span style="font-size:44px;display:block;margin-bottom:10px;">🦺</span><h2 style="font-family:\'Nunito Sans\',sans-serif;font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:5px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.4);">Work Wear</h2><div style="width:80px;height:4px;background:repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 10px,#1c1c1c 10px,#1c1c1c 20px);margin:12px auto;"></div><p style="font-size:13px;font-weight:700;color:rgba(245,158,11,0.8);letter-spacing:2px;text-transform:uppercase;">Built tough · Ready for the site</p><button onclick="selectCat(\'all\')" style="margin-top:20px;padding:10px 24px;background:#f59e0b;color:#1c1c1c;border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:900;cursor:pointer;">✕ Clear Filter</button></div>';
+
+      var iconHtml = theme.heroIcon ? '<span style="font-size:42px;display:block;margin-bottom:10px;">' + escHtml(theme.heroIcon) + '</span>' : '';
+      var taglineHtml = theme.heroTagline ? '<p style="font-size:14px;font-weight:700;color:' + (theme.heroAccentColor||'#fff') + ';letter-spacing:1px;opacity:0.85;margin-top:8px;">' + escHtml(theme.heroTagline) + '</p>' : '';
+      var fontFam = theme.fontFamily || "'Nunito Sans',sans-serif";
+
+      heroBanner.innerHTML = '<div style="text-align:center;z-index:6;padding:20px;">' + iconHtml +
+        '<h2 style="font-family:' + fontFam + ';font-size:clamp(28px,5vw,52px);font-weight:800;letter-spacing:2px;color:' + (theme.heroTitleColor||'#fff') + ';margin-bottom:8px;">' + escHtml(theme.heroTitle) + '</h2>' +
+        '<div style="width:60px;height:3px;background:' + (theme.heroAccentColor||'#fff') + ';margin:12px auto;border-radius:2px;"></div>' +
+        taglineHtml +
+        '<button onclick="selectCat(\'all\')" style="margin-top:20px;padding:10px 24px;background:' + (theme.heroAccentColor||'#fff') + ';color:' + (theme.heroBtnTextColor||'#1a1a1a') + ';border:none;border-radius:6px;font-family:\'Nunito Sans\',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✕ Clear Filter</button></div>';
     } else {
       banner.className = ''; banner.innerHTML = '';
       heroBanner.style.display = 'none'; heroBanner.innerHTML = '';
+      heroBanner.style.backgroundImage = 'none';
       heroContent.style.display = '';
     }
   }
