@@ -1157,6 +1157,95 @@
         </select>
       </div>
 
+      <div class="info-box" style="background:#fff0f5;border-color:#f0a8c0;color:#8b3d5e;">
+        <strong style="color:#c01250;">✨ Hero Banner Takeover (optional):</strong> When a customer taps this category, replace the homepage hero with a custom title, tagline, and background just for this category — like a mini landing page.
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="cat-hero-enabled" onchange="toggleHeroFields()" style="width:18px;height:18px;cursor:pointer;"/>
+          Enable hero takeover for this category
+        </label>
+      </div>
+
+      <div id="cat-hero-fields" style="display:none;">
+        <div class="form-group">
+          <label>Icon (emoji)</label>
+          <input type="text" id="cat-hero-icon" placeholder="e.g. 🎀" maxlength="4" style="width:90px;text-align:center;font-size:20px;" oninput="previewCategoryTheme()"/>
+        </div>
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="cat-hero-title" placeholder="e.g. Aprons" maxlength="40" oninput="previewCategoryTheme()"/>
+        </div>
+        <div class="form-group">
+          <label>Tagline</label>
+          <input type="text" id="cat-hero-tagline" placeholder="e.g. Elegantly crafted · Every stitch, a statement" maxlength="80" oninput="previewCategoryTheme()"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Title Color</label>
+            <input type="color" id="cat-hero-title-color" value="#ffffff" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+          </div>
+          <div class="form-group">
+            <label>Accent Color (divider, tagline, button)</label>
+            <input type="color" id="cat-hero-accent-color" value="#ffffff" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Background Color</label>
+          <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">Used as a fallback behind the photo below, or alone if no photo is set.</p>
+          <input type="color" id="cat-hero-bg-color" value="#1a1a1a" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+        </div>
+        <div class="form-group">
+          <label>Background Photo (optional)</label>
+          <div class="photo-section">
+            <div class="photo-buttons">
+              <button type="button" class="photo-btn photo-btn-gallery" title="Upload from gallery" onclick="triggerImgurUpload('cat-hero-bg-gallery')">
+                <input type="file" id="cat-hero-bg-gallery" accept="image/*" style="display:none" onchange="uploadCatHeroBgToHost(this)"/>
+                <span class="btn-icon">📱</span>
+                <span>Upload from<br/>Gallery</span>
+              </button>
+              <button type="button" class="photo-btn photo-btn-camera" title="Take a photo" onclick="triggerImgurUpload('cat-hero-bg-camera')">
+                <input type="file" id="cat-hero-bg-camera" accept="image/*" capture="environment" style="display:none" onchange="uploadCatHeroBgToHost(this)"/>
+                <span class="btn-icon">📷</span>
+                <span>Take a<br/>Photo</span>
+              </button>
+              <button type="button" class="photo-btn photo-btn-url" onclick="toggleCatHeroBgUrlInput()" title="Paste image link">
+                <span class="btn-icon">🔗</span>
+                <span>Paste Image<br/>Link</span>
+              </button>
+            </div>
+            <div class="url-input-row" id="cat-hero-bg-url-input-row">
+              <input type="url" id="cat-hero-bg-url-input" placeholder="Paste image link here e.g. https://..."/>
+              <button class="url-add-btn" onclick="addCatHeroBgImageFromUrl()">Add</button>
+            </div>
+            <div id="cat-hero-bg-preview-wrap" style="margin-top:10px;display:none;">
+              <div style="position:relative;width:160px;height:90px;">
+                <img id="cat-hero-bg-preview-img" style="width:160px;height:90px;object-fit:cover;border-radius:8px;border:2px solid var(--border);" alt="Hero background preview"/>
+                <button onclick="clearCatHeroBgImage()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+              </div>
+            </div>
+            <p id="cat-hero-bg-photo-msg" style="font-size:12px;color:#999;font-weight:700;margin-top:10px;">No background photo added yet — using the color above.</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Button Text Color</label>
+          <input type="color" id="cat-hero-btn-text-color" value="#1a1a1a" oninput="previewCategoryTheme()" style="width:46px;height:42px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"/>
+        </div>
+        <div class="form-group">
+          <label>Hero Live Preview</label>
+          <div id="cat-hero-preview" style="border-radius:10px;min-height:200px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#1a1a1a;">
+            <div>
+              <span id="cat-hero-preview-icon" style="font-size:36px;display:block;margin-bottom:8px;"></span>
+              <h3 id="cat-hero-preview-title" style="font-size:28px;font-weight:800;margin-bottom:6px;color:#fff;">Sample Title</h3>
+              <div id="cat-hero-preview-divider" style="width:50px;height:3px;background:#fff;margin:10px auto;border-radius:2px;"></div>
+              <p id="cat-hero-preview-tagline" style="font-size:13px;font-weight:700;color:#fff;opacity:0.85;margin-bottom:14px;">Sample tagline goes here</p>
+              <span id="cat-hero-preview-btn" style="display:inline-block;padding:9px 20px;background:#fff;color:#1a1a1a;border-radius:6px;font-size:12px;font-weight:800;">✕ Clear Filter</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Live Preview</label>
         <div id="cat-theme-preview" style="border:2px solid var(--border);border-radius:10px;padding:20px;background:#fff;transition:background 0.3s;">
@@ -2267,6 +2356,40 @@
   if (window.firebaseReady) { initCategoriesSync(); }
   else { window.addEventListener('firebase-ready', initCategoriesSync); }
 
+  // One-time migration: Aprons and Workwear used to have a hardcoded hero
+  // banner baked into the site's code. Now that hero banners are editable
+  // per-category from this tab, give those two categories their original
+  // look as real theme data, so they don't just disappear after this update.
+  function migrateLegacyHeroCategories() {
+    var cats = getCategories();
+    var changed = false;
+    var aprons = cats.find(function(c){ return c.key === 'aprons'; });
+    if (aprons && (!aprons.theme || !aprons.theme.heroEnabled)) {
+      aprons.theme = Object.assign({}, aprons.theme, {
+        heroEnabled: true, heroIcon: '🎀', heroTitle: 'Aprons',
+        heroTagline: 'Elegantly crafted · Every stitch, a statement',
+        heroTitleColor: '#6b3d6b', heroAccentColor: '#8b5e83',
+        heroBgColor: 'linear-gradient(135deg,#f5e6ee 0%,#ede0f0 50%,#f0e8d8 100%)',
+        heroBtnTextColor: '#ffffff', fontFamily: "'Playfair Display',serif"
+      });
+      changed = true;
+    }
+    var workwear = cats.find(function(c){ return c.key === 'workwear'; });
+    if (workwear && (!workwear.theme || !workwear.theme.heroEnabled)) {
+      workwear.theme = Object.assign({}, workwear.theme, {
+        heroEnabled: true, heroIcon: '🦺', heroTitle: 'Work Wear',
+        heroTagline: 'Built tough · Ready for the site',
+        heroTitleColor: '#f59e0b', heroAccentColor: '#f59e0b',
+        heroBgColor: 'linear-gradient(135deg,#1c1c1c 0%,#2d2410 60%,#3d2e08 100%)',
+        heroBtnTextColor: '#1c1c1c'
+      });
+      changed = true;
+    }
+    if (changed) saveCategories(cats);
+  }
+  if (window.firebaseReady) { setTimeout(migrateLegacyHeroCategories, 1500); }
+  else { window.addEventListener('firebase-ready', function(){ setTimeout(migrateLegacyHeroCategories, 1500); }); }
+
   function slugifyCategory(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
@@ -2284,6 +2407,7 @@
   });
 
   var catBgImage = '';
+  var catHeroBgImage = '';
 
   function clearCategoryForm() {
     document.getElementById('cat-icon').value = '';
@@ -2297,7 +2421,17 @@
     document.getElementById('cat-font-size').value = '1';
     document.getElementById('cat-font-size-display').textContent = 'Normal';
     document.getElementById('cat-animation').value = 'none';
+    document.getElementById('cat-hero-enabled').checked = false;
+    document.getElementById('cat-hero-icon').value = '';
+    document.getElementById('cat-hero-title').value = '';
+    document.getElementById('cat-hero-tagline').value = '';
+    document.getElementById('cat-hero-title-color').value = '#ffffff';
+    document.getElementById('cat-hero-accent-color').value = '#ffffff';
+    document.getElementById('cat-hero-bg-color').value = '#1a1a1a';
+    document.getElementById('cat-hero-btn-text-color').value = '#1a1a1a';
+    document.getElementById('cat-hero-fields').style.display = 'none';
     clearCatBgImage();
+    clearCatHeroBgImage();
     previewCategoryTheme();
   }
 
@@ -2323,8 +2457,23 @@
       textColor: document.getElementById('cat-text-color').value,
       fontFamily: document.getElementById('cat-font-family').value,
       fontSizeScale: parseFloat(document.getElementById('cat-font-size').value),
-      animationStyle: document.getElementById('cat-animation').value
+      animationStyle: document.getElementById('cat-animation').value,
+      heroEnabled: document.getElementById('cat-hero-enabled').checked,
+      heroIcon: document.getElementById('cat-hero-icon').value.trim(),
+      heroTitle: document.getElementById('cat-hero-title').value.trim(),
+      heroTagline: document.getElementById('cat-hero-tagline').value.trim(),
+      heroTitleColor: document.getElementById('cat-hero-title-color').value,
+      heroAccentColor: document.getElementById('cat-hero-accent-color').value,
+      heroBgColor: document.getElementById('cat-hero-bg-color').value,
+      heroBgImage: catHeroBgImage || '',
+      heroBtnTextColor: document.getElementById('cat-hero-btn-text-color').value
     };
+  }
+
+  function toggleHeroFields() {
+    var enabled = document.getElementById('cat-hero-enabled').checked;
+    document.getElementById('cat-hero-fields').style.display = enabled ? 'block' : 'none';
+    previewCategoryTheme();
   }
 
   // ── Category background image upload (same pattern as deals/ads) ──
@@ -2399,6 +2548,78 @@
     previewCategoryTheme();
   }
 
+  // ── Hero takeover background image upload (same pattern as above) ──
+  function uploadCatHeroBgToHost(input) {
+    var file = input.files[0];
+    if (!file || (!file.type.startsWith('image/') && !isLikelyHeic(file))) return;
+    document.getElementById('cat-hero-bg-photo-msg').textContent = '⏳ Uploading...';
+    document.getElementById('cat-hero-bg-photo-msg').style.color = '#f59e0b';
+    prepareImageFile(file).then(function(safeFile) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var MAX = 1600, w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; } }
+          else       { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          uploadImageToHost(dataUrl).then(function(url){
+              catHeroBgImage = url;
+              showCatHeroBgPreview(url);
+              showToast('✅ Hero background photo uploaded!');
+          })
+          .catch(function(err){
+            console.error('Hero background upload failed:', err);
+            document.getElementById('cat-hero-bg-photo-msg').textContent = '❌ Error: ' + (err && err.message ? err.message : 'unknown') + '. Try the 🔗 Paste Link option.';
+            document.getElementById('cat-hero-bg-photo-msg').style.color = '#e31837';
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(safeFile);
+    }).catch(function(){
+      document.getElementById('cat-hero-bg-photo-msg').textContent = '❌ Could not convert this HEIC photo. Try the 🔗 Paste Link option.';
+      document.getElementById('cat-hero-bg-photo-msg').style.color = '#e31837';
+    });
+    input.value = '';
+  }
+
+  function toggleCatHeroBgUrlInput() {
+    var row = document.getElementById('cat-hero-bg-url-input-row');
+    row.classList.toggle('visible');
+    if (row.classList.contains('visible')) document.getElementById('cat-hero-bg-url-input').focus();
+  }
+
+  function addCatHeroBgImageFromUrl() {
+    var url = document.getElementById('cat-hero-bg-url-input').value.trim();
+    if (!url || !url.startsWith('http')) { showToast('❌ Please paste a valid image link'); return; }
+    catHeroBgImage = url;
+    document.getElementById('cat-hero-bg-url-input').value = '';
+    document.getElementById('cat-hero-bg-url-input-row').classList.remove('visible');
+    showCatHeroBgPreview(url);
+    showToast('✅ Image link added!');
+  }
+
+  function showCatHeroBgPreview(src) {
+    var wrap = document.getElementById('cat-hero-bg-preview-wrap');
+    document.getElementById('cat-hero-bg-preview-img').src = src;
+    wrap.style.display = 'block';
+    document.getElementById('cat-hero-bg-photo-msg').textContent = '✅ Background photo added!';
+    document.getElementById('cat-hero-bg-photo-msg').style.color = '#27ae60';
+    previewCategoryTheme();
+  }
+
+  function clearCatHeroBgImage() {
+    catHeroBgImage = '';
+    document.getElementById('cat-hero-bg-preview-wrap').style.display = 'none';
+    document.getElementById('cat-hero-bg-photo-msg').textContent = 'No background photo added yet — using the color above.';
+    document.getElementById('cat-hero-bg-photo-msg').style.color = '#999';
+    previewCategoryTheme();
+  }
+
   function colorLuminance(hex) {
     var c = hex.replace('#','');
     var r = parseInt(c.substr(0,2),16)/255, g = parseInt(c.substr(2,2),16)/255, b = parseInt(c.substr(4,2),16)/255;
@@ -2438,6 +2659,30 @@
       var map = { fade:'catFade 0.5s ease both', slide:'catSlide 0.45s ease both', zoom:'catZoom 0.4s ease both', bounce:'catBounce 0.55s cubic-bezier(.34,1.56,.64,1) both' };
       card.style.animation = map[theme.animationStyle] || '';
     }
+
+    // Hero takeover preview
+    var heroPreview = document.getElementById('cat-hero-preview');
+    if (theme.heroEnabled) {
+      if (theme.heroBgImage) {
+        heroPreview.style.backgroundImage = 'url(' + theme.heroBgImage + ')';
+        heroPreview.style.backgroundSize = 'cover';
+        heroPreview.style.backgroundPosition = 'center';
+        heroPreview.style.backgroundColor = theme.heroBgColor;
+      } else {
+        heroPreview.style.backgroundImage = 'none';
+        heroPreview.style.background = theme.heroBgColor;
+      }
+      document.getElementById('cat-hero-preview-icon').textContent = theme.heroIcon;
+      document.getElementById('cat-hero-preview-title').textContent = theme.heroTitle || 'Sample Title';
+      document.getElementById('cat-hero-preview-title').style.color = theme.heroTitleColor;
+      document.getElementById('cat-hero-preview-title').style.fontFamily = theme.fontFamily || "'Nunito Sans',sans-serif";
+      document.getElementById('cat-hero-preview-divider').style.background = theme.heroAccentColor;
+      document.getElementById('cat-hero-preview-tagline').textContent = theme.heroTagline || '';
+      document.getElementById('cat-hero-preview-tagline').style.color = theme.heroAccentColor;
+      var heroBtn = document.getElementById('cat-hero-preview-btn');
+      heroBtn.style.background = theme.heroAccentColor;
+      heroBtn.style.color = theme.heroBtnTextColor;
+    }
   }
 
   function saveCategory() {
@@ -2448,6 +2693,10 @@
     if (!name) { showToast('❌ Please enter a category name'); return; }
     if (colorLuminance(theme.textColor) > 0.85) {
       showToast('❌ Product Name Color is too pale to read on a white card — please pick something darker first.');
+      return;
+    }
+    if (theme.heroEnabled && !theme.heroTitle) {
+      showToast('❌ Hero takeover is enabled but has no title — please add one or turn off the hero takeover.');
       return;
     }
 
@@ -2499,6 +2748,18 @@
     document.getElementById('cat-animation').value = theme.animationStyle || 'none';
     if (theme.bgImage) { catBgImage = theme.bgImage; showCatBgPreview(theme.bgImage); }
     else { clearCatBgImage(); }
+
+    document.getElementById('cat-hero-enabled').checked = !!theme.heroEnabled;
+    document.getElementById('cat-hero-fields').style.display = theme.heroEnabled ? 'block' : 'none';
+    document.getElementById('cat-hero-icon').value = theme.heroIcon || '';
+    document.getElementById('cat-hero-title').value = theme.heroTitle || '';
+    document.getElementById('cat-hero-tagline').value = theme.heroTagline || '';
+    document.getElementById('cat-hero-title-color').value = theme.heroTitleColor || '#ffffff';
+    document.getElementById('cat-hero-accent-color').value = theme.heroAccentColor || '#ffffff';
+    document.getElementById('cat-hero-bg-color').value = theme.heroBgColor || '#1a1a1a';
+    document.getElementById('cat-hero-btn-text-color').value = theme.heroBtnTextColor || '#1a1a1a';
+    if (theme.heroBgImage) { catHeroBgImage = theme.heroBgImage; showCatHeroBgPreview(theme.heroBgImage); }
+    else { clearCatHeroBgImage(); }
     previewCategoryTheme();
 
     window.scrollTo({ top:0, behavior:'smooth' });
