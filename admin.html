@@ -327,6 +327,7 @@
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <!-- Firebase -->
 <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -512,6 +513,8 @@
     <button class="tab-btn" onclick="showTab('deals')">🔥 Daily Deals</button>
     <button class="tab-btn" onclick="showTab('ads')">📢 Ads</button>
     <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
+    <button class="tab-btn" onclick="showTab('about')">ℹ️ About Page</button>
+    <button class="tab-btn" onclick="showTab('invoices')">🧾 Invoices</button>
     <button class="tab-btn owner-only" onclick="showTab('settings')" id="settings-tab">⚙️ Settings</button>
   </div>
 
@@ -560,6 +563,11 @@
       <div class="form-group">
         <label>Price in Rands *</label>
         <input type="number" id="f-price" placeholder="e.g. 299" min="1"/>
+      </div>
+      <div class="form-group">
+        <label>Wholesale Price in Rands (optional)</label>
+        <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">Used on invoices for wholesale customers. Leave blank to use the regular price.</p>
+        <input type="number" id="f-wholesale-price" placeholder="e.g. 199" min="1"/>
       </div>
       <div class="form-group">
         <label>Stock Count *</label>
@@ -1274,6 +1282,201 @@
     </div>
   </div>
 
+  <!-- ABOUT PAGE -->
+  <div class="tab-panel" id="tab-about">
+    <div class="section-card">
+      <h2>ℹ️ About Page</h2>
+      <div class="info-box">
+        <strong>How it works:</strong> This is what customers see when they tap "About" on the store. Fill in your story, contact details, and hours — changes show up immediately, on any device.
+      </div>
+
+      <div id="about-sync-retry" style="display:none;background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:700;color:#7d6300;margin-bottom:10px;">⚠️ Your last change saved on this device only — it hasn't reached the cloud yet, so other phones/laptops won't see it until it does.</p>
+        <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryAboutSync()">🔄 Retry Cloud Sync</button>
+      </div>
+
+      <div class="form-group">
+        <label>Heading *</label>
+        <input type="text" id="about-heading" placeholder="e.g. About Mr Clearance" maxlength="60"/>
+      </div>
+
+      <div class="form-group">
+        <label>Our Story</label>
+        <textarea id="about-story" rows="6" placeholder="Tell customers who you are, what you sell, and why they should shop with you..." style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;resize:vertical;" maxlength="1500" oninput="document.getElementById('about-story-count').textContent = this.value.length"></textarea>
+        <p style="font-size:11px;color:var(--text-light);margin-top:4px;"><span id="about-story-count">0</span>/1500 characters</p>
+      </div>
+
+      <div class="form-group">
+        <label>Photo (optional)</label>
+        <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">A photo of your shop, products, or team — shown at the top of the page.</p>
+        <div class="photo-section">
+          <div class="photo-buttons">
+            <button type="button" class="photo-btn photo-btn-gallery" title="Upload from gallery" onclick="triggerImgurUpload('about-photo-gallery')">
+              <input type="file" id="about-photo-gallery" accept="image/*" style="display:none" onchange="uploadAboutPhotoToHost(this)"/>
+              <span class="btn-icon">📱</span>
+              <span>Upload from<br/>Gallery</span>
+            </button>
+            <button type="button" class="photo-btn photo-btn-camera" title="Take a photo" onclick="triggerImgurUpload('about-photo-camera')">
+              <input type="file" id="about-photo-camera" accept="image/*" capture="environment" style="display:none" onchange="uploadAboutPhotoToHost(this)"/>
+              <span class="btn-icon">📷</span>
+              <span>Take a<br/>Photo</span>
+            </button>
+            <button type="button" class="photo-btn photo-btn-url" onclick="toggleAboutPhotoUrlInput()" title="Paste image link">
+              <span class="btn-icon">🔗</span>
+              <span>Paste Image<br/>Link</span>
+            </button>
+          </div>
+          <div class="url-input-row" id="about-photo-url-input-row">
+            <input type="url" id="about-photo-url-input" placeholder="Paste image link here e.g. https://..."/>
+            <button class="url-add-btn" onclick="addAboutPhotoFromUrl()">Add</button>
+          </div>
+          <div id="about-photo-preview-wrap" style="margin-top:10px;display:none;">
+            <div style="position:relative;width:160px;height:100px;">
+              <img id="about-photo-preview-img" style="width:160px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--border);" alt="About photo preview"/>
+              <button onclick="clearAboutPhoto()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+          </div>
+          <p id="about-photo-msg" style="font-size:12px;color:#999;font-weight:700;margin-top:10px;">No photo added yet.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>WhatsApp Number</label>
+          <input type="tel" id="about-whatsapp" placeholder="e.g. 0821234567"/>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="about-email" placeholder="e.g. hello@mrclearance.co.za"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="about-address" placeholder="e.g. 12 Main Road, Cape Town" maxlength="120"/>
+      </div>
+
+      <div class="form-group">
+        <label>Store Hours</label>
+        <textarea id="about-hours" rows="3" placeholder="e.g.&#10;Mon–Fri: 9am – 6pm&#10;Sat: 9am – 2pm&#10;Sun: Closed" style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:600;outline:none;resize:vertical;" maxlength="300"></textarea>
+      </div>
+
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveAboutPage()">💾 Save About Page</button>
+        <button class="btn-secondary" onclick="window.open('index.html','_blank')">👁️ View Live Page</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVOICES -->
+  <div class="tab-panel" id="tab-invoices">
+
+    <div class="section-card">
+      <h2>🏢 Your Company Details (for invoice header)</h2>
+      <div class="form-group">
+        <label>Company Logo</label>
+        <div class="photo-section">
+          <div class="photo-buttons">
+            <button type="button" class="photo-btn photo-btn-gallery" onclick="triggerImgurUpload('inv-logo-gallery')">
+              <input type="file" id="inv-logo-gallery" accept="image/*" style="display:none" onchange="uploadInvoiceLogoToHost(this)"/>
+              <span class="btn-icon">📱</span><span>Upload<br/>Logo</span>
+            </button>
+            <button type="button" class="photo-btn photo-btn-url" onclick="toggleInvLogoUrlInput()">
+              <span class="btn-icon">🔗</span><span>Paste Image<br/>Link</span>
+            </button>
+          </div>
+          <div class="url-input-row" id="inv-logo-url-input-row">
+            <input type="url" id="inv-logo-url-input" placeholder="Paste image link here e.g. https://..."/>
+            <button class="url-add-btn" onclick="addInvLogoFromUrl()">Add</button>
+          </div>
+          <div id="inv-logo-preview-wrap" style="margin-top:10px;display:none;">
+            <div style="position:relative;width:120px;height:80px;">
+              <img id="inv-logo-preview-img" style="width:120px;height:80px;object-fit:contain;background:#fff;border-radius:8px;border:2px solid var(--border);" alt="Logo preview"/>
+              <button onclick="clearInvLogo()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;">✕</button>
+            </div>
+          </div>
+          <p id="inv-logo-msg" style="font-size:12px;color:#999;font-weight:700;margin-top:10px;">No logo added yet.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Company Name</label><input type="text" id="inv-company-name" placeholder="Mr Clearance"/></div>
+        <div class="form-group"><label>Phone / WhatsApp</label><input type="text" id="inv-company-phone" placeholder="082 123 4567"/></div>
+      </div>
+      <div class="form-group"><label>Address</label><input type="text" id="inv-company-address" placeholder="12 Main Road, Cape Town"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Email</label><input type="email" id="inv-company-email" placeholder="hello@mrclearance.co.za"/></div>
+        <div class="form-group"><label>VAT / Reg Number (optional)</label><input type="text" id="inv-company-vat" placeholder="optional"/></div>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="saveInvoiceCompanyInfo()">💾 Save Company Details</button>
+    </div>
+
+    <div class="section-card">
+      <h2>👥 Customers</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Customer Name *</label><input type="text" id="cust-name-inv" placeholder="e.g. John Smith / ABC Store"/></div>
+        <div class="form-group">
+          <label>Customer Type *</label>
+          <select id="cust-type-inv">
+            <option value="regular">Regular Customer</option>
+            <option value="wholesale">Wholesale Customer</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Phone</label><input type="text" id="cust-phone-inv" placeholder="082 123 4567"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="cust-email-inv" placeholder="optional"/></div>
+      </div>
+      <div class="form-group"><label>Address (optional)</label><input type="text" id="cust-address-inv" placeholder="optional"/></div>
+      <input type="hidden" id="cust-edit-id"/>
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveCustomer()">💾 Save Customer</button>
+        <button class="btn-secondary" onclick="clearCustomerForm()">Clear Form</button>
+      </div>
+      <div id="customers-list" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;"></div>
+    </div>
+
+    <div class="section-card">
+      <h2>🧾 Create Invoice</h2>
+      <div class="form-group">
+        <label>Customer *</label>
+        <select id="inv-customer-select" onchange="onInvoiceCustomerChange()">
+          <option value="">-- Select a customer --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Add Products</label>
+        <input type="text" id="inv-product-search" placeholder="🔍 Search products by name..." onkeyup="searchInvoiceProducts()" autocomplete="off"/>
+        <div id="inv-product-results" style="display:none;background:#fff;border:1px solid var(--border);border-radius:8px;margin-top:6px;max-height:240px;overflow-y:auto;"></div>
+      </div>
+      <div id="inv-line-items" style="display:flex;flex-direction:column;gap:8px;margin:14px 0;"></div>
+      <div id="inv-empty-msg" style="text-align:center;color:var(--text-light);padding:20px;font-size:13px;">No items added yet — search for a product above.</div>
+
+      <div style="border-top:2px solid var(--border);padding-top:14px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding:4px 0;"><span>Subtotal</span><span id="inv-subtotal">R 0</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;padding:4px 0;gap:8px;">
+          <span>Delivery / Other Charges (R)</span>
+          <input type="number" id="inv-extra-charge" value="0" min="0" style="width:100px;background:#f5f5f5;border:2px solid var(--border);border-radius:6px;padding:6px 10px;font-weight:700;" oninput="updateInvoiceTotals()"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:900;color:var(--red);padding:8px 0;border-top:1px solid var(--border);margin-top:6px;"><span>Total</span><span id="inv-total">R 0</span></div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes (optional, shown on invoice)</label>
+        <textarea id="inv-notes" rows="2" placeholder="e.g. Payment due within 7 days" style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;resize:vertical;"></textarea>
+      </div>
+
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="generateInvoicePdf()">📄 Generate &amp; Download PDF</button>
+        <button class="btn-secondary" onclick="clearInvoiceBuilder()">Clear</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>📋 Past Invoices</h2>
+      <div id="invoices-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
   <!-- SETTINGS (OWNER ONLY) -->
   <div class="tab-panel" id="tab-settings">
     <div class="section-card">
@@ -1380,13 +1583,15 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','add','manage','inventory','barcodes','deals','ads','categories','settings'];
+    var names = ['dashboard','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
     if (tab === 'deals')      renderDealsList();
     if (tab === 'ads')        renderAdsList();
     if (tab === 'categories') renderCategoriesList();
+    if (tab === 'about')      loadAboutPageForm();
+    if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
     if (tab === 'inventory')  renderInventory();
   }
@@ -1638,6 +1843,7 @@
   function clearForm() {
     document.getElementById('f-name').value     = '';
     document.getElementById('f-price').value    = '';
+    document.getElementById('f-wholesale-price').value = '';
     document.getElementById('f-stock').value    = '';
     document.getElementById('f-badge').value    = '';
     document.getElementById('f-sizes').value      = '';
@@ -1659,6 +1865,7 @@
   function saveProduct() {
     var name     = document.getElementById('f-name').value.trim();
     var price    = parseInt(document.getElementById('f-price').value);
+    var wholesalePrice = parseInt(document.getElementById('f-wholesale-price').value) || null;
     var category = document.getElementById('f-category').value;
     var badge    = document.getElementById('f-badge').value.trim().toUpperCase();
     var desc     = document.getElementById('f-desc').value.trim();
@@ -1674,7 +1881,7 @@
     var sizeGuide = sgRaw ? sgRaw.split('\n').map(function(row){ return row.split(',').map(function(c){return c.trim();}); }).filter(function(r){return r.length>0;}) : [];
     var specsRaw = document.getElementById('f-specs').value.trim();
     var specs = specsRaw ? specsRaw.split('\n').map(function(s){ var parts=s.split(':'); return parts.length>=2?{key:parts[0].trim(),value:parts.slice(1).join(':').trim()}:null; }).filter(Boolean) : [];
-    var productData = { name:name, price:price, stock:stock, category:category, badge:badge, images:images, desc:desc, sizes:sizes, sizeGuide:sizeGuide, specs:specs };
+    var productData = { name:name, price:price, wholesalePrice:wholesalePrice, stock:stock, category:category, badge:badge, images:images, desc:desc, sizes:sizes, sizeGuide:sizeGuide, specs:specs };
     if (editingId !== null) {
       window.fbUpdateProduct(editingId, productData).then(function(){
         showToast('✅ Product updated!');
@@ -1700,6 +1907,7 @@
     editingId = id;
     document.getElementById('f-name').value     = p.name;
     document.getElementById('f-price').value    = p.price;
+    document.getElementById('f-wholesale-price').value = p.wholesalePrice || '';
     document.getElementById('f-stock').value    = p.stock || 0;
     document.getElementById('f-category').value = p.category;
     document.getElementById('f-badge').value    = p.badge || '';
@@ -1832,6 +2040,158 @@
   }
   if (window.firebaseReady) { initDealsSync(); }
   else { window.addEventListener('firebase-ready', initDealsSync); }
+
+  // ── ABOUT PAGE ────────────────────────────────────────────────
+  // Synced via Firebase (store_data/about), same pattern as categories/ads/deals.
+  var cachedAbout = null;
+  var aboutPhotoImage = '';
+
+  function getAboutPage() {
+    if (cachedAbout) return cachedAbout;
+    try { return JSON.parse(localStorage.getItem('mrc_about') || 'null') || {}; } catch(e) { return {}; }
+  }
+
+  function saveAboutData(data) {
+    cachedAbout = data;
+    localStorage.setItem('mrc_about', JSON.stringify(data));
+    if (window.fbSaveStoreData) {
+      window.fbSaveStoreData('about', data).then(function(){
+        var el = document.getElementById('about-sync-retry');
+        if (el) el.style.display = 'none';
+      }).catch(function(err){
+        console.error('About page cloud sync failed:', err);
+        showToast('⚠️ Saved on this device only. Cloud sync error: ' + (err && err.code ? err.code : 'unknown') + '. Tap "Retry Cloud Sync" below.');
+        var el = document.getElementById('about-sync-retry');
+        if (el) el.style.display = 'block';
+      });
+    }
+  }
+
+  function retryAboutSync() {
+    var el = document.getElementById('about-sync-retry');
+    if (el) el.style.display = 'none';
+    saveAboutData(getAboutPage());
+  }
+
+  function initAboutSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('about', function(data) {
+        if (data && typeof data === 'object' && Object.keys(data).length) {
+          cachedAbout = data;
+        } else if (!cachedAbout) {
+          var localRaw = localStorage.getItem('mrc_about');
+          var localData = null;
+          try { localData = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
+          cachedAbout = (localData && typeof localData === 'object') ? localData : {};
+          if (Object.keys(cachedAbout).length && window.fbSaveStoreData) window.fbSaveStoreData('about', cachedAbout).catch(function(){});
+        }
+        localStorage.setItem('mrc_about', JSON.stringify(cachedAbout));
+        if (document.getElementById('tab-about') && document.getElementById('tab-about').classList.contains('active')) {
+          loadAboutPageForm();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initAboutSync(); }
+  else { window.addEventListener('firebase-ready', initAboutSync); }
+
+  function loadAboutPageForm() {
+    var data = getAboutPage();
+    document.getElementById('about-heading').value = data.heading || '';
+    document.getElementById('about-story').value = data.story || '';
+    document.getElementById('about-story-count').textContent = (data.story || '').length;
+    document.getElementById('about-whatsapp').value = data.whatsapp || '';
+    document.getElementById('about-email').value = data.email || '';
+    document.getElementById('about-address').value = data.address || '';
+    document.getElementById('about-hours').value = data.hours || '';
+    if (data.photo) { aboutPhotoImage = data.photo; showAboutPhotoPreview(data.photo); }
+    else { clearAboutPhoto(); }
+  }
+
+  function saveAboutPage() {
+    var heading = document.getElementById('about-heading').value.trim();
+    if (!heading) { showToast('❌ Please enter a heading'); return; }
+    var data = {
+      heading: heading,
+      story: document.getElementById('about-story').value.trim(),
+      whatsapp: document.getElementById('about-whatsapp').value.trim(),
+      email: document.getElementById('about-email').value.trim(),
+      address: document.getElementById('about-address').value.trim(),
+      hours: document.getElementById('about-hours').value.trim(),
+      photo: aboutPhotoImage || ''
+    };
+    saveAboutData(data);
+    showToast('✅ About page saved!');
+  }
+
+  // ── About photo upload (same pattern as deals/ads/category backgrounds) ──
+  function uploadAboutPhotoToHost(input) {
+    var file = input.files[0];
+    if (!file || (!file.type.startsWith('image/') && !isLikelyHeic(file))) return;
+    document.getElementById('about-photo-msg').textContent = '⏳ Uploading...';
+    document.getElementById('about-photo-msg').style.color = '#f59e0b';
+    prepareImageFile(file).then(function(safeFile) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var MAX = 1600, w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; } }
+          else       { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          uploadImageToHost(dataUrl).then(function(url){
+              aboutPhotoImage = url;
+              showAboutPhotoPreview(url);
+              showToast('✅ Photo uploaded!');
+          })
+          .catch(function(err){
+            console.error('About photo upload failed:', err);
+            document.getElementById('about-photo-msg').textContent = '❌ Error: ' + (err && err.message ? err.message : 'unknown') + '. Try the 🔗 Paste Link option.';
+            document.getElementById('about-photo-msg').style.color = '#e31837';
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(safeFile);
+    }).catch(function(){
+      document.getElementById('about-photo-msg').textContent = '❌ Could not convert this HEIC photo. Try the 🔗 Paste Link option.';
+      document.getElementById('about-photo-msg').style.color = '#e31837';
+    });
+    input.value = '';
+  }
+
+  function toggleAboutPhotoUrlInput() {
+    var row = document.getElementById('about-photo-url-input-row');
+    row.classList.toggle('visible');
+    if (row.classList.contains('visible')) document.getElementById('about-photo-url-input').focus();
+  }
+
+  function addAboutPhotoFromUrl() {
+    var url = document.getElementById('about-photo-url-input').value.trim();
+    if (!url || !url.startsWith('http')) { showToast('❌ Please paste a valid image link'); return; }
+    aboutPhotoImage = url;
+    document.getElementById('about-photo-url-input').value = '';
+    document.getElementById('about-photo-url-input-row').classList.remove('visible');
+    showAboutPhotoPreview(url);
+    showToast('✅ Image link added!');
+  }
+
+  function showAboutPhotoPreview(src) {
+    document.getElementById('about-photo-preview-img').src = src;
+    document.getElementById('about-photo-preview-wrap').style.display = 'block';
+    document.getElementById('about-photo-msg').textContent = '✅ Photo added!';
+    document.getElementById('about-photo-msg').style.color = '#27ae60';
+  }
+
+  function clearAboutPhoto() {
+    aboutPhotoImage = '';
+    document.getElementById('about-photo-preview-wrap').style.display = 'none';
+    document.getElementById('about-photo-msg').textContent = 'No photo added yet.';
+    document.getElementById('about-photo-msg').style.color = '#999';
+  }
 
   function uploadDealToImgur(input) {
     var file = input.files[0];
@@ -2851,6 +3211,450 @@
     var d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
     return d.innerHTML;
+  }
+
+  // ── INVOICES ──────────────────────────────────────────────────
+  var cachedCustomers = null;
+  var cachedInvoices = null;
+  var invLogoImage = '';
+  var invoiceLineItems = [];
+
+  // -- Company info (synced) --
+  function getInvCompanyInfo() {
+    try { return JSON.parse(localStorage.getItem('mrc_inv_company') || 'null') || {}; } catch(e) { return {}; }
+  }
+  function saveInvCompanyData(data) {
+    localStorage.setItem('mrc_inv_company', JSON.stringify(data));
+    if (window.fbSaveStoreData) window.fbSaveStoreData('inv_company', data).catch(function(){ showToast('⚠️ Saved locally only — could not sync to cloud.'); });
+  }
+  function initInvCompanySync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('inv_company', function(data) {
+        if (data && typeof data === 'object' && Object.keys(data).length) {
+          localStorage.setItem('mrc_inv_company', JSON.stringify(data));
+          if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) loadInvCompanyForm();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initInvCompanySync(); } else { window.addEventListener('firebase-ready', initInvCompanySync); }
+
+  function loadInvCompanyForm() {
+    var d = getInvCompanyInfo();
+    document.getElementById('inv-company-name').value = d.name || '';
+    document.getElementById('inv-company-phone').value = d.phone || '';
+    document.getElementById('inv-company-address').value = d.address || '';
+    document.getElementById('inv-company-email').value = d.email || '';
+    document.getElementById('inv-company-vat').value = d.vat || '';
+    if (d.logo) { invLogoImage = d.logo; showInvLogoPreview(d.logo); } else { clearInvLogo(); }
+  }
+
+  function saveInvoiceCompanyInfo() {
+    var data = {
+      name: document.getElementById('inv-company-name').value.trim(),
+      phone: document.getElementById('inv-company-phone').value.trim(),
+      address: document.getElementById('inv-company-address').value.trim(),
+      email: document.getElementById('inv-company-email').value.trim(),
+      vat: document.getElementById('inv-company-vat').value.trim(),
+      logo: invLogoImage || ''
+    };
+    saveInvCompanyData(data);
+    showToast('✅ Company details saved!');
+  }
+
+  function uploadInvoiceLogoToHost(input) {
+    var file = input.files[0];
+    if (!file || (!file.type.startsWith('image/') && !isLikelyHeic(file))) return;
+    document.getElementById('inv-logo-msg').textContent = '⏳ Uploading...';
+    prepareImageFile(file).then(function(safeFile) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var MAX = 600, w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; } } else { if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          uploadImageToHost(canvas.toDataURL('image/png')).then(function(url){
+            invLogoImage = url; showInvLogoPreview(url); showToast('✅ Logo uploaded!');
+          }).catch(function(err){
+            document.getElementById('inv-logo-msg').textContent = '❌ Error: ' + (err && err.message || 'unknown');
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(safeFile);
+    });
+    input.value = '';
+  }
+  function toggleInvLogoUrlInput() {
+    document.getElementById('inv-logo-url-input-row').classList.toggle('visible');
+  }
+  function addInvLogoFromUrl() {
+    var url = document.getElementById('inv-logo-url-input').value.trim();
+    if (!url || !url.startsWith('http')) { showToast('❌ Please paste a valid image link'); return; }
+    invLogoImage = url; showInvLogoPreview(url);
+    document.getElementById('inv-logo-url-input-row').classList.remove('visible');
+  }
+  function showInvLogoPreview(src) {
+    document.getElementById('inv-logo-preview-img').src = src;
+    document.getElementById('inv-logo-preview-wrap').style.display = 'block';
+    document.getElementById('inv-logo-msg').textContent = '✅ Logo added!';
+  }
+  function clearInvLogo() {
+    invLogoImage = '';
+    document.getElementById('inv-logo-preview-wrap').style.display = 'none';
+    document.getElementById('inv-logo-msg').textContent = 'No logo added yet.';
+  }
+
+  // -- Customers (synced) --
+  function getCustomersInv() {
+    if (cachedCustomers) return cachedCustomers;
+    try { return JSON.parse(localStorage.getItem('mrc_customers_inv') || '[]'); } catch(e) { return []; }
+  }
+  function saveCustomersInv(list) {
+    cachedCustomers = list;
+    localStorage.setItem('mrc_customers_inv', JSON.stringify(list));
+    if (window.fbSaveStoreData) window.fbSaveStoreData('customers_inv', list).catch(function(){ showToast('⚠️ Saved locally only — could not sync to cloud.'); });
+  }
+  function initCustomersSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('customers_inv', function(list) {
+        cachedCustomers = Array.isArray(list) ? list : [];
+        localStorage.setItem('mrc_customers_inv', JSON.stringify(cachedCustomers));
+        if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) { renderCustomersList(); populateInvoiceCustomerDropdown(); }
+      });
+    }
+  }
+  if (window.firebaseReady) { initCustomersSync(); } else { window.addEventListener('firebase-ready', initCustomersSync); }
+
+  function clearCustomerForm() {
+    document.getElementById('cust-name-inv').value = '';
+    document.getElementById('cust-type-inv').value = 'regular';
+    document.getElementById('cust-phone-inv').value = '';
+    document.getElementById('cust-email-inv').value = '';
+    document.getElementById('cust-address-inv').value = '';
+    document.getElementById('cust-edit-id').value = '';
+  }
+
+  function saveCustomer() {
+    var name = document.getElementById('cust-name-inv').value.trim();
+    if (!name) { showToast('❌ Please enter a customer name'); return; }
+    var editId = document.getElementById('cust-edit-id').value;
+    var data = {
+      id: editId || ('cust_' + Date.now()),
+      name: name,
+      type: document.getElementById('cust-type-inv').value,
+      phone: document.getElementById('cust-phone-inv').value.trim(),
+      email: document.getElementById('cust-email-inv').value.trim(),
+      address: document.getElementById('cust-address-inv').value.trim()
+    };
+    var list = getCustomersInv();
+    if (editId) {
+      var idx = list.findIndex(function(c){ return c.id === editId; });
+      if (idx >= 0) list[idx] = data;
+    } else {
+      list.push(data);
+    }
+    saveCustomersInv(list);
+    clearCustomerForm();
+    renderCustomersList();
+    populateInvoiceCustomerDropdown();
+    showToast('✅ Customer saved!');
+  }
+
+  function editCustomer(id) {
+    var c = getCustomersInv().find(function(x){ return x.id === id; });
+    if (!c) return;
+    document.getElementById('cust-name-inv').value = c.name;
+    document.getElementById('cust-type-inv').value = c.type;
+    document.getElementById('cust-phone-inv').value = c.phone || '';
+    document.getElementById('cust-email-inv').value = c.email || '';
+    document.getElementById('cust-address-inv').value = c.address || '';
+    document.getElementById('cust-edit-id').value = c.id;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function deleteCustomer(id, btn) {
+    if (btn.getAttribute('data-confirming') === 'true') {
+      saveCustomersInv(getCustomersInv().filter(function(c){ return c.id !== id; }));
+      renderCustomersList();
+      populateInvoiceCustomerDropdown();
+      showToast('🗑️ Customer deleted!');
+    } else {
+      btn.setAttribute('data-confirming','true'); btn.textContent='⚠️ Tap again';
+      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent='🗑️ Delete'; }, 3000);
+    }
+  }
+
+  function renderCustomersList() {
+    var list = getCustomersInv();
+    var el = document.getElementById('customers-list');
+    if (!el) return;
+    if (!list.length) { el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;">No customers yet.</p>'; return; }
+    el.innerHTML = list.map(function(c){
+      return '<div class="product-item"><div class="product-item-main">' +
+        '<div class="product-info"><div class="product-name">' + escAdminHtml(c.name) + ' ' + (c.type==='wholesale' ? '<span class="product-badge-label" style="background:#7c3aed;">WHOLESALE</span>' : '') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">' + escAdminHtml(c.phone||'') + (c.email ? ' · ' + escAdminHtml(c.email) : '') + '</div></div>' +
+        '<div class="item-actions"><button class="btn-edit-item" onclick="editCustomer(\'' + c.id + '\')">✏️ Edit</button>' +
+        '<button class="btn-delete-item" data-confirming="false" onclick="deleteCustomer(\'' + c.id + '\', this)">🗑️ Delete</button></div>' +
+      '</div></div>';
+    }).join('');
+  }
+
+  function populateInvoiceCustomerDropdown() {
+    var sel = document.getElementById('inv-customer-select');
+    if (!sel) return;
+    var current = sel.value;
+    var list = getCustomersInv();
+    sel.innerHTML = '<option value="">-- Select a customer --</option>' +
+      list.map(function(c){ return '<option value="' + c.id + '">' + escAdminHtml(c.name) + (c.type==='wholesale'?' (Wholesale)':'') + '</option>'; }).join('');
+    if (current) sel.value = current;
+  }
+
+  function onInvoiceCustomerChange() {
+    updateInvoiceTotals(); // re-price line items if customer type changed
+  }
+
+  // -- Invoice builder --
+  function searchInvoiceProducts() {
+    var q = document.getElementById('inv-product-search').value.trim().toLowerCase();
+    var results = document.getElementById('inv-product-results');
+    if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
+    var products = (getProducts() || []).filter(function(p){ return p.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    if (!products.length) { results.innerHTML = '<div style="padding:12px;color:var(--text-light);font-size:13px;">No products found.</div>'; results.style.display = 'block'; return; }
+    results.innerHTML = products.map(function(p){
+      return '<div onclick="addInvoiceLineItem(\'' + p.id + '\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;" onmouseover="this.style.background=\'#f9f9f9\'" onmouseout="this.style.background=\'#fff\'">' +
+        '<span>' + escAdminHtml(p.name) + '</span><span style="color:var(--text-light);font-weight:700;">R ' + p.price.toLocaleString() + '</span></div>';
+    }).join('');
+    results.style.display = 'block';
+  }
+
+  function addInvoiceLineItem(productId) {
+    var p = (getProducts() || []).find(function(x){ return x.id === productId; });
+    if (!p) return;
+    var existing = invoiceLineItems.find(function(i){ return i.productId === productId; });
+    if (existing) { existing.qty++; }
+    else { invoiceLineItems.push({ productId: p.id, name: p.name, regularPrice: p.price, wholesalePrice: p.wholesalePrice || p.price, qty: 1 }); }
+    document.getElementById('inv-product-search').value = '';
+    document.getElementById('inv-product-results').style.display = 'none';
+    renderInvoiceLineItems();
+  }
+
+  function removeInvoiceLineItem(idx) {
+    invoiceLineItems.splice(idx, 1);
+    renderInvoiceLineItems();
+  }
+
+  function changeInvoiceLineQty(idx, delta) {
+    invoiceLineItems[idx].qty = Math.max(1, invoiceLineItems[idx].qty + delta);
+    renderInvoiceLineItems();
+  }
+
+  function isInvoiceCustomerWholesale() {
+    var custId = document.getElementById('inv-customer-select').value;
+    var c = getCustomersInv().find(function(x){ return x.id === custId; });
+    return c && c.type === 'wholesale';
+  }
+
+  function renderInvoiceLineItems() {
+    var wrap = document.getElementById('inv-line-items');
+    var emptyMsg = document.getElementById('inv-empty-msg');
+    if (!invoiceLineItems.length) { wrap.innerHTML = ''; emptyMsg.style.display = 'block'; updateInvoiceTotals(); return; }
+    emptyMsg.style.display = 'none';
+    var wholesale = isInvoiceCustomerWholesale();
+    wrap.innerHTML = invoiceLineItems.map(function(item, idx){
+      var unitPrice = wholesale ? item.wholesalePrice : item.regularPrice;
+      return '<div style="display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:8px;padding:10px 12px;">' +
+        '<div style="flex:1;"><div style="font-weight:700;font-size:14px;">' + escAdminHtml(item.name) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-light);">R ' + unitPrice.toLocaleString() + ' each' + (wholesale ? ' (wholesale)' : '') + '</div></div>' +
+        '<div class="qty-control"><button onclick="changeInvoiceLineQty(' + idx + ',-1)">−</button><span class="qty-val">' + item.qty + '</span><button onclick="changeInvoiceLineQty(' + idx + ',1)">+</button></div>' +
+        '<div style="font-weight:800;width:80px;text-align:right;">R ' + (unitPrice * item.qty).toLocaleString() + '</div>' +
+        '<button onclick="removeInvoiceLineItem(' + idx + ')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;">✕</button>' +
+      '</div>';
+    }).join('');
+    updateInvoiceTotals();
+  }
+
+  function updateInvoiceTotals() {
+    var wholesale = isInvoiceCustomerWholesale();
+    var subtotal = invoiceLineItems.reduce(function(sum, item){
+      return sum + (wholesale ? item.wholesalePrice : item.regularPrice) * item.qty;
+    }, 0);
+    var extra = parseFloat(document.getElementById('inv-extra-charge').value) || 0;
+    document.getElementById('inv-subtotal').textContent = 'R ' + subtotal.toLocaleString();
+    document.getElementById('inv-total').textContent = 'R ' + (subtotal + extra).toLocaleString();
+  }
+
+  function clearInvoiceBuilder() {
+    invoiceLineItems = [];
+    document.getElementById('inv-customer-select').value = '';
+    document.getElementById('inv-extra-charge').value = '0';
+    document.getElementById('inv-notes').value = '';
+    renderInvoiceLineItems();
+  }
+
+  function getInvoices() {
+    if (cachedInvoices) return cachedInvoices;
+    try { return JSON.parse(localStorage.getItem('mrc_invoices') || '[]'); } catch(e) { return []; }
+  }
+  function saveInvoicesList(list) {
+    cachedInvoices = list;
+    localStorage.setItem('mrc_invoices', JSON.stringify(list));
+    if (window.fbSaveStoreData) window.fbSaveStoreData('invoices', list).catch(function(){});
+  }
+  function initInvoicesSync() {
+    if (window.fbListenStoreData) {
+      window.fbListenStoreData('invoices', function(list) {
+        cachedInvoices = Array.isArray(list) ? list : [];
+        localStorage.setItem('mrc_invoices', JSON.stringify(cachedInvoices));
+        if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) renderInvoicesList();
+      });
+    }
+  }
+  if (window.firebaseReady) { initInvoicesSync(); } else { window.addEventListener('firebase-ready', initInvoicesSync); }
+
+  function renderInvoicesList() {
+    var el = document.getElementById('invoices-list');
+    if (!el) return;
+    var list = getInvoices().slice().reverse();
+    if (!list.length) { el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;">No invoices generated yet.</p>'; return; }
+    el.innerHTML = list.map(function(inv){
+      return '<div class="product-item"><div class="product-item-main">' +
+        '<div class="product-info"><div class="product-name">' + escAdminHtml(inv.invoiceNumber) + ' — ' + escAdminHtml(inv.customerName) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">' + new Date(inv.date).toLocaleDateString() + ' · R ' + inv.total.toLocaleString() + '</div></div>' +
+      '</div></div>';
+    }).join('');
+  }
+
+  function generateInvoicePdf() {
+    var custId = document.getElementById('inv-customer-select').value;
+    var customer = getCustomersInv().find(function(c){ return c.id === custId; });
+    if (!customer) { showToast('❌ Please select a customer'); return; }
+    if (!invoiceLineItems.length) { showToast('❌ Please add at least one product'); return; }
+    if (typeof window.jspdf === 'undefined') { showToast('❌ PDF library still loading — please try again in a moment.'); return; }
+
+    var company = getInvCompanyInfo();
+    var wholesale = customer.type === 'wholesale';
+    var extra = parseFloat(document.getElementById('inv-extra-charge').value) || 0;
+    var subtotal = invoiceLineItems.reduce(function(sum, item){ return sum + (wholesale ? item.wholesalePrice : item.regularPrice) * item.qty; }, 0);
+    var total = subtotal + extra;
+    var invoiceNumber = 'INV-' + Date.now().toString().slice(-8);
+    var notes = document.getElementById('inv-notes').value.trim();
+
+    var { jsPDF } = window.jspdf;
+    var doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    var pageW = doc.internal.pageSize.getWidth();
+    var margin = 40;
+    var y = 50;
+
+    function finishPdf() {
+      // Header: company name + invoice meta
+      doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(20,20,20);
+      doc.text(company.name || 'Invoice', margin + (invLogoImage ? 90 : 0), y + 10);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+      var infoY = y + 28;
+      if (company.address) { doc.text(company.address, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
+      if (company.phone)   { doc.text('Tel: ' + company.phone, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
+      if (company.email)   { doc.text(company.email, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
+      if (company.vat)     { doc.text('VAT/Reg: ' + company.vat, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(227,24,55);
+      doc.text('INVOICE', pageW - margin, y + 10, { align: 'right' });
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+      doc.text(invoiceNumber, pageW - margin, y + 28, { align: 'right' });
+      doc.text(new Date().toLocaleDateString(), pageW - margin, y + 40, { align: 'right' });
+
+      y = Math.max(infoY, y + 50) + 20;
+      doc.setDrawColor(220,220,220); doc.line(margin, y, pageW - margin, y);
+      y += 20;
+
+      // Bill to
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,20,20);
+      doc.text('BILL TO', margin, y);
+      if (wholesale) { doc.setTextColor(124,58,237); doc.text('WHOLESALE CUSTOMER', pageW - margin, y, { align: 'right' }); }
+      y += 16;
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20,20,20);
+      doc.text(customer.name, margin, y); y += 14;
+      if (customer.phone)   { doc.setFontSize(9); doc.setTextColor(100,100,100); doc.text(customer.phone, margin, y); y += 12; }
+      if (customer.email)   { doc.text(customer.email, margin, y); y += 12; }
+      if (customer.address) { doc.text(customer.address, margin, y); y += 12; }
+      y += 16;
+
+      // Table header
+      doc.setFillColor(30,30,30);
+      doc.rect(margin, y, pageW - margin*2, 24, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text('ITEM', margin + 10, y + 16);
+      doc.text('QTY', pageW - margin - 200, y + 16, { align: 'right' });
+      doc.text('UNIT PRICE', pageW - margin - 100, y + 16, { align: 'right' });
+      doc.text('TOTAL', pageW - margin - 10, y + 16, { align: 'right' });
+      y += 24;
+
+      doc.setTextColor(20,20,20); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      invoiceLineItems.forEach(function(item, idx){
+        var unitPrice = wholesale ? item.wholesalePrice : item.regularPrice;
+        var rowH = 22;
+        if (idx % 2 === 1) { doc.setFillColor(248,248,248); doc.rect(margin, y, pageW - margin*2, rowH, 'F'); }
+        doc.text(item.name, margin + 10, y + 15, { maxWidth: pageW - margin*2 - 220 });
+        doc.text(String(item.qty), pageW - margin - 200, y + 15, { align: 'right' });
+        doc.text('R ' + unitPrice.toLocaleString(), pageW - margin - 100, y + 15, { align: 'right' });
+        doc.text('R ' + (unitPrice * item.qty).toLocaleString(), pageW - margin - 10, y + 15, { align: 'right' });
+        y += rowH;
+      });
+
+      y += 10;
+      doc.setDrawColor(220,220,220); doc.line(pageW - margin - 200, y, pageW - margin, y);
+      y += 16;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.text('Subtotal', pageW - margin - 100, y, { align: 'right' });
+      doc.text('R ' + subtotal.toLocaleString(), pageW - margin - 10, y, { align: 'right' });
+      y += 16;
+      if (extra > 0) {
+        doc.text('Delivery / Other', pageW - margin - 100, y, { align: 'right' });
+        doc.text('R ' + extra.toLocaleString(), pageW - margin - 10, y, { align: 'right' });
+        y += 16;
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(227,24,55);
+      doc.text('TOTAL', pageW - margin - 100, y + 6, { align: 'right' });
+      doc.text('R ' + total.toLocaleString(), pageW - margin - 10, y + 6, { align: 'right' });
+      y += 36;
+
+      if (notes) {
+        doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+        doc.text(notes, margin, y, { maxWidth: pageW - margin*2 });
+        y += 20;
+      }
+
+      doc.setFontSize(8); doc.setTextColor(160,160,160);
+      doc.text('Thank you for your business!', margin, doc.internal.pageSize.getHeight() - 30);
+
+      doc.save(invoiceNumber + '-' + customer.name.replace(/\s+/g,'_') + '.pdf');
+
+      var list = getInvoices();
+      list.push({ invoiceNumber: invoiceNumber, customerName: customer.name, date: new Date().toISOString(), total: total });
+      saveInvoicesList(list);
+      renderInvoicesList();
+      showToast('✅ Invoice generated!');
+    }
+
+    if (invLogoImage) {
+      var logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.onload = function() {
+        try {
+          var ratio = logoImg.width / logoImg.height;
+          var logoH = 50, logoW = logoH * ratio;
+          doc.addImage(logoImg, 'PNG', margin, y - 10, logoW, logoH);
+        } catch(e) { console.error('Logo embed failed:', e); }
+        finishPdf();
+      };
+      logoImg.onerror = function(){ finishPdf(); };
+      logoImg.src = invLogoImage;
+    } else {
+      finishPdf();
+    }
   }
 
   // ── BARCODES & SCANNER ───────────────────────────────────────
