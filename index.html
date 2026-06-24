@@ -318,6 +318,11 @@
     if (typeof renderDeals === 'function') renderDeals();
   });
 
+  onSnapshot(doc(db, 'store_data', 'about'), function(snap) {
+    var about = snap.exists() ? snap.data().value : null;
+    localStorage.setItem('mrc_about', JSON.stringify(about && typeof about === 'object' ? about : {}));
+  });
+
   // Auth state listener
   onAuthStateChanged(auth, function(user) {
     window.mrcUser = user || null;
@@ -434,6 +439,28 @@
       <span class="auth-skip" onclick="closeAuth()">Maybe later — continue browsing</span>
     </div>
   </div>
+
+  <!-- ABOUT MODAL -->
+  <div id="about-overlay" onclick="closeAboutIfOutside(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400000;align-items:center;justify-content:center;">
+    <div id="about-modal" style="background:#fff;width:94%;max-width:520px;border-radius:16px;padding:0;position:relative;box-shadow:0 16px 48px rgba(0,0,0,0.2);max-height:88vh;overflow-y:auto;font-family:'Nunito Sans',sans-serif;">
+      <button onclick="closeAboutModal()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.9);border:none;color:#1a1a1a;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.15);">✕</button>
+      <div id="about-modal-photo-wrap" style="display:none;width:100%;height:180px;overflow:hidden;border-radius:16px 16px 0 0;">
+        <img id="about-modal-photo" style="width:100%;height:100%;object-fit:cover;" alt="About us"/>
+      </div>
+      <div style="padding:28px 28px 32px;">
+        <h2 id="about-modal-heading" style="font-size:22px;font-weight:900;color:#1a1a1a;margin-bottom:14px;">About Us</h2>
+        <p id="about-modal-story" style="font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;margin-bottom:20px;"></p>
+
+        <div id="about-modal-contact" style="border-top:1px solid #eee;padding-top:16px;display:flex;flex-direction:column;gap:10px;">
+          <div id="about-modal-whatsapp-row" style="display:none;font-size:14px;color:#333;">📱 <a id="about-modal-whatsapp-link" href="#" target="_blank" style="color:#e31837;text-decoration:none;font-weight:700;"></a></div>
+          <div id="about-modal-email-row" style="display:none;font-size:14px;color:#333;">✉️ <a id="about-modal-email-link" href="#" style="color:#e31837;text-decoration:none;font-weight:700;"></a></div>
+          <div id="about-modal-address-row" style="display:none;font-size:14px;color:#333;">📍 <span id="about-modal-address"></span></div>
+          <div id="about-modal-hours-row" style="display:none;font-size:14px;color:#333;">🕒 <span id="about-modal-hours" style="white-space:pre-wrap;"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- PRODUCT DETAIL MODAL -->
   <div id="pdp-overlay" onclick="closePdpIfOutside(event)">
     <div id="pdp-modal">
@@ -493,7 +520,7 @@
       <ul class="nav-links">
         <li><a href="#">Home</a></li>
         <li><a href="#deals">Deals</a></li>
-        <li><a href="#">About</a></li>
+        <li><a href="#" onclick="openAboutModal(); return false;">About</a></li>
       </ul>
     </div>
     <div class="nav-right">
@@ -598,6 +625,7 @@
   <footer class="footer">
     <p>© 2026 Mr Clearance. All rights reserved. | Payments secured by PayFast</p>
     <p style="margin-top:8px;font-size:12px;">
+      <a href="#" onclick="openAboutModal(); return false;" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">About Us</a> |
       <a href="terms.html" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">Terms &amp; Conditions</a> |
       <a href="refund-policy.html" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">Refund &amp; Cancellation Policy</a>
     </p>
@@ -638,6 +666,52 @@
 
   function closeAuthIfOutside(e) {
     if (e.target === document.getElementById('auth-overlay')) closeAuth();
+  }
+
+  function openAboutModal() {
+    var data = {};
+    try { data = JSON.parse(localStorage.getItem('mrc_about') || 'null') || {}; } catch(e) {}
+    document.getElementById('about-modal-heading').textContent = data.heading || 'About Us';
+    document.getElementById('about-modal-story').textContent = data.story || '';
+
+    var photoWrap = document.getElementById('about-modal-photo-wrap');
+    if (data.photo) { document.getElementById('about-modal-photo').src = data.photo; photoWrap.style.display = 'block'; }
+    else { photoWrap.style.display = 'none'; }
+
+    var waRow = document.getElementById('about-modal-whatsapp-row');
+    if (data.whatsapp) {
+      var digits = data.whatsapp.replace(/\D/g,'');
+      document.getElementById('about-modal-whatsapp-link').href = 'https://wa.me/' + digits;
+      document.getElementById('about-modal-whatsapp-link').textContent = data.whatsapp;
+      waRow.style.display = 'block';
+    } else { waRow.style.display = 'none'; }
+
+    var emailRow = document.getElementById('about-modal-email-row');
+    if (data.email) {
+      document.getElementById('about-modal-email-link').href = 'mailto:' + data.email;
+      document.getElementById('about-modal-email-link').textContent = data.email;
+      emailRow.style.display = 'block';
+    } else { emailRow.style.display = 'none'; }
+
+    var addrRow = document.getElementById('about-modal-address-row');
+    if (data.address) { document.getElementById('about-modal-address').textContent = data.address; addrRow.style.display = 'block'; }
+    else { addrRow.style.display = 'none'; }
+
+    var hoursRow = document.getElementById('about-modal-hours-row');
+    if (data.hours) { document.getElementById('about-modal-hours').textContent = data.hours; hoursRow.style.display = 'block'; }
+    else { hoursRow.style.display = 'none'; }
+
+    document.getElementById('about-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAboutModal() {
+    document.getElementById('about-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function closeAboutIfOutside(e) {
+    if (e.target === document.getElementById('about-overlay')) closeAboutModal();
   }
 
   function switchAuthTab(tab) {
