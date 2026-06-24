@@ -3550,15 +3550,16 @@
     var y = 50;
 
     function finishPdf() {
-      // Header: company name + invoice meta
-      doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(20,20,20);
-      doc.text(company.name || 'Invoice', margin + (invLogoImage ? 90 : 0), y + 10);
+      var textStartY = invLogoImage ? y + 55 : y;
+      var centerX = pageW / 2;
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20,20,20);
+      doc.text(company.name || 'Invoice', centerX, textStartY + 14, { align: 'center' });
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
-      var infoY = y + 28;
-      if (company.address) { doc.text(company.address, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
-      if (company.phone)   { doc.text('Tel: ' + company.phone, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
-      if (company.email)   { doc.text(company.email, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
-      if (company.vat)     { doc.text('VAT/Reg: ' + company.vat, margin + (invLogoImage ? 90 : 0), infoY); infoY += 12; }
+      var infoY = textStartY + 30;
+      if (company.address) { doc.text(company.address, centerX, infoY, { align: 'center' }); infoY += 12; }
+      if (company.phone)   { doc.text('Tel: ' + company.phone, centerX, infoY, { align: 'center' }); infoY += 12; }
+      if (company.email)   { doc.text(company.email, centerX, infoY, { align: 'center' }); infoY += 12; }
+      if (company.vat)     { doc.text('VAT/Reg: ' + company.vat, centerX, infoY, { align: 'center' }); infoY += 12; }
 
       doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(227,24,55);
       doc.text('INVOICE', pageW - margin, y + 10, { align: 'right' });
@@ -3645,8 +3646,8 @@
       logoImg.onload = function() {
         try {
           var ratio = logoImg.width / logoImg.height;
-          var logoH = 50, logoW = logoH * ratio;
-          doc.addImage(logoImg, 'PNG', margin, y - 10, logoW, logoH);
+          var logoH = 45, logoW = Math.min(logoH * ratio, 160);
+          doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, y - 5, logoW, logoH);
         } catch(e) { console.error('Logo embed failed:', e); }
         finishPdf();
       };
