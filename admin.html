@@ -1591,7 +1591,7 @@
     if (tab === 'ads')        renderAdsList();
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
-    if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); }
+    if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
     if (tab === 'inventory')  renderInventory();
   }
