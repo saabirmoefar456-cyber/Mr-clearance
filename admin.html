@@ -1461,8 +1461,8 @@
       </div>
 
       <div class="form-group">
-        <label>Notes (optional, shown on invoice)</label>
-        <textarea id="inv-notes" rows="2" placeholder="e.g. Payment due within 7 days" style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;resize:vertical;"></textarea>
+        <label>Additional Information (optional, shown at the bottom of the invoice)</label>
+        <textarea id="inv-notes" rows="3" placeholder="e.g. Payment due within 7 days, bank details, warranty info, etc." style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;resize:vertical;"></textarea>
       </div>
 
       <div class="btn-actions">
@@ -3465,10 +3465,15 @@
     emptyMsg.style.display = 'none';
     var wholesale = isInvoiceCustomerWholesale();
     wrap.innerHTML = invoiceLineItems.map(function(item, idx){
-      var unitPrice = wholesale ? item.wholesalePrice : item.regularPrice;
-      return '<div style="display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:8px;padding:10px 12px;">' +
-        '<div style="flex:1;"><div style="font-weight:700;font-size:14px;">' + escAdminHtml(item.name) + '</div>' +
-        '<div style="font-size:12px;color:var(--text-light);">R ' + unitPrice.toLocaleString() + ' each' + (wholesale ? ' (wholesale)' : '') + '</div></div>' +
+      var defaultPrice = wholesale ? item.wholesalePrice : item.regularPrice;
+      var unitPrice = (item.overridePrice !== null && item.overridePrice !== undefined) ? item.overridePrice : defaultPrice;
+      return '<div style="display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:8px;padding:10px 12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:140px;"><div style="font-weight:700;font-size:14px;">' + escAdminHtml(item.name) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-light);">Default: R ' + defaultPrice.toLocaleString() + (wholesale ? ' (wholesale)' : '') + '</div></div>' +
+        '<div style="display:flex;align-items:center;gap:4px;">' +
+          '<span style="font-size:12px;color:var(--text-light);">R</span>' +
+          '<input type="number" value="' + unitPrice + '" min="0" step="1" onchange="setInvoiceLinePrice(' + idx + ', this.value)" style="width:80px;background:#fff;border:2px solid var(--border);border-radius:6px;padding:6px 8px;font-weight:700;font-size:13px;"/>' +
+        '</div>' +
         '<div class="qty-control"><button onclick="changeInvoiceLineQty(' + idx + ',-1)">−</button><span class="qty-val">' + item.qty + '</span><button onclick="changeInvoiceLineQty(' + idx + ',1)">+</button></div>' +
         '<div style="font-weight:800;width:80px;text-align:right;">R ' + (unitPrice * item.qty).toLocaleString() + '</div>' +
         '<button onclick="removeInvoiceLineItem(' + idx + ')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;">✕</button>' +
@@ -3477,10 +3482,21 @@
     updateInvoiceTotals();
   }
 
+  function setInvoiceLinePrice(idx, value) {
+    var num = parseFloat(value);
+    invoiceLineItems[idx].overridePrice = isNaN(num) ? null : num;
+    renderInvoiceLineItems();
+  }
+
+  function getLineItemUnitPrice(item, wholesale) {
+    if (item.overridePrice !== null && item.overridePrice !== undefined) return item.overridePrice;
+    return wholesale ? item.wholesalePrice : item.regularPrice;
+  }
+
   function updateInvoiceTotals() {
     var wholesale = isInvoiceCustomerWholesale();
     var subtotal = invoiceLineItems.reduce(function(sum, item){
-      return sum + (wholesale ? item.wholesalePrice : item.regularPrice) * item.qty;
+      return sum + getLineItemUnitPrice(item, wholesale) * item.qty;
     }, 0);
     var extra = parseFloat(document.getElementById('inv-extra-charge').value) || 0;
     document.getElementById('inv-subtotal').textContent = 'R ' + subtotal.toLocaleString();
@@ -3538,7 +3554,7 @@
     var company = getInvCompanyInfo();
     var wholesale = customer.type === 'wholesale';
     var extra = parseFloat(document.getElementById('inv-extra-charge').value) || 0;
-    var subtotal = invoiceLineItems.reduce(function(sum, item){ return sum + (wholesale ? item.wholesalePrice : item.regularPrice) * item.qty; }, 0);
+    var subtotal = invoiceLineItems.reduce(function(sum, item){ return sum + getLineItemUnitPrice(item, wholesale) * item.qty; }, 0);
     var total = subtotal + extra;
     var invoiceNumber = 'INV-' + Date.now().toString().slice(-8);
     var notes = document.getElementById('inv-notes').value.trim();
@@ -3595,7 +3611,7 @@
 
       doc.setTextColor(20,20,20); doc.setFont('helvetica','normal'); doc.setFontSize(10);
       invoiceLineItems.forEach(function(item, idx){
-        var unitPrice = wholesale ? item.wholesalePrice : item.regularPrice;
+        var unitPrice = getLineItemUnitPrice(item, wholesale);
         var rowH = 22;
         if (idx % 2 === 1) { doc.setFillColor(248,248,248); doc.rect(margin, y, pageW - margin*2, rowH, 'F'); }
         doc.text(item.name, margin + 10, y + 15, { maxWidth: pageW - margin*2 - 220 });
@@ -3623,9 +3639,14 @@
       y += 36;
 
       if (notes) {
-        doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+        doc.setDrawColor(220,220,220); doc.line(margin, y, pageW - margin, y);
+        y += 18;
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,20,20);
+        doc.text('ADDITIONAL INFORMATION', margin, y);
+        y += 14;
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
         doc.text(notes, margin, y, { maxWidth: pageW - margin*2 });
-        y += 20;
+        y += 24;
       }
 
       doc.setFontSize(8); doc.setTextColor(160,160,160);
