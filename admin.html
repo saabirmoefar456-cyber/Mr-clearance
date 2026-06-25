@@ -2693,7 +2693,8 @@
   function initCategoriesSync() {
     if (window.fbListenStoreData) {
       window.fbListenStoreData('categories', function(cats) {
-        if (Array.isArray(cats) && cats.length) {
+        var hadRealCloudData = Array.isArray(cats) && cats.length;
+        if (hadRealCloudData) {
           cachedCategories = cats;
         } else if (!cachedCategories) {
           // No cloud data yet — migrate whatever this device already has
@@ -2710,6 +2711,11 @@
         if (document.getElementById('tab-categories') && document.getElementById('tab-categories').classList.contains('active')) {
           renderCategoriesList();
         }
+        // Only run the one-time legacy hero migration once we genuinely
+        // know what's in the cloud — never on a blind timer, since that
+        // could fire before real data arrives and overwrite it with
+        // an incomplete fallback list.
+        migrateLegacyHeroCategories();
       });
     }
   }
@@ -2721,6 +2727,7 @@
   // per-category from this tab, give those two categories their original
   // look as real theme data, so they don't just disappear after this update.
   function migrateLegacyHeroCategories() {
+    if (localStorage.getItem('mrc_hero_migration_done') === 'true') return;
     var cats = getCategories();
     var changed = false;
     var aprons = cats.find(function(c){ return c.key === 'aprons'; });
@@ -2745,10 +2752,9 @@
       });
       changed = true;
     }
+    localStorage.setItem('mrc_hero_migration_done', 'true');
     if (changed) saveCategories(cats);
   }
-  if (window.firebaseReady) { setTimeout(migrateLegacyHeroCategories, 1500); }
-  else { window.addEventListener('firebase-ready', function(){ setTimeout(migrateLegacyHeroCategories, 1500); }); }
 
   function slugifyCategory(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -3395,7 +3401,7 @@
     if (!list.length) { el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;">No customers yet.</p>'; return; }
     el.innerHTML = list.map(function(c){
       return '<div class="product-item"><div class="product-item-main">' +
-        '<div class="product-info"><div class="product-name">' + escAdminHtml(c.name) + ' ' + (c.type==='wholesale' ? '<span class="product-badge-label" style="background:#7c3aed;">WHOLESALE</span>' : '') + '</div>' +
+        '<div class="product-info"><div class="product-name">' + escAdminHtml(c.name) + ' ' + (c.type==='wholesale' ? '<span class="product-badge-label" style="background:#7c3aed;color:#fff;border:none;">WHOLESALE</span>' : '') + '</div>' +
         '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">' + escAdminHtml(c.phone||'') + (c.email ? ' · ' + escAdminHtml(c.email) : '') + '</div></div>' +
         '<div class="item-actions"><button class="btn-edit-item" onclick="editCustomer(\'' + c.id + '\')">✏️ Edit</button>' +
         '<button class="btn-delete-item" data-confirming="false" onclick="deleteCustomer(\'' + c.id + '\', this)">🗑️ Delete</button></div>' +
@@ -3513,7 +3519,15 @@
 
   function getInvoices() {
     if (cachedInvoices) return cachedInvoices;
-    try { return JSON.parse(localStorage.getItem('mrc_invoices') || '[]'); } catch(e) { return []; }
+    var list = [];
+    try { list = JSON.parse(localStorage.getItem('mrc_invoices') || '[]'); } catch(e) { list = []; }
+    var changed = false;
+    list.forEach(function(inv, i){
+      if (!inv.id) { inv.id = 'inv_' + Date.now() + '_' + i; changed = true; }
+      if (inv.paid === undefined) { inv.paid = false; changed = true; }
+    });
+    if (changed) { cachedInvoices = list; localStorage.setItem('mrc_invoices', JSON.stringify(list)); }
+    return list;
   }
   function saveInvoicesList(list) {
     cachedInvoices = list;
@@ -3537,11 +3551,40 @@
     var list = getInvoices().slice().reverse();
     if (!list.length) { el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;">No invoices generated yet.</p>'; return; }
     el.innerHTML = list.map(function(inv){
+      var paid = !!inv.paid;
+      var statusBadge = paid
+        ? '<span class="product-badge-label" style="background:#27ae60;color:#fff;border:none;">PAID</span>'
+        : '<span class="product-badge-label" style="background:var(--red);color:#fff;border:none;">OUTSTANDING</span>';
       return '<div class="product-item"><div class="product-item-main">' +
-        '<div class="product-info"><div class="product-name">' + escAdminHtml(inv.invoiceNumber) + ' — ' + escAdminHtml(inv.customerName) + '</div>' +
+        '<div class="product-info"><div class="product-name">' + escAdminHtml(inv.invoiceNumber) + ' — ' + escAdminHtml(inv.customerName) + ' ' + statusBadge + '</div>' +
         '<div style="font-size:12px;color:var(--text-light);font-weight:600;margin-top:3px;">' + new Date(inv.date).toLocaleDateString() + ' · R ' + inv.total.toLocaleString() + '</div></div>' +
+        '<div class="item-actions">' +
+          '<button class="btn-edit-item" onclick="toggleInvoicePaid(\'' + inv.id + '\')">' + (paid ? '↩️ Mark Outstanding' : '✅ Mark Paid') + '</button>' +
+          '<button class="btn-delete-item" data-confirming="false" onclick="deleteInvoice(\'' + inv.id + '\', this)">🗑️ Delete</button>' +
+        '</div>' +
       '</div></div>';
     }).join('');
+  }
+
+  function toggleInvoicePaid(id) {
+    var list = getInvoices();
+    var inv = list.find(function(i){ return i.id === id; });
+    if (!inv) return;
+    inv.paid = !inv.paid;
+    saveInvoicesList(list);
+    renderInvoicesList();
+    showToast(inv.paid ? '✅ Marked as paid!' : '↩️ Marked as outstanding');
+  }
+
+  function deleteInvoice(id, btn) {
+    if (btn.getAttribute('data-confirming') === 'true') {
+      saveInvoicesList(getInvoices().filter(function(i){ return i.id !== id; }));
+      renderInvoicesList();
+      showToast('🗑️ Invoice deleted!');
+    } else {
+      btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️ Tap again';
+      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️ Delete'; }, 3000);
+    }
   }
 
   function generateInvoicePdf() {
@@ -3655,7 +3698,7 @@
       doc.save(invoiceNumber + '-' + customer.name.replace(/\s+/g,'_') + '.pdf');
 
       var list = getInvoices();
-      list.push({ invoiceNumber: invoiceNumber, customerName: customer.name, date: new Date().toISOString(), total: total });
+      list.push({ id: 'inv_' + Date.now(), invoiceNumber: invoiceNumber, customerName: customer.name, date: new Date().toISOString(), total: total, paid: false });
       saveInvoicesList(list);
       renderInvoicesList();
       showToast('✅ Invoice generated!');
