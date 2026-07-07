@@ -275,7 +275,7 @@
   </style>
  <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const firebaseConfig = {
@@ -293,6 +293,23 @@
 
   window.mrcDb   = db;
   window.mrcAuth = auth;
+
+  // Save a customer order to Firestore so admin (owner/mum/dad) can see
+  // every incoming sale live, regardless of whether the WhatsApp message
+  // actually goes through (popup blockers, etc. can stop that silently).
+  window.fbSaveOrder = async function(order) {
+    try {
+      const ordersRef = collection(db, 'orders');
+      const docRef = await addDoc(ordersRef, Object.assign({}, order, {
+        createdAt: new Date().toISOString(),
+        status: 'pending'
+      }));
+      return docRef.id;
+    } catch (e) {
+      console.error('Order save failed:', e);
+      return null;
+    }
+  };
 
   // Products listener
   onSnapshot(collection(db, 'products'), function(snap) {
@@ -1207,7 +1224,9 @@
   }
 
   // ── DELIVERY ──────────────────────────────────────────────────
-  var STORE_ADDR='368 Imam Haron Road, Lansdowne', OWNER_WHATSAPP='27677698001', DELIVERY_FEE=50;
+  var STORE_ADDR='368 Imam Haron Road, Lansdowne', DELIVERY_FEE=50;
+  // All 3 numbers get notified of every new order (owner + mum's number + dad's number).
+  var OWNER_WHATSAPP_NUMBERS = ['27677698001', '27843966390', '27732982244'];
   var selectedFulfilment='delivery', withinRange=false, currentOrderNumber='';
   var NEARBY_SUBURBS=['lansdowne','crawford','athlone','belgravia','claremont','kenwyn','rondebosch','wetton','wynberg','plumstead','ottery','hanover park','gatesville','penlyn','kewtown','silvertown','bridgetown'];
   function generateOrderNumber(){ return 'MRC-'+Date.now().toString().slice(-6)+Math.floor(Math.random()*100); }
@@ -1345,8 +1364,33 @@
         : '🚚 We will contact you to confirm delivery time')+
       '%0A%0AThank you for shopping with Mr Clearance! 🛍️';
 
-    // Open WhatsApp for owner
-    window.open('https://wa.me/'+OWNER_WHATSAPP+'?text='+ownerMsg, '_blank');
+    // ── SAVE ORDER TO FIRESTORE — this is what makes it show up live in
+    // admin for owner/mum/dad, independent of whether WhatsApp opens ──
+    if (window.fbSaveOrder) {
+      window.fbSaveOrder({
+        orderNumber:      currentOrderNumber,
+        customerName:     name,
+        customerWhatsapp: whatsapp,
+        customerEmail:    window.mrcUser ? window.mrcUser.email : 'Guest',
+        address:          address,
+        fulfilment:       deliveryInfo,
+        items:            cart.map(function(i){ return { name: i.name, qty: i.qty, price: i.price }; }),
+        subtotal:         cartTotal,
+        deliveryFee:      deliveryFee,
+        total:            grandTotal,
+        notes:            notes
+      });
+    }
+
+    // Open WhatsApp for owner — sent to all 3 numbers (owner, mum, dad),
+    // staggered slightly since browsers can block several popups opened
+    // in the same instant.
+    OWNER_WHATSAPP_NUMBERS.forEach(function(num, i){
+      setTimeout(function(){
+        var win = window.open('https://wa.me/'+num+'?text='+ownerMsg, '_blank');
+        if (!win) { showToast('⚠️ A WhatsApp notification was blocked by your browser — allow popups for this site.'); }
+      }, i*400);
+    });
 
     // Open WhatsApp for customer after short delay
     setTimeout(function(){
