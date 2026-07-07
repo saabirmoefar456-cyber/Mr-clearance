@@ -1621,7 +1621,7 @@
       else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); }); }
       showToast('Welcome ' + acc.name + '! 👋');
     } catch (e) {
-      err.textContent = '❌ Wrong password. Please try again.';
+      err.textContent = '❌ ' + (e.code || e.message || 'Unknown error') + ' (debug mode — tell Claude this exact text)';
       document.getElementById('password-input').value = '';
     }
   }
