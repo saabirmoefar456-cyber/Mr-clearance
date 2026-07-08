@@ -404,29 +404,6 @@
       await signOut(auth);
     };
 
-    // ── STAFF LOGIN (owner/mum/dad) ──────────────────────────────
-    // Real Firebase Authentication instead of a plaintext password
-    // sitting in this file. See the STAFF_DIRECTORY map further down
-    // for which email each role signs in with.
-    window.fbStaffLogin = async function(email, password) {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      return cred.user;
-    };
-    window.fbStaffLogout = async function() {
-      await signOut(auth);
-    };
-
-    // ── ORDERS — live feed of everything customers check out with ──
-    window.fbListenOrders = function(callback) {
-      const ordersRef = collection(db, 'orders');
-      return onSnapshot(ordersRef, snap => {
-        callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      });
-    };
-    window.fbUpdateOrderStatus = async function(id, status) {
-      await updateDoc(doc(db, 'orders', id), { status: status });
-    };
-
     // Helper: strip oversized base64 images — Firestore has 1MB doc limit
     function sanitiseImages(images) {
       return (images || []).map(function(src) {
@@ -512,7 +489,7 @@
       <input type="password" id="password-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()"/>
       <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('password-input', this)" aria-label="Show password">👁️</button>
     </div>
-    <button class="login-btn" onclick="login()">🔓 Login</button>
+    <button class="login-btn" id="login-btn" onclick="login()">🔓 Login</button>
     <p class="login-error" id="login-error"></p>
     <p class="login-hint" id="login-hint">Owner access selected</p>
   </div>
@@ -533,7 +510,6 @@
 
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
-    <button class="tab-btn" onclick="showTab('orders')">🛒 Orders</button>
     <button class="tab-btn" onclick="showTab('add')">➕ Add Product</button>
     <button class="tab-btn" onclick="showTab('manage')">📦 Manage Products</button>
     <button class="tab-btn" onclick="showTab('inventory')">📋 Inventory</button>
@@ -578,25 +554,6 @@
         <p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">Loading customers...</p>
       </div>
     </div>
-
-  <!-- ORDERS TAB — live feed of every checkout, visible to owner/mum/dad -->
-  <div class="tab-panel" id="tab-orders">
-    <div class="stats-grid" id="orders-stats-grid">
-      <div class="stat-card"><span class="stat-number">0</span><span class="stat-label">Orders Today</span></div>
-      <div class="stat-card"><span class="stat-number">R0</span><span class="stat-label">Revenue Today</span></div>
-      <div class="stat-card"><span class="stat-number">0</span><span class="stat-label">Total Orders</span></div>
-      <div class="stat-card"><span class="stat-number">0</span><span class="stat-label">Pending</span></div>
-    </div>
-    <div class="section-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <h2 style="margin:0;">🛒 Incoming Orders</h2>
-        <button onclick="renderOrders()" class="btn-secondary" style="font-size:12px;padding:8px 14px;">🔄 Refresh</button>
-      </div>
-      <p style="font-size:12px;color:var(--text-light);font-weight:600;margin-bottom:14px;">Every order placed on the store shows up here instantly for Owner, Mum, and Dad — no need to rely on WhatsApp arriving.</p>
-      <div id="orders-list"></div>
-      <p id="orders-empty" style="display:none;text-align:center;padding:32px;color:var(--text-light);font-size:14px;font-weight:600;">No orders yet — they'll appear here the moment a customer checks out.</p>
-    </div>
-  </div>
 
   <!-- ADD PRODUCT TAB -->
   <div class="tab-panel" id="tab-add">
@@ -1564,13 +1521,10 @@
 
 <script>
   // ── ACCOUNTS ──────────────────────────────────────────────────
-  // IMPORTANT: passwords are NOT stored here anymore — they live only in
-  // Firebase Authentication, which you manage from the Firebase console
-  // (Authentication → Users). This map just tells the login screen which
-  // email address corresponds to each role button, and what to call them.
-  // You must create these 3 users in Firebase Auth with these exact emails
-  // (see the message accompanying this file for full setup steps).
-  var STAFF_DIRECTORY = {
+  // NOTE: passwords are NOT stored here anymore. Each account's real
+  // password lives in Firebase Console → Authentication → Users.
+  // To change a password, reset it there — not in this file.
+  var ACCOUNTS = {
     owner: { email: 'owner@mrclearance.co.za', name: 'Owner', role: 'owner' },
     mum:   { email: 'mum@mrclearance.co.za',   name: 'Mum',   role: 'staff' },
     dad:   { email: 'dad@mrclearance.co.za',   name: 'Dad',   role: 'staff' }
@@ -1599,36 +1553,46 @@
 
   async function login() {
     var pw  = document.getElementById('password-input').value;
-    var acc = STAFF_DIRECTORY[selectedUser];
+    var acc = ACCOUNTS[selectedUser];
     var err = document.getElementById('login-error');
+    var btn = document.getElementById('login-btn');
+
+    if (!window.fbLogin) {
+      err.textContent = '⏳ Still connecting, please wait a second and try again.';
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
     err.textContent = '';
-    if (!pw) { err.textContent = '❌ Please enter your password.'; return; }
-    if (!window.fbStaffLogin) { err.textContent = '⏳ Still connecting — try again in a moment.'; return; }
+
     try {
-      await window.fbStaffLogin(acc.email, pw);
+      // This is the real security check — it asks Firebase itself
+      // to verify the email + password against Authentication → Users.
+      await window.fbLogin(acc.email, pw);
+
       loggedInUser = selectedUser;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display  = 'block';
       document.getElementById('role-badge').textContent = acc.name;
       populateAllCategoryDropdowns();
-      initOrdersListener();
-     if (acc.role === 'owner') {
+      if (acc.role === 'owner') {
         document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'block'; });
         loadSettings();
         setTimeout(loadCustomers, 1500);
-   }
+      }
       if (window.firebaseReady) { loadProductsFromFirebase(); }
       else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); }); }
       showToast('Welcome ' + acc.name + '! 👋');
     } catch (e) {
-      err.textContent = '❌ ' + (e.code || e.message || 'Unknown error') + ' (debug mode — tell Claude this exact text)';
+      err.textContent = '❌ Wrong password. Please try again.';
       document.getElementById('password-input').value = '';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Log In'; }
     }
   }
 
-  async function logout() {
-    try { if (window.fbStaffLogout) await window.fbStaffLogout(); } catch(e) {}
+  function logout() {
     loggedInUser = null;
+    if (window.fbLogout) { window.fbLogout(); }
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('admin-panel').style.display  = 'none';
     document.getElementById('password-input').value = '';
@@ -1642,11 +1606,10 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
+    var names = ['dashboard','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
-    if (tab === 'orders')     renderOrders();
     if (tab === 'deals')      renderDealsList();
     if (tab === 'ads')        renderAdsList();
     if (tab === 'categories') renderCategoriesList();
@@ -4187,67 +4150,6 @@
     lowList.innerHTML = low.map(function(p){
       var stk = getStockLabel(p.stock);
       return '<div class="low-stock-item"><span class="low-stock-name">'+p.name+'</span><span class="barcode-product-stock '+stk.cls+'">'+stk.text+'</span><button class="btn-edit-item" onclick="editProduct(\''+p.id+'\');showTab(\'add\')">Restock</button></div>';
-    }).join('');
-  }
-
-  // ── LIVE ORDERS (from customer checkout) ────────────────────────
-  var cachedOrders = [];
-  var ordersListenerStarted = false;
-  function initOrdersListener() {
-    if (ordersListenerStarted) return;
-    if (!window.fbListenOrders) { setTimeout(initOrdersListener, 800); return; }
-    ordersListenerStarted = true;
-    window.fbListenOrders(function(orders) {
-      cachedOrders = orders.slice().sort(function(a,b){
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      });
-      renderOrders();
-    });
-  }
-
-  function renderOrders() {
-    var listEl  = document.getElementById('orders-list');
-    var emptyEl = document.getElementById('orders-empty');
-    var statsEl = document.getElementById('orders-stats-grid');
-    if (!listEl || !statsEl) return;
-
-    var todayStr = new Date().toDateString();
-    var todayOrders = cachedOrders.filter(function(o){ return o.createdAt && new Date(o.createdAt).toDateString() === todayStr; });
-    var todayRevenue = todayOrders.reduce(function(s,o){ return s + (o.total || 0); }, 0);
-    var pendingCount = cachedOrders.filter(function(o){ return (o.status || 'pending') === 'pending'; }).length;
-
-    statsEl.innerHTML =
-      '<div class="stat-card"><span class="stat-number">'+todayOrders.length+'</span><span class="stat-label">Orders Today</span></div>' +
-      '<div class="stat-card"><span class="stat-number">R'+todayRevenue.toLocaleString()+'</span><span class="stat-label">Revenue Today</span></div>' +
-      '<div class="stat-card"><span class="stat-number">'+cachedOrders.length+'</span><span class="stat-label">Total Orders</span></div>' +
-      '<div class="stat-card"><span class="stat-number">'+pendingCount+'</span><span class="stat-label">Pending</span></div>';
-
-    if (cachedOrders.length === 0) { listEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
-    emptyEl.style.display = 'none';
-
-    listEl.innerHTML = cachedOrders.map(function(o){
-      var itemsHtml = (o.items || []).map(function(i){ return i.qty+'x '+i.name; }).join(', ');
-      var when = o.createdAt ? new Date(o.createdAt).toLocaleString('en-ZA') : '—';
-      var status = o.status || 'pending';
-      var statusColor = status === 'fulfilled' ? '#27ae60' : (status === 'cancelled' ? '#999' : '#f59e0b');
-      return '<div class="section-card" style="margin-bottom:10px;padding:16px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">' +
-          '<strong style="color:var(--red);font-size:14px;">'+(o.orderNumber || '—')+'</strong>' +
-          '<span style="font-size:12px;color:var(--text-light);font-weight:600;">'+when+'</span>' +
-        '</div>' +
-        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-top:8px;">'+(o.customerName || '—')+' · '+(o.customerWhatsapp || '')+'</div>' +
-        '<div style="font-size:13px;color:var(--text-mid);margin-top:4px;font-weight:600;">'+itemsHtml+'</div>' +
-        '<div style="font-size:13px;color:var(--text-mid);margin-top:4px;font-weight:600;">'+(o.fulfilment || '')+(o.address ? ' · '+o.address : '')+'</div>' +
-        (o.notes ? '<div style="font-size:12px;color:var(--text-light);margin-top:4px;font-style:italic;">📝 '+o.notes+'</div>' : '') +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px;">' +
-          '<span style="font-weight:900;color:#1a1a1a;font-size:15px;">R'+(o.total || 0).toLocaleString()+'</span>' +
-          '<select onchange="window.fbUpdateOrderStatus(\''+o.id+'\', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-weight:700;font-size:13px;color:'+statusColor+';">' +
-            '<option value="pending" '   + (status==='pending'   ? 'selected' : '') + '>⏳ Pending</option>' +
-            '<option value="fulfilled" ' + (status==='fulfilled' ? 'selected' : '') + '>✅ Fulfilled</option>' +
-            '<option value="cancelled" ' + (status==='cancelled' ? 'selected' : '') + '>❌ Cancelled</option>' +
-          '</select>' +
-        '</div>' +
-      '</div>';
     }).join('');
   }
 
