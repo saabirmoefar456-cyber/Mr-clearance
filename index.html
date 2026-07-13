@@ -1292,6 +1292,27 @@
     var name     = document.getElementById('cust-name').value.trim();
     var whatsapp = document.getElementById('cust-whatsapp').value.trim();
     var notes    = document.getElementById('cust-notes').value.trim();
+ try {
+  fetch('https://whatsapp-notifications-w4wz.onrender.com/send-order-alert', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-webhook-secret': 'YOUR_WEBHOOK_SECRET' // Put your Render secret here
+    },
+    body: JSON.stringify({
+      numbers: ["27677698001"], // Recipient phone number
+      message: `🚨 *NEW CUSTOMER ORDER!*\n\n` +
+               `📦 *Order ID:* #${orderId || 'NEW'}\n` +
+               `👤 *Customer:* ${customerName}\n` +
+               `📞 *Phone:* ${customerPhone}\n` +
+               `📍 *Address:* ${deliveryAddress}\n` +
+               `💰 *Total:* R${totalAmount}`
+    })
+  });
+} catch (waError) {
+  console.error("WhatsApp notification error:", waError);
+}
+// -------------------------------------------------------------
 
     // Auto-fill from logged in customer profile
     if (!name && window.mrcUser && window.mrcUser.displayName) {
@@ -1607,9 +1628,6 @@
         <label style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;display:block;margin-bottom:8px;">Select PAXI Option *</label>
         <select id="paxi-option" onchange="updateModalSummary()" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;">
           <option value="">-- Choose PAXI option --</option>
-          <option value="PUDO Locker Small|49">📦 PUDO Locker Small — R49</option>
-          <option value="PUDO Locker Medium|80">📦 PUDO Locker Medium — R80</option>
-          <option value="PUDO Locker Large|100">📦 PUDO Locker Large — R100</option>
           <option value="PEP PAXI Small 3-5 days|109.95">🚀 PEP PAXI Small (3–5 days) — R109.95</option>
           <option value="PEP PAXI Small 7-9 days|59.95">🐢 PEP PAXI Small (7–9 days) — R59.95</option>
           <option value="PEP PAXI Large 3-5 days|139.95">🚀 PEP PAXI Large (3–5 days) — R139.95</option>
