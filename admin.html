@@ -4244,6 +4244,47 @@
     t.classList.add('show');
     setTimeout(function(){ t.classList.remove('show'); }, 2800);
   }
+
+  // ==========================================
+// WHATSAPP ALERT HELPER FOR ADMIN
+// ==========================================
+window.sendAdminWhatsAppAlert = async function(orderId, customerName, total) {
+  // 1. Ask for Webhook Secret if not stored already
+  let secret = localStorage.getItem('wa_secret');
+  if (!secret) {
+    secret = prompt("Enter your Render Webhook Secret:");
+    if (!secret) return;
+    localStorage.setItem('wa_secret', secret);
+  }
+
+  try {
+    const response = await fetch('https://whatsapp-notifications-w4wz.onrender.com/send-order-alert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-webhook-secret': secret
+      },
+      body: JSON.stringify({
+        numbers: ["27677698001"], // Your admin WhatsApp number
+        message: `📢 *ADMIN ORDER ALERT*\n\n` +
+                 `📦 *Order ID:* #${orderId || 'N/A'}\n` +
+                 `👤 *Customer:* ${customerName || 'Customer'}\n` +
+                 `💰 *Total:* R${total || '0'}`
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(`✅ WhatsApp alert sent successfully for Order #${orderId || ''}`);
+    } else {
+      alert(`❌ Error sending alert: ${data.error || 'Unauthorized or failed'}`);
+    }
+  } catch (err) {
+    console.error("WhatsApp error:", err);
+    alert('❌ Request failed. Check your network or Render server status.');
+  }
+};
 </script>
 </body>
 </html>
