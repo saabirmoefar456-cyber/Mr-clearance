@@ -175,6 +175,18 @@ body {
 }
 .hero-skew { position:absolute; top:-40px; right:60px; width:220px; height:220px; background:rgba(255,255,255,0.04); border-radius:50%; }
 .hero-blob { display:none; }
+/* Diagonal "clearance tag" stripe across the hero corner — echoes the
+   sale-badge clip-path used on product cards, ties the hero back to
+   the rest of the page's visual language instead of being flat color. */
+.hero::before, .hero::after { pointer-events:none; }
+.hero { }
+.hero .hero-tag-corner {
+  position:absolute; top:18px; left:-46px; width:220px; padding:6px 0;
+  background:var(--kraft); color:var(--ink); transform:rotate(-45deg);
+  font-family:var(--font-tag); font-size:11px; font-weight:800;
+  letter-spacing:2px; text-transform:uppercase; text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25); z-index:1;
+}
 .hero-content { text-align:center; z-index:1; animation:fadeUp 0.8s ease 0.2s both; }
 .hero-badge {
   display:inline-flex; align-items:center; gap:8px;
@@ -375,7 +387,12 @@ body {
 .deals-timer-wrap { margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:10px; }
 .timer-label { font-size:11px; font-weight:800; letter-spacing:2px; color:var(--red); text-transform:uppercase; }
 .deals-timer { display:flex; align-items:center; gap:8px; }
-.timer-block { background:var(--ink); border-radius:var(--radius); padding:12px 18px; text-align:center; min-width:72px; }
+@keyframes timerPulse {
+  0%, 100% { box-shadow:0 0 0 0 rgba(227,24,55,0.45); }
+  50%      { box-shadow:0 0 0 6px rgba(227,24,55,0); }
+}
+.timer-block { background:var(--ink); border-radius:var(--radius); padding:12px 18px; text-align:center; min-width:72px; animation:timerPulse 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .timer-block { animation:none; } }
 .timer-block span { display:block; font-family:var(--font-display); font-size:34px; color:#fff; line-height:1; letter-spacing:-1px; }
 .timer-block label { font-size:9px; color:rgba(255,255,255,0.5); letter-spacing:2px; text-transform:uppercase; margin-top:4px; display:block; font-weight:700; }
 .timer-sep { font-size:28px; font-weight:900; color:var(--text); margin-bottom:14px; }
