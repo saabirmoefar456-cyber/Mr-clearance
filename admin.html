@@ -4,6 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Mr Clearance — Admin</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e31837'/%3E%3Ctext x='50' y='68' font-family='Arial, sans-serif' font-weight='900' font-size='50' fill='white' text-anchor='middle'%3EMC%3C/text%3E%3C/svg%3E"/>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -401,31 +403,14 @@
     };
 
     // ── ADMIN IDENTITY (for securing the database) ──────────────────
-    // The admin panel's Owner/Mum/Dad login is just a password check on
-    // this page — it never told Firestore "this request is really from
-    // an admin". That meant database rules had no way to tell an admin
-    // write apart from anyone else's, so they had to stay wide open.
-    // This gives the admin panel one shared, real Firebase identity
-    // (invisible to you — no extra login screen) so the database rules
-    // can require it before allowing any write.
-    var ADMIN_AUTH_EMAIL = 'store-admin@mrclearance-internal.local';
-    var ADMIN_AUTH_PASSWORD = 'Sabah7861-Mrclearance-Admin-Key-2026';
-
-    window.fbAdminSignIn = async function() {
-      try {
-        await signInWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_AUTH_PASSWORD);
-      } catch (e) {
-        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-          // First time ever — create this identity once, automatically.
-          await createUserWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_AUTH_PASSWORD);
-        } else {
-          throw e;
-        }
-      }
-    };
-
-    window.fbAdminSignOut = async function() {
-      try { await signOut(auth); } catch(e) {}
+    // Owner, Mum and Dad each sign in with their OWN real Firebase Auth
+    // account (owner@mrclearance.co.za / mum@... / dad@...). Firestore
+    // rules check request.auth.token.email against those 3 addresses,
+    // so a write is only allowed if it really came from one of you —
+    // not from anyone who happened to view the page source.
+    window.fbStaffSignIn = async function(email, password) {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      return cred.user;
     };
 
     // Helper: strip oversized base64 images — Firestore has 1MB doc limit
@@ -526,7 +511,7 @@
       <input type="password" id="password-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()"/>
       <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('password-input', this)" aria-label="Show password">👁️</button>
     </div>
-    <button class="login-btn" onclick="login()">🔓 Login</button>
+    <button class="login-btn" id="login-btn" onclick="login()">🔓 Login</button>
     <p class="login-error" id="login-error"></p>
     <p class="login-hint" id="login-hint">Owner access selected</p>
   </div>
@@ -1578,10 +1563,13 @@
 
 <script>
   // ── ACCOUNTS ──────────────────────────────────────────────────
-  var ACCOUNTS = {
-    owner: { password: 'Sabah7861$', name: 'Owner', role: 'owner' },
-    mum:   { password: '7861',       name: 'Mum',   role: 'staff' },
-    dad:   { password: '7861',       name: 'Dad',   role: 'staff' }
+  // Passwords live in Firebase Auth now, not here. Set these 3 up once
+  // in the Firebase Console → Authentication → Users, with whatever
+  // password each of you wants.
+  var STAFF_ACCOUNTS = {
+    owner: { email: 'owner@mrclearance.co.za', name: 'Owner', role: 'owner' },
+    mum:   { email: 'mum@mrclearance.co.za',   name: 'Mum',   role: 'staff' },
+    dad:   { email: 'dad@mrclearance.co.za',   name: 'Dad',   role: 'staff' }
   };
   var selectedUser = 'owner';
   var loggedInUser = null;
@@ -1605,27 +1593,38 @@
     document.getElementById('login-hint').textContent = hints[user];
   }
 
-  function login() {
+  async function login() {
     var pw  = document.getElementById('password-input').value;
-    var acc = ACCOUNTS[selectedUser];
+    var acc = STAFF_ACCOUNTS[selectedUser];
     var err = document.getElementById('login-error');
-    if (pw === acc.password) {
+    var btn = document.getElementById('login-btn');
+    err.textContent = '';
+
+    if (!window.fbStaffSignIn) {
+      err.textContent = '⏳ Still connecting — wait a second and try again.';
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+
+    try {
+      await window.fbStaffSignIn(acc.email, pw);
       loggedInUser = selectedUser;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display  = 'block';
       document.getElementById('role-badge').textContent = acc.name;
       populateAllCategoryDropdowns();
-     if (acc.role === 'owner') {
+      if (acc.role === 'owner') {
         document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'block'; });
         loadSettings();
         setTimeout(loadCustomers, 1500);
-   }
-      if (window.firebaseReady) { loadProductsFromFirebase(); window.fbAdminSignIn().catch(function(e){ console.error('Admin auth sign-in failed:', e); }); }
-      else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); window.fbAdminSignIn().catch(function(e){ console.error('Admin auth sign-in failed:', e); }); }); }
+      }
+      loadProductsFromFirebase();
       showToast('Welcome ' + acc.name + '! 👋');
-    } else {
+    } catch (e) {
       err.textContent = '❌ Wrong password. Please try again.';
       document.getElementById('password-input').value = '';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🔓 Login'; }
     }
   }
 
@@ -1637,7 +1636,7 @@
     document.getElementById('login-error').textContent = '';
     document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'none'; });
     showTab('dashboard');
-    if (window.fbAdminSignOut) window.fbAdminSignOut();
+    if (window.fbLogout) window.fbLogout();
   }
 
   // ── TABS ──────────────────────────────────────────────────────
