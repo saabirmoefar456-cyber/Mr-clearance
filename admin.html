@@ -2,10 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Mr Clearance — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
@@ -404,6 +400,34 @@
       await signOut(auth);
     };
 
+    // ── ADMIN IDENTITY (for securing the database) ──────────────────
+    // The admin panel's Owner/Mum/Dad login is just a password check on
+    // this page — it never told Firestore "this request is really from
+    // an admin". That meant database rules had no way to tell an admin
+    // write apart from anyone else's, so they had to stay wide open.
+    // This gives the admin panel one shared, real Firebase identity
+    // (invisible to you — no extra login screen) so the database rules
+    // can require it before allowing any write.
+    var ADMIN_AUTH_EMAIL = 'store-admin@mrclearance-internal.local';
+    var ADMIN_AUTH_PASSWORD = 'Sabah7861-Mrclearance-Admin-Key-2026';
+
+    window.fbAdminSignIn = async function() {
+      try {
+        await signInWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_AUTH_PASSWORD);
+      } catch (e) {
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          // First time ever — create this identity once, automatically.
+          await createUserWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_AUTH_PASSWORD);
+        } else {
+          throw e;
+        }
+      }
+    };
+
+    window.fbAdminSignOut = async function() {
+      try { await signOut(auth); } catch(e) {}
+    };
+
     // Helper: strip oversized base64 images — Firestore has 1MB doc limit
     function sanitiseImages(images) {
       return (images || []).map(function(src) {
@@ -433,6 +457,19 @@
     
     window.fbDeleteProduct = async function(id) {
       await deleteDoc(doc(db, 'products', id));
+    };
+
+    // ── ORDERS — live list so new orders appear without a manual refresh ──
+    window.fbListenOrders = function(callback) {
+      return onSnapshot(collection(db, 'orders'), function(snap) {
+        var orders = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+        orders.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+        callback(orders);
+      });
+    };
+
+    window.fbUpdateOrderStatus = async function(id, status) {
+      await updateDoc(doc(db, 'orders', id), { status: status });
     };
     
     window.fbListen = function(callback) {
@@ -489,7 +526,7 @@
       <input type="password" id="password-input" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()"/>
       <button type="button" class="pw-toggle-btn" onclick="togglePwVisibility('password-input', this)" aria-label="Show password">👁️</button>
     </div>
-    <button class="login-btn" id="login-btn" onclick="login()">🔓 Login</button>
+    <button class="login-btn" onclick="login()">🔓 Login</button>
     <p class="login-error" id="login-error"></p>
     <p class="login-hint" id="login-hint">Owner access selected</p>
   </div>
@@ -510,6 +547,7 @@
 
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
+    <button class="tab-btn" onclick="showTab('orders')">🛒 Orders <span id="orders-new-badge" style="display:none;background:#e31837;color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px;">0</span></button>
     <button class="tab-btn" onclick="showTab('add')">➕ Add Product</button>
     <button class="tab-btn" onclick="showTab('manage')">📦 Manage Products</button>
     <button class="tab-btn" onclick="showTab('inventory')">📋 Inventory</button>
@@ -1372,6 +1410,25 @@
     </div>
   </div>
 
+  <!-- ORDERS -->
+  <div class="tab-panel" id="tab-orders">
+    <div class="section-card">
+      <h2>🛒 Customer Orders</h2>
+      <div class="info-box">
+        <strong>How it works:</strong> Every completed checkout is saved here automatically — this is the permanent record, separate from the WhatsApp message, so nothing gets missed even if a notification doesn't come through.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <button class="tab-btn active" data-status-filter="all" onclick="filterOrders('all', this)">All</button>
+        <button class="tab-btn" data-status-filter="new" onclick="filterOrders('new', this)">🆕 New</button>
+        <button class="tab-btn" data-status-filter="processing" onclick="filterOrders('processing', this)">⏳ Processing</button>
+        <button class="tab-btn" data-status-filter="completed" onclick="filterOrders('completed', this)">✅ Completed</button>
+        <button class="tab-btn" data-status-filter="cancelled" onclick="filterOrders('cancelled', this)">❌ Cancelled</button>
+      </div>
+      <div id="orders-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <p id="orders-empty-msg" style="display:none;text-align:center;color:var(--text-light);padding:30px;">No orders yet.</p>
+    </div>
+  </div>
+
   <!-- INVOICES -->
   <div class="tab-panel" id="tab-invoices">
 
@@ -1521,13 +1578,10 @@
 
 <script>
   // ── ACCOUNTS ──────────────────────────────────────────────────
-  // NOTE: passwords are NOT stored here anymore. Each account's real
-  // password lives in Firebase Console → Authentication → Users.
-  // To change a password, reset it there — not in this file.
   var ACCOUNTS = {
-    owner: { email: 'owner@mrclearance.co.za', name: 'Owner', role: 'owner' },
-    mum:   { email: 'mum@mrclearance.co.za',   name: 'Mum',   role: 'staff' },
-    dad:   { email: 'dad@mrclearance.co.za',   name: 'Dad',   role: 'staff' }
+    owner: { password: 'Sabah7861$', name: 'Owner', role: 'owner' },
+    mum:   { password: '7861',       name: 'Mum',   role: 'staff' },
+    dad:   { password: '7861',       name: 'Dad',   role: 'staff' }
   };
   var selectedUser = 'owner';
   var loggedInUser = null;
@@ -1551,54 +1605,39 @@
     document.getElementById('login-hint').textContent = hints[user];
   }
 
-  async function login() {
+  function login() {
     var pw  = document.getElementById('password-input').value;
     var acc = ACCOUNTS[selectedUser];
     var err = document.getElementById('login-error');
-    var btn = document.getElementById('login-btn');
-
-    if (!window.fbLogin) {
-      err.textContent = '⏳ Still connecting, please wait a second and try again.';
-      return;
-    }
-    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
-    err.textContent = '';
-
-    try {
-      // This is the real security check — it asks Firebase itself
-      // to verify the email + password against Authentication → Users.
-      await window.fbLogin(acc.email, pw);
-
+    if (pw === acc.password) {
       loggedInUser = selectedUser;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-panel').style.display  = 'block';
       document.getElementById('role-badge').textContent = acc.name;
       populateAllCategoryDropdowns();
-      if (acc.role === 'owner') {
+     if (acc.role === 'owner') {
         document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'block'; });
         loadSettings();
         setTimeout(loadCustomers, 1500);
-      }
-      if (window.firebaseReady) { loadProductsFromFirebase(); }
-      else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); }); }
+   }
+      if (window.firebaseReady) { loadProductsFromFirebase(); window.fbAdminSignIn().catch(function(e){ console.error('Admin auth sign-in failed:', e); }); }
+      else { window.addEventListener('firebase-ready', function(){ loadProductsFromFirebase(); window.fbAdminSignIn().catch(function(e){ console.error('Admin auth sign-in failed:', e); }); }); }
       showToast('Welcome ' + acc.name + '! 👋');
-    } catch (e) {
+    } else {
       err.textContent = '❌ Wrong password. Please try again.';
       document.getElementById('password-input').value = '';
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Log In'; }
     }
   }
 
   function logout() {
     loggedInUser = null;
-    if (window.fbLogout) { window.fbLogout(); }
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('admin-panel').style.display  = 'none';
     document.getElementById('password-input').value = '';
     document.getElementById('login-error').textContent = '';
     document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display = 'none'; });
     showTab('dashboard');
+    if (window.fbAdminSignOut) window.fbAdminSignOut();
   }
 
   // ── TABS ──────────────────────────────────────────────────────
@@ -1606,7 +1645,7 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
+    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
@@ -1615,6 +1654,7 @@
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
     if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
+    if (tab === 'orders')     { renderOrdersList(); markOrdersSeen(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
     if (tab === 'inventory')  renderInventory();
   }
@@ -3240,6 +3280,104 @@
     var d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
     return d.innerHTML;
+  }
+
+  // ── ORDERS ────────────────────────────────────────────────────
+  var cachedOrders = [];
+  var currentOrderFilter = 'all';
+
+  function initOrdersSync() {
+    if (window.fbListenOrders) {
+      window.fbListenOrders(function(orders) {
+        cachedOrders = orders;
+        updateOrdersBadge();
+        if (document.getElementById('tab-orders') && document.getElementById('tab-orders').classList.contains('active')) {
+          renderOrdersList();
+        }
+      });
+    }
+  }
+  if (window.firebaseReady) { initOrdersSync(); }
+  else { window.addEventListener('firebase-ready', initOrdersSync); }
+
+  function updateOrdersBadge() {
+    var badge = document.getElementById('orders-new-badge');
+    if (!badge) return;
+    var newCount = cachedOrders.filter(function(o){ return o.status === 'new'; }).length;
+    if (newCount > 0) { badge.textContent = newCount; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+
+  function markOrdersSeen() {
+    // Only clears the badge count visually — doesn't change order status,
+    // since "seen by admin" and "actually fulfilled" are different things.
+    var badge = document.getElementById('orders-new-badge');
+    if (badge) badge.style.display = 'none';
+  }
+
+  function filterOrders(status, btn) {
+    currentOrderFilter = status;
+    document.querySelectorAll('#tab-orders [data-status-filter]').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderOrdersList();
+  }
+
+  var ORDER_STATUS_LABELS = {
+    new:        { label: '🆕 New',        color: '#e31837' },
+    processing: { label: '⏳ Processing', color: '#f59e0b' },
+    completed:  { label: '✅ Completed',  color: '#27ae60' },
+    cancelled:  { label: '❌ Cancelled',  color: '#999' }
+  };
+
+  function renderOrdersList() {
+    var list = document.getElementById('orders-list');
+    var emptyMsg = document.getElementById('orders-empty-msg');
+    if (!list) return;
+    var orders = currentOrderFilter === 'all' ? cachedOrders : cachedOrders.filter(function(o){ return o.status === currentOrderFilter; });
+    if (!orders.length) { list.innerHTML = ''; emptyMsg.style.display = 'block'; return; }
+    emptyMsg.style.display = 'none';
+
+    list.innerHTML = orders.map(function(o){
+      var statusInfo = ORDER_STATUS_LABELS[o.status] || ORDER_STATUS_LABELS.new;
+      var itemsHtml = (o.items || []).map(function(i){
+        return '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#555;padding:3px 0;"><span>' + i.qty + '× ' + escAdminHtml(i.name) + '</span><span>R ' + (i.price * i.qty).toLocaleString() + '</span></div>';
+      }).join('');
+      var waDigits = (o.customerWhatsapp || '').replace(/\D/g,'');
+      var waLink = waDigits ? '<a href="https://wa.me/' + waDigits + '" target="_blank" style="color:#27ae60;text-decoration:none;font-weight:700;font-size:12.5px;">💬 WhatsApp ' + escAdminHtml(o.customerWhatsapp) + '</a>' : '';
+
+      return '<div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:#fff;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">' +
+          '<div><strong style="font-size:14px;">' + escAdminHtml(o.orderNumber || 'Order') + '</strong>' +
+          '<div style="font-size:11.5px;color:var(--text-light);margin-top:2px;">' + new Date(o.date).toLocaleString() + '</div></div>' +
+          '<span style="background:' + statusInfo.color + ';color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;white-space:nowrap;">' + statusInfo.label + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:700;margin-bottom:2px;">' + escAdminHtml(o.customerName || 'Customer') + '</div>' +
+        (waLink ? '<div style="margin-bottom:6px;">' + waLink + '</div>' : '') +
+        (o.address ? '<div style="font-size:12px;color:#666;margin-bottom:8px;">📍 ' + escAdminHtml(o.address) + '</div>' : '') +
+        '<div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin:8px 0;">' + itemsHtml + '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-bottom:12px;"><span>Total</span><span style="color:var(--red);">R ' + (o.total||0).toLocaleString() + '</span></div>' +
+        (o.notes ? '<div style="font-size:12px;color:#888;font-style:italic;margin-bottom:10px;">"' + escAdminHtml(o.notes) + '"</div>' : '') +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+          orderStatusButtons(o) +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function orderStatusButtons(o) {
+    var statuses = ['new','processing','completed','cancelled'];
+    return statuses.filter(function(s){ return s !== o.status; }).map(function(s){
+      var info = ORDER_STATUS_LABELS[s];
+      return '<button class="btn-secondary" style="padding:6px 12px;font-size:11.5px;" onclick="setOrderStatus(\'' + o.id + '\',\'' + s + '\')">' + info.label + '</button>';
+    }).join('');
+  }
+
+  function setOrderStatus(orderId, status) {
+    window.fbUpdateOrderStatus(orderId, status).then(function(){
+      showToast('✅ Order marked ' + status);
+    }).catch(function(err){
+      showToast('❌ Could not update order: ' + (err && err.message ? err.message : 'unknown error'));
+    });
   }
 
   // ── INVOICES ──────────────────────────────────────────────────
