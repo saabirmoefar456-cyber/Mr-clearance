@@ -1350,24 +1350,38 @@
     var itemsList  = cart.map(function(i){ return i.qty+'x '+i.name+' @ R'+i.price.toLocaleString(); }).join('%0A');
     var itemsPlain = cart.map(function(i){ return i.qty+'x '+i.name+' @ R'+i.price.toLocaleString(); }).join('\n');
 
-    // ── WHATSAPP — Owner message ──
-    var ownerMsg =
-      '🛒 *NEW ORDER — '+currentOrderNumber+'*%0A'+
-      '━━━━━━━━━━━━━━━━━━━━%0A'+
-      '*Customer:* '+name+'%0A'+
-      '*WhatsApp:* '+whatsapp+'%0A'+
-      '*Email:* '+(window.mrcUser ? window.mrcUser.email : 'Guest')+'%0A'+
-      '*Address:* '+address+'%0A'+
-      '*Fulfilment:* '+deliveryInfo+'%0A'+
-      '━━━━━━━━━━━━━━━━━━━━%0A'+
-      '*Items:*%0A'+itemsList+'%0A'+
-      '━━━━━━━━━━━━━━━━━━━━%0A'+
-      '*Subtotal:* R'+cartTotal.toLocaleString()+'%0A'+
-      '*Delivery:* R'+deliveryFee.toLocaleString()+'%0A'+
-      '*TOTAL: R'+grandTotal.toLocaleString()+'*%0A'+
-      (notes ? '📝 *Notes:* '+notes : '')+'%0A'+
-      '━━━━━━━━━━━━━━━━━━━━';
+// Function to send order alert to a single phone
+function sendTelegramNotification(orderData) {
+  // 1. Paste your Bot Token from @BotFather below
+  const BOT_TOKEN = "8915301497:AAGlys_RCpZP96_ekUQpAev25A0ngBDFQYQ";
+  
+  // 2. Paste your Personal Chat ID from @userinfobot below
+  const CHAT_ID = "7674414884";
 
+  // Build the message format
+  const message = 
+    `🚨 *NEW ORDER RECEIVED!* 🚨\n\n` +
+    `👤 *Name:* ${orderData.name || 'N/A'}\n` +
+    `📞 *Phone:* ${orderData.phone || 'N/A'}\n` +
+    `📍 *Address:* ${orderData.address || 'N/A'}\n` +
+    `🚚 *Delivery Fee:* R${orderData.deliveryFee || 0}\n` +
+    `💰 *Total:* R${orderData.total || 0}\n\n` +
+    `🛍️ *Items Ordered:*\n${orderData.itemsSummary || 'Check Admin Panel'}`;
+
+  // Call Telegram API
+  fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: CHAT_ID,
+      text: message,
+      parse_mode: 'Markdown'
+    })
+  })
+  .then(res => res.json())
+  .then(data => console.log('Telegram Alert Sent Successfully:', data))
+  .catch(err => console.error('Telegram Alert Error:', err));
+}
     // ── WHATSAPP — Customer message ──
     var cleanWA  = whatsapp.replace(/^0/,'27').replace(/\s/g,'');
     var custMsg  =
@@ -1384,14 +1398,6 @@
         ? '📍 *Collect at:* '+STORE_ADDR+'%0AMon–Sat, 9am–5pm'
         : '🚚 We will contact you to confirm delivery time')+
       '%0A%0AThank you for shopping with Mr Clearance! 🛍️';
-
-    // Open WhatsApp for owner
-    window.open('https://wa.me/'+OWNER_WHATSAPP+'?text='+ownerMsg, '_blank');
-
-    // Open WhatsApp for customer after short delay
-    setTimeout(function(){
-      window.open('https://wa.me/'+cleanWA+'?text='+custMsg, '_blank');
-    }, 1500);
 
     // ── EMAIL — Send confirmation to logged-in customer ──
     sendOrderConfirmationEmail({
