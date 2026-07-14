@@ -2,10 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Mr Clearance — Shop Online</title>
   <link rel="stylesheet" href="style.css"/>
@@ -294,21 +290,14 @@
   window.mrcDb   = db;
   window.mrcAuth = auth;
 
-  // Save a customer order to Firestore so admin (owner/mum/dad) can see
-  // every incoming sale live, regardless of whether the WhatsApp message
-  // actually goes through (popup blockers, etc. can stop that silently).
-  window.fbSaveOrder = async function(order) {
-    try {
-      const ordersRef = collection(db, 'orders');
-      const docRef = await addDoc(ordersRef, Object.assign({}, order, {
-        createdAt: new Date().toISOString(),
-        status: 'pending'
-      }));
-      return docRef.id;
-    } catch (e) {
-      console.error('Order save failed:', e);
-      return null;
-    }
+  // Every completed checkout gets saved here as its own record, so the
+  // admin panel has a real, permanent order history — not just a WhatsApp
+  // message that depends on the customer's phone actually sending it.
+  window.fbSaveOrder = function(order) {
+    return addDoc(collection(db, 'orders'), order).catch(function(err){
+      console.error('Could not save order to database:', err);
+      throw err;
+    });
   };
 
   // Products listener
@@ -346,6 +335,16 @@
 
   // Auth state listener
   onAuthStateChanged(auth, function(user) {
+    // The admin panel signs in with its own internal account (invisible,
+    // used only so the database can verify admin writes). If this browser
+    // is also used to log into admin.html, that session is shared here —
+    // treat it as logged-out on the storefront rather than showing a
+    // broken "customer" view for an account that isn't really a customer.
+    if (user && user.email === 'store-admin@mrclearance-internal.local') {
+      window.mrcUser = null;
+      updateNavForLoggedOutUser();
+      return;
+    }
     window.mrcUser = user || null;
     if (user) {
       updateNavForLoggedInUser(user);
@@ -571,9 +570,6 @@
       <form id="payfast-form" action="https://www.payfast.co.za/eng/process" method="POST">
         <input type="hidden" name="merchant_id" value="34216539"/>
         <input type="hidden" name="merchant_key" value="onzh11cpteni8"/>
-        <input type="hidden" name="return_url" value="https://webuyanything.xyz/thank-you.html"/>
-        <input type="hidden" name="cancel_url" value="https://webuyanything.xyz"/>
-        <input type="hidden" name="notify_url" value="https://webuyanything.xyz/notify"/>
         <input type="hidden" name="return_url" value="https://mrclearance.co.za/thank-you.html"/>
         <input type="hidden" name="cancel_url" value="https://mrclearance.co.za"/>
         <input type="hidden" name="notify_url" value="https://mrclearance.co.za/notify"/>
@@ -847,7 +843,7 @@
         ? 'Please collect from: 368 Imam Haron Road, Lansdowne\nMonday – Saturday, 9am – 5pm'
         : 'We will contact you on WhatsApp to confirm your delivery time and details.',
       store_name:           'Mr Clearance',
-      store_url:            'webuyanything.xyz'
+      store_url:            'mrclearance.co.za'
     };
     emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
       .then(function() { showToast('📧 Confirmation email sent to ' + userEmail); })
@@ -1224,9 +1220,7 @@
   }
 
   // ── DELIVERY ──────────────────────────────────────────────────
-  var STORE_ADDR='368 Imam Haron Road, Lansdowne', DELIVERY_FEE=50;
-  // All 3 numbers get notified of every new order (owner + mum's number + dad's number).
-  var OWNER_WHATSAPP_NUMBERS = ['27677698001', '27843966390', '27732982244'];
+  var STORE_ADDR='368 Imam Haron Road, Lansdowne', OWNER_WHATSAPP='27677698001', DELIVERY_FEE=50;
   var selectedFulfilment='delivery', withinRange=false, currentOrderNumber='';
   var NEARBY_SUBURBS=['lansdowne','crawford','athlone','belgravia','claremont','kenwyn','rondebosch','wetton','wynberg','plumstead','ottery','hanover park','gatesville','penlyn','kewtown','silvertown','bridgetown'];
   function generateOrderNumber(){ return 'MRC-'+Date.now().toString().slice(-6)+Math.floor(Math.random()*100); }
@@ -1292,27 +1286,6 @@
     var name     = document.getElementById('cust-name').value.trim();
     var whatsapp = document.getElementById('cust-whatsapp').value.trim();
     var notes    = document.getElementById('cust-notes').value.trim();
- try {
-  fetch('https://whatsapp-notifications-w4wz.onrender.com/send-order-alert', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-webhook-secret': 'YOUR_WEBHOOK_SECRET' // Put your Render secret here
-    },
-    body: JSON.stringify({
-      numbers: ["27677698001"], // Recipient phone number
-      message: `🚨 *NEW CUSTOMER ORDER!*\n\n` +
-               `📦 *Order ID:* #${orderId || 'NEW'}\n` +
-               `👤 *Customer:* ${customerName}\n` +
-               `📞 *Phone:* ${customerPhone}\n` +
-               `📍 *Address:* ${deliveryAddress}\n` +
-               `💰 *Total:* R${totalAmount}`
-    })
-  });
-} catch (waError) {
-  console.error("WhatsApp notification error:", waError);
-}
-// -------------------------------------------------------------
 
     // Auto-fill from logged in customer profile
     if (!name && window.mrcUser && window.mrcUser.displayName) {
@@ -1385,33 +1358,8 @@
         : '🚚 We will contact you to confirm delivery time')+
       '%0A%0AThank you for shopping with Mr Clearance! 🛍️';
 
-    // ── SAVE ORDER TO FIRESTORE — this is what makes it show up live in
-    // admin for owner/mum/dad, independent of whether WhatsApp opens ──
-    if (window.fbSaveOrder) {
-      window.fbSaveOrder({
-        orderNumber:      currentOrderNumber,
-        customerName:     name,
-        customerWhatsapp: whatsapp,
-        customerEmail:    window.mrcUser ? window.mrcUser.email : 'Guest',
-        address:          address,
-        fulfilment:       deliveryInfo,
-        items:            cart.map(function(i){ return { name: i.name, qty: i.qty, price: i.price }; }),
-        subtotal:         cartTotal,
-        deliveryFee:      deliveryFee,
-        total:            grandTotal,
-        notes:            notes
-      });
-    }
-
-    // Open WhatsApp for owner — sent to all 3 numbers (owner, mum, dad),
-    // staggered slightly since browsers can block several popups opened
-    // in the same instant.
-    OWNER_WHATSAPP_NUMBERS.forEach(function(num, i){
-      setTimeout(function(){
-        var win = window.open('https://wa.me/'+num+'?text='+ownerMsg, '_blank');
-        if (!win) { showToast('⚠️ A WhatsApp notification was blocked by your browser — allow popups for this site.'); }
-      }, i*400);
-    });
+    // Open WhatsApp for owner
+    window.open('https://wa.me/'+OWNER_WHATSAPP+'?text='+ownerMsg, '_blank');
 
     // Open WhatsApp for customer after short delay
     setTimeout(function(){
@@ -1428,6 +1376,27 @@
       grandTotal:        grandTotal,
       deliveryInfo:      deliveryInfo,
       selectedFulfilment: selectedFulfilment
+    });
+
+    // ── SAVE ORDER — so it shows up permanently in the admin panel,
+    // not just as a WhatsApp message that depends on it being sent ──
+    window.fbSaveOrder({
+      orderNumber:  currentOrderNumber,
+      date:         new Date().toISOString(),
+      status:       'new',
+      customerName: name,
+      customerWhatsapp: whatsapp,
+      customerEmail: window.mrcUser ? window.mrcUser.email : null,
+      address:      address,
+      fulfilment:   deliveryInfo,
+      items:        cart.map(function(i){ return { name: i.name, qty: i.qty, price: i.price }; }),
+      subtotal:     cartTotal,
+      deliveryFee:  deliveryFee,
+      total:        grandTotal,
+      notes:        notes || null,
+      paymentMethod: 'PayFast'
+    }).catch(function(){
+      showToast('⚠️ Order sent via WhatsApp, but could not save to your order history — check your internet connection.');
     });
 
     // ── Save address to customer profile if logged in ──
@@ -1628,6 +1597,9 @@
         <label style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;display:block;margin-bottom:8px;">Select PAXI Option *</label>
         <select id="paxi-option" onchange="updateModalSummary()" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;">
           <option value="">-- Choose PAXI option --</option>
+          <option value="PUDO Locker Small|49">📦 PUDO Locker Small — R49</option>
+          <option value="PUDO Locker Medium|80">📦 PUDO Locker Medium — R80</option>
+          <option value="PUDO Locker Large|100">📦 PUDO Locker Large — R100</option>
           <option value="PEP PAXI Small 3-5 days|109.95">🚀 PEP PAXI Small (3–5 days) — R109.95</option>
           <option value="PEP PAXI Small 7-9 days|59.95">🐢 PEP PAXI Small (7–9 days) — R59.95</option>
           <option value="PEP PAXI Large 3-5 days|139.95">🚀 PEP PAXI Large (3–5 days) — R139.95</option>
