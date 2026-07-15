@@ -541,6 +541,7 @@
     <button class="tab-btn" onclick="showTab('ads')">📢 Ads</button>
     <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
     <button class="tab-btn" onclick="showTab('about')">ℹ️ About Page</button>
+    <button class="tab-btn" onclick="showTab('customers')">👥 Customers</button>
     <button class="tab-btn" onclick="showTab('invoices')">🧾 Invoices</button>
     <button class="tab-btn owner-only" onclick="showTab('settings')" id="settings-tab">⚙️ Settings</button>
   </div>
@@ -1415,6 +1416,34 @@
   </div>
 
   <!-- INVOICES -->
+  <!-- CUSTOMERS -->
+  <div class="tab-panel" id="tab-customers">
+    <div class="section-card">
+      <h2>👥 Customers</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Customer Name *</label><input type="text" id="cust-name-inv" placeholder="e.g. John Smith / ABC Store"/></div>
+        <div class="form-group">
+          <label>Customer Type *</label>
+          <select id="cust-type-inv">
+            <option value="regular">Regular Customer</option>
+            <option value="wholesale">Wholesale Customer</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group"><label>Phone</label><input type="text" id="cust-phone-inv" placeholder="082 123 4567"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="cust-email-inv" placeholder="optional"/></div>
+      </div>
+      <div class="form-group"><label>Address (optional)</label><input type="text" id="cust-address-inv" placeholder="optional"/></div>
+      <input type="hidden" id="cust-edit-id"/>
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveCustomer()">💾 Save Customer</button>
+        <button class="btn-secondary" onclick="clearCustomerForm()">Clear Form</button>
+      </div>
+      <div id="customers-list" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;"></div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tab-invoices">
 
     <div class="section-card">
@@ -1454,31 +1483,6 @@
         <div class="form-group"><label>VAT / Reg Number (optional)</label><input type="text" id="inv-company-vat" placeholder="optional"/></div>
       </div>
       <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="saveInvoiceCompanyInfo()">💾 Save Company Details</button>
-    </div>
-
-    <div class="section-card">
-      <h2>👥 Customers</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="form-group"><label>Customer Name *</label><input type="text" id="cust-name-inv" placeholder="e.g. John Smith / ABC Store"/></div>
-        <div class="form-group">
-          <label>Customer Type *</label>
-          <select id="cust-type-inv">
-            <option value="regular">Regular Customer</option>
-            <option value="wholesale">Wholesale Customer</option>
-          </select>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="form-group"><label>Phone</label><input type="text" id="cust-phone-inv" placeholder="082 123 4567"/></div>
-        <div class="form-group"><label>Email</label><input type="email" id="cust-email-inv" placeholder="optional"/></div>
-      </div>
-      <div class="form-group"><label>Address (optional)</label><input type="text" id="cust-address-inv" placeholder="optional"/></div>
-      <input type="hidden" id="cust-edit-id"/>
-      <div class="btn-actions">
-        <button class="btn-primary" onclick="saveCustomer()">💾 Save Customer</button>
-        <button class="btn-secondary" onclick="clearCustomerForm()">Clear Form</button>
-      </div>
-      <div id="customers-list" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;"></div>
     </div>
 
     <div class="section-card">
@@ -1644,7 +1648,7 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','invoices','settings'];
+    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
@@ -1652,7 +1656,8 @@
     if (tab === 'ads')        renderAdsList();
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
-    if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
+    if (tab === 'customers')  { renderCustomersList(); populateInvoiceCustomerDropdown(); }
+    if (tab === 'invoices')   { renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
     if (tab === 'orders')     { renderOrdersList(); markOrdersSeen(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
     if (tab === 'inventory')  renderInventory();
@@ -3489,7 +3494,8 @@
       window.fbListenStoreData('customers_inv', function(list) {
         cachedCustomers = Array.isArray(list) ? list : [];
         localStorage.setItem('mrc_customers_inv', JSON.stringify(cachedCustomers));
-        if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) { renderCustomersList(); populateInvoiceCustomerDropdown(); }
+        populateInvoiceCustomerDropdown();
+        if (document.getElementById('tab-customers') && document.getElementById('tab-customers').classList.contains('active')) { renderCustomersList(); }
       });
     }
   }
@@ -3677,16 +3683,23 @@
     renderInvoiceLineItems();
   }
 
-  function getInvoices() {
-    if (cachedInvoices) return cachedInvoices;
-    var list = [];
-    try { list = JSON.parse(localStorage.getItem('mrc_invoices') || '[]'); } catch(e) { list = []; }
+  // Older invoices (created before the "id" field existed) can be missing
+  // an id. Without one, the delete button has nothing to match against and
+  // silently does nothing when tapped — this backfills a real id onto any
+  // invoice that's missing one, wherever the list comes from.
+  function backfillInvoiceIds(list) {
     var changed = false;
     list.forEach(function(inv, i){
       if (!inv.id) { inv.id = 'inv_' + Date.now() + '_' + i; changed = true; }
       if (inv.paid === undefined) { inv.paid = false; changed = true; }
     });
-    if (changed) { cachedInvoices = list; localStorage.setItem('mrc_invoices', JSON.stringify(list)); }
+    return changed;
+  }
+  function getInvoices() {
+    if (cachedInvoices) return cachedInvoices;
+    var list = [];
+    try { list = JSON.parse(localStorage.getItem('mrc_invoices') || '[]'); } catch(e) { list = []; }
+    if (backfillInvoiceIds(list)) { cachedInvoices = list; localStorage.setItem('mrc_invoices', JSON.stringify(list)); }
     return list;
   }
   function saveInvoicesList(list) {
@@ -3698,6 +3711,9 @@
     if (window.fbListenStoreData) {
       window.fbListenStoreData('invoices', function(list) {
         cachedInvoices = Array.isArray(list) ? list : [];
+        if (backfillInvoiceIds(cachedInvoices) && window.fbSaveStoreData) {
+          window.fbSaveStoreData('invoices', cachedInvoices).catch(function(){});
+        }
         localStorage.setItem('mrc_invoices', JSON.stringify(cachedInvoices));
         if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) renderInvoicesList();
       });
@@ -3742,8 +3758,8 @@
       renderInvoicesList();
       showToast('🗑️ Invoice deleted!');
     } else {
-      btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️ Tap again';
-      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️ Delete'; }, 3000);
+      btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️ Tap again'; btn.classList.add('confirming');
+      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️ Delete'; btn.classList.remove('confirming'); }, 3000);
     }
   }
 
