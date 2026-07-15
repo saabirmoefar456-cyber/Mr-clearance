@@ -1426,10 +1426,12 @@
         <p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">Loading customers...</p>
       </div>
     </div>
+  </div>
+
+  <div class="tab-panel" id="tab-invoices">
 
     <div class="section-card">
-      <h2>📇 Invoice Customers</h2>
-      <p style="font-size:12px;color:var(--text-light);font-weight:600;margin:-6px 0 12px;">People and businesses you invoice — used in the invoice builder, separate from store logins above.</p>
+      <h2>👥 Customers</h2>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="form-group"><label>Customer Name *</label><input type="text" id="cust-name-inv" placeholder="e.g. John Smith / ABC Store"/></div>
         <div class="form-group">
@@ -1452,9 +1454,6 @@
       </div>
       <div id="customers-list" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;"></div>
     </div>
-  </div>
-
-  <div class="tab-panel" id="tab-invoices">
 
     <div class="section-card">
       <h2>🏢 Your Company Details (for invoice header)</h2>
@@ -1666,8 +1665,8 @@
     if (tab === 'ads')        renderAdsList();
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
-    if (tab === 'customers')  { renderCustomersList(); populateInvoiceCustomerDropdown(); loadCustomers(); }
-    if (tab === 'invoices')   { renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
+    if (tab === 'customers')  { loadCustomers(); }
+    if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
     if (tab === 'orders')     { renderOrdersList(); markOrdersSeen(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
     if (tab === 'inventory')  renderInventory();
@@ -3505,7 +3504,7 @@
         cachedCustomers = Array.isArray(list) ? list : [];
         localStorage.setItem('mrc_customers_inv', JSON.stringify(cachedCustomers));
         populateInvoiceCustomerDropdown();
-        if (document.getElementById('tab-customers') && document.getElementById('tab-customers').classList.contains('active')) { renderCustomersList(); }
+        if (document.getElementById('tab-invoices') && document.getElementById('tab-invoices').classList.contains('active')) { renderCustomersList(); }
       });
     }
   }
