@@ -1018,6 +1018,9 @@
       html += '<h3>' + escHtml(p.name) + '</h3>';
       html += '<p>' + escHtml(p.desc||'') + '</p>';
       html += '<span class="price">R ' + (p.price||0).toLocaleString() + '</span>';
+      if (p.reviewCount) {
+        html += '<div class="card-rating"><span class="stars-mini">' + starsString(p.avgRating||0) + '</span> (' + p.reviewCount + ')</div>';
+      }
       html += '<div class="qty-row"><div class="qty-control">';
       html += '<button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button>';
       html += '</div>';
@@ -1130,6 +1133,72 @@
     if (pdpReviewUnsub) { pdpReviewUnsub(); pdpReviewUnsub = null; }
   }
   function closePdpIfOutside(e) { if (e.target === document.getElementById('pdp-overlay')) closePdp(); }
+
+  // ── REVIEWS ────────────────────────────────────────────────────
+  function starsString(n) {
+    n = Math.round(n || 0);
+    if (n < 0) n = 0; if (n > 5) n = 5;
+    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+  }
+
+  function highlightPdpStars(n) {
+    document.querySelectorAll('#pdp-star-input span').forEach(function(s){
+      s.classList.toggle('filled', parseInt(s.getAttribute('data-val'), 10) <= n);
+    });
+  }
+
+  function setupPdpStarInput() {
+    var wrap = document.getElementById('pdp-star-input');
+    if (!wrap) return;
+    wrap.querySelectorAll('span').forEach(function(star){
+      star.addEventListener('click', function(){
+        pdpSelectedRating = parseInt(star.getAttribute('data-val'), 10);
+        highlightPdpStars(pdpSelectedRating);
+      });
+      star.addEventListener('mouseenter', function(){
+        highlightPdpStars(parseInt(star.getAttribute('data-val'), 10));
+      });
+    });
+    wrap.addEventListener('mouseleave', function(){ highlightPdpStars(pdpSelectedRating); });
+  }
+
+  function renderPdpReviews(reviews) {
+    var summaryEl = document.getElementById('pdp-rating-summary');
+    var listEl = document.getElementById('pdp-review-list');
+    if (!summaryEl || !listEl) return;
+    if (!reviews.length) {
+      summaryEl.textContent = 'No reviews yet — be the first!';
+      listEl.innerHTML = '';
+      return;
+    }
+    var avg = reviews.reduce(function(s,r){ return s + (r.rating||0); }, 0) / reviews.length;
+    summaryEl.innerHTML = '<span class="stars-mini">' + starsString(avg) + '</span> ' + avg.toFixed(1) + ' out of 5 (' + reviews.length + ' review' + (reviews.length !== 1 ? 's' : '') + ')';
+    listEl.innerHTML = reviews.map(function(r){
+      var d = r.date ? new Date(r.date).toLocaleDateString('en-ZA') : '';
+      return '<div class="review-item">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span class="review-name">' + escHtml(r.customerName || 'Anonymous') + '</span>' +
+          '<span class="review-date">' + d + '</span>' +
+        '</div>' +
+        '<div class="stars-mini">' + starsString(r.rating) + '</div>' +
+        (r.comment ? '<div class="review-comment">' + escHtml(r.comment) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function submitPdpReview() {
+    if (!window.mrcUser) { showToast('❌ Please log in to leave a review'); return; }
+    if (!pdpSelectedRating) { showToast('❌ Tap a star rating first'); return; }
+    if (!pdpCurrentProduct) return;
+    var comment = (document.getElementById('pdp-review-text').value || '').trim();
+    var name = window.mrcUser.displayName || (window.mrcUser.email ? window.mrcUser.email.split('@')[0] : 'Customer');
+    window.fbSubmitReview(pdpCurrentProduct.id, pdpSelectedRating, comment, name).then(function(){
+      showToast('✅ Thanks for your review!');
+      document.getElementById('pdp-review-text').value = '';
+      pdpSelectedRating = 0;
+      highlightPdpStars(0);
+    }).catch(function(){ showToast('❌ Could not submit review — try again.'); });
+  }
   function pdpSetImg(thumb, src) {
     document.getElementById('pdp-main-img').src = src;
     document.querySelectorAll('.pdp-thumb').forEach(function(t){ t.classList.remove('active'); });
@@ -1200,7 +1269,7 @@
   // ── LOADER ────────────────────────────────────────────────────
   function hideLoader() { var l = document.getElementById('loader'); if (l) { l.style.opacity='0'; setTimeout(function(){ l.style.display='none'; }, 600); } }
   setTimeout(hideLoader, 2000);
-  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderAds(); renderCategorySidebar(); };
+  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderAds(); renderCategorySidebar(); setupPdpStarInput(); };
 
   // ── TOAST ─────────────────────────────────────────────────────
   function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2800); }
