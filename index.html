@@ -327,8 +327,10 @@
   };
 
   // Products listener
+  window.mrcProductsLoaded = false;
   onSnapshot(collection(db, 'products'), function(snap) {
     var products = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+    window.mrcProductsLoaded = true;
     localStorage.setItem('mrc_products', JSON.stringify(products));
     if (typeof renderProducts === 'function') { renderProducts(); if (typeof filterProducts === 'function') filterProducts(); }
   });
@@ -670,11 +672,18 @@
   </section>
 
   <footer class="footer">
+    <div style="display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.12);">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.75);">🔒 Secure Checkout</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.75);">💳 PayFast Verified</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.75);">🚚 PAXI / PUDO Delivery</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.75);">📍 Lansdowne, Cape Town</span>
+    </div>
     <p>© 2026 Mr Clearance. All rights reserved. | Payments secured by PayFast</p>
     <p style="margin-top:8px;font-size:12px;">
       <a href="#" onclick="openAboutModal(); return false;" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">About Us</a> |
       <a href="terms.html" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">Terms &amp; Conditions</a> |
-      <a href="refund-policy.html" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">Refund &amp; Cancellation Policy</a>
+      <a href="refund-policy.html" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">Refund &amp; Cancellation Policy</a> |
+      <a href="https://wa.me/27677698001" target="_blank" style="color:rgba(255,255,255,0.6);text-decoration:none;margin:0 8px;">WhatsApp Us</a>
     </p>
   </footer>
 
@@ -877,14 +886,12 @@
       .catch(function(e) { console.warn('Email send failed:', e); });
   }
   // ── DEFAULTS ──────────────────────────────────────────────────
-  var DEFAULT_PRODUCTS = [
-    { id:1, name:'Air Max Sneakers', price:1299, category:'footwear', badge:'SALE', images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80','https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&q=80'], desc:'Ultra-light running shoes built for speed and style.', sizes:[{label:'7'},{label:'8'},{label:'9'},{label:'10'},{label:'11'}], specs:[{key:'Material',value:'Mesh & Rubber'},{key:'Sole',value:'Air cushion'}] },
-    { id:2, name:'Pro Headphones', price:2499, category:'electronics', badge:'HOT', images:['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'], desc:'Noise-cancelling sound with 40-hour battery life.', specs:[{key:'Battery',value:'40 hours'},{key:'Connection',value:'Bluetooth 5.0'}] },
-    { id:3, name:'Ultrabook Laptop', price:14999, category:'electronics', badge:'NEW', images:['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80'], desc:'Slim, powerful, and built for the modern creator.' },
-    { id:4, name:'Smart Watch', price:3799, category:'accessories', badge:'', images:['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80'], desc:'Track fitness, calls, and notifications on your wrist.' },
-    { id:5, name:'Mirrorless Camera', price:18500, category:'electronics', badge:'DEAL', images:['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&q=80'], desc:'Capture life in stunning 4K resolution detail.' },
-    { id:6, name:'Urban Backpack', price:899, category:'accessories', badge:'', images:['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80'], desc:'Durable, stylish carry for work or adventure.' }
-  ];
+  // Previously this held 6 fake demo products (sneakers, headphones, a
+  // laptop) that would briefly flash on screen for every new visitor
+  // before the real Firebase data loaded in. Left empty on purpose now —
+  // real customers should never see placeholder stock photos of products
+  // Mr Clearance doesn't actually sell.
+  var DEFAULT_PRODUCTS = [];
 
   function getProducts() {
     try { var s = localStorage.getItem('mrc_products'); if (s) return JSON.parse(s); } catch(e) {}
@@ -904,7 +911,14 @@
     var products = getProducts();
     var grid = document.getElementById('products-grid');
     if (!grid) return;
-    if (products.length === 0) { grid.innerHTML = ''; document.getElementById('product-count').textContent = 'No products yet'; return; }
+    if (products.length === 0) {
+      var stillLoading = !window.mrcProductsLoaded && !localStorage.getItem('mrc_products');
+      grid.innerHTML = stillLoading
+        ? '<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:#999;font-size:14px;font-weight:600;">🛍️ Loading products…</div>'
+        : '<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:#999;font-size:14px;font-weight:600;">No products yet — check back soon!</div>';
+      document.getElementById('product-count').textContent = stillLoading ? 'Loading…' : 'No products yet';
+      return;
+    }
     var html = '';
     for (var i = 0; i < products.length; i++) {
       var p = products[i];
