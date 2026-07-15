@@ -1353,7 +1353,7 @@
 // Function to send order alert to a single phone
 function sendTelegramNotification(orderData) {
   // 1. Paste your Bot Token from @BotFather below
-  const BOT_TOKEN = "8915301497:AAGlys_RCpZP96_ekUQpAev25A0ngBDFQYQ";
+  const BOT_TOKEN = "8942378939:AAGLC6ckagf1emqkT6UFqC50yPBh3y6N43U";
   
   // 2. Paste your Personal Chat ID from @userinfobot below
   const CHAT_ID = "7674414884";
@@ -1361,6 +1361,7 @@ function sendTelegramNotification(orderData) {
   // Build the message format
   const message = 
     `🚨 *NEW ORDER RECEIVED!* 🚨\n\n` +
+    `🔖 *Order No:* ${orderData.orderNumber || 'N/A'}\n` +
     `👤 *Name:* ${orderData.name || 'N/A'}\n` +
     `📞 *Phone:* ${orderData.phone || 'N/A'}\n` +
     `📍 *Address:* ${orderData.address || 'N/A'}\n` +
@@ -1430,6 +1431,17 @@ function sendTelegramNotification(orderData) {
       paymentMethod: 'PayFast'
     }).catch(function(){
       showToast('⚠️ Order sent via WhatsApp, but could not save to your order history — check your internet connection.');
+    });
+
+    // ── TELEGRAM — Ping you instantly the moment an order comes in ──
+    sendTelegramNotification({
+      orderNumber:  currentOrderNumber,
+      name:         name,
+      phone:        whatsapp,
+      address:      address,
+      deliveryFee:  deliveryFee,
+      total:        grandTotal,
+      itemsSummary: itemsPlain
     });
 
     // ── Save address to customer profile if logged in ──
