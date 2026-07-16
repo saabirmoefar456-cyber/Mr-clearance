@@ -311,16 +311,6 @@
     .product-card[data-category="workwear"] .card-img-wrap { background:#1c1c1c; }
     .product-card[data-category="workwear"] .badge-sale { background:#f59e0b; color:#1c1c1c; }
 
-    /* Hero corner tag — kept inline here (not in style.css) so it
-       always loads with the page itself, even if style.css is ever
-       cached or fails to update on your host. */
-    .hero-tag-corner {
-      position:absolute; top:18px; left:-46px; width:220px; padding:6px 0;
-      background:#e8dcc4; color:#161614; transform:rotate(-45deg);
-      font-family:'Oswald','Nunito Sans',sans-serif; font-size:11px; font-weight:800;
-      letter-spacing:2px; text-transform:uppercase; text-align:center;
-      box-shadow:0 2px 6px rgba(0,0,0,0.25); z-index:1;
-    }
   </style>
  <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -708,7 +698,6 @@
 
   <!-- HERO -->
   <section class="hero" id="hero-section">
-    <div class="hero-tag-corner">Clearance</div>
     <div id="hero-banner-slot" style="display:none;position:absolute;inset:0;z-index:5;"></div>
     <div class="hero-content" id="hero-default-content">
       <p class="hero-badge">Clearance Deals — Cape Town 🇿🇦</p>
@@ -1225,7 +1214,14 @@
       document.getElementById('pdp-review-text').value = '';
       pdpSelectedRating = 0;
       highlightPdpStars(0);
-    }).catch(function(){ showToast('❌ Could not submit review — try again.'); });
+    }).catch(function(err){
+      console.error('Review submission failed:', err);
+      if (err && err.code === 'permission-denied') {
+        showToast('❌ Store settings are blocking reviews — tell Sabah to check Firestore rules.');
+      } else {
+        showToast('❌ Could not submit review (' + (err && err.code ? err.code : 'unknown error') + ')');
+      }
+    });
   }
   function pdpSetImg(thumb, src) {
     document.getElementById('pdp-main-img').src = src;
