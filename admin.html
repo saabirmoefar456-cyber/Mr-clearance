@@ -334,7 +334,7 @@
 <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     // ✅ Added the missing imports: getDocs, addDoc, updateDoc, deleteDoc
-    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     
     const firebaseConfig = {
@@ -392,6 +392,35 @@
     // do. If they log in again, their profile will simply be recreated.
     window.fbDeleteCustomerProfile = async function(uid) {
       await deleteDoc(doc(db, 'customers', uid));
+    };
+
+    // ── REVIEWS (moderation) ──────────────────────────────────────
+    window.fbListenAllReviews = function(callback) {
+      return onSnapshot(collection(db, 'reviews'), function(snap) {
+        var reviews = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+        reviews.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+        callback(reviews);
+      });
+    };
+
+    window.fbDeleteReview = async function(reviewId, productId, rating) {
+      await deleteDoc(doc(db, 'reviews', reviewId));
+      // Keep the product's average-rating badge accurate after removal.
+      if (!productId) return;
+      var productRef = doc(db, 'products', String(productId));
+      try {
+        await runTransaction(db, async function(tx) {
+          var snap = await tx.get(productRef);
+          if (!snap.exists()) return;
+          var data     = snap.data();
+          var oldCount = data.reviewCount || 0;
+          var oldAvg   = data.avgRating || 0;
+          if (oldCount <= 1) { tx.update(productRef, { avgRating: 0, reviewCount: 0 }); return; }
+          var newCount = oldCount - 1;
+          var newAvg   = ((oldAvg * oldCount) - (rating || 0)) / newCount;
+          tx.update(productRef, { avgRating: Math.max(0, newAvg), reviewCount: newCount });
+        });
+      } catch (e) { console.warn('Could not update product rating average after review delete:', e); }
     };
     
     window.fbRegister = async function(email, password, name) {
@@ -550,6 +579,7 @@
     <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
     <button class="tab-btn" onclick="showTab('about')">ℹ️ About Page</button>
     <button class="tab-btn" onclick="showTab('customers')">👥 Customers</button>
+    <button class="tab-btn" onclick="showTab('reviews')">⭐ Reviews</button>
     <button class="tab-btn" onclick="showTab('invoices')">🧾 Invoices</button>
     <button class="tab-btn owner-only" onclick="showTab('settings')" id="settings-tab">⚙️ Settings</button>
   </div>
@@ -1428,6 +1458,20 @@
     </div>
   </div>
 
+  <!-- REVIEWS -->
+  <div class="tab-panel" id="tab-reviews">
+    <div class="section-card">
+      <h2>⭐ Product Reviews</h2>
+      <p style="font-size:12px;color:var(--text-light);font-weight:600;margin:-6px 0 12px;">Everything customers have posted, across all products. Delete anything inappropriate or fake.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <span id="reviews-count-badge" style="background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;">Loading...</span>
+      </div>
+      <div id="reviews-list" style="display:flex;flex-direction:column;gap:10px;">
+        <p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">Loading reviews...</p>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tab-invoices">
 
     <div class="section-card">
@@ -1657,7 +1701,7 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','invoices','settings'];
+    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','reviews','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
@@ -1666,6 +1710,7 @@
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
     if (tab === 'customers')  { loadCustomers(); }
+    if (tab === 'reviews')    { loadReviews(); }
     if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
     if (tab === 'orders')     { renderOrdersList(); markOrdersSeen(); }
     if (tab === 'barcodes')   renderBarcodeGrid();
@@ -4402,6 +4447,58 @@
     } else {
       btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️'; btn.classList.add('confirming');
       setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️'; btn.classList.remove('confirming'); }, 3000);
+    }
+  }
+
+  // ── REVIEWS ────────────────────────────────────────────────────
+  function reviewStarsStr(n) {
+    n = Math.round(n || 0); if (n < 0) n = 0; if (n > 5) n = 5;
+    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+  }
+
+  function loadReviews() {
+    if (!window.fbListenAllReviews) return;
+    window.fbListenAllReviews(function(reviews) {
+      var list  = document.getElementById('reviews-list');
+      var badge = document.getElementById('reviews-count-badge');
+      if (!list || !badge) return;
+      badge.textContent = reviews.length + ' Review' + (reviews.length !== 1 ? 's' : '');
+      if (reviews.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">No reviews yet.</p>';
+        return;
+      }
+      var productsById = {};
+      (getProducts() || []).forEach(function(p){ productsById[p.id] = p; });
+      list.innerHTML = reviews.map(function(r) {
+        var prod = productsById[r.productId];
+        var prodName = prod ? prod.name : ('Product #' + r.productId);
+        var d = r.date ? new Date(r.date).toLocaleDateString('en-ZA') : '';
+        return '<div style="padding:14px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+            '<div style="min-width:0;">' +
+              '<div style="font-size:13px;font-weight:800;color:var(--red);">' + escAdminHtml(prodName) + '</div>' +
+              '<div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">' + escAdminHtml(r.customerName || 'Anonymous') + '</div>' +
+              '<div style="color:#f5a623;font-size:13px;letter-spacing:1px;margin-top:2px;">' + reviewStarsStr(r.rating) + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;flex-shrink:0;">' +
+              '<div style="font-size:11px;color:var(--text-light);font-weight:700;margin-bottom:6px;">' + d + '</div>' +
+              '<button class="btn-delete-item" data-confirming="false" onclick="deleteReviewAdmin(\'' + r.id + '\', \'' + r.productId + '\', ' + (r.rating||0) + ', this)">🗑️ Delete</button>' +
+            '</div>' +
+          '</div>' +
+          (r.comment ? '<div style="font-size:13px;color:#444;line-height:1.5;margin-top:8px;">' + escAdminHtml(r.comment) + '</div>' : '') +
+        '</div>';
+      }).join('');
+    });
+  }
+
+  function deleteReviewAdmin(reviewId, productId, rating, btn) {
+    if (btn.getAttribute('data-confirming') === 'true') {
+      window.fbDeleteReview(reviewId, productId, rating).then(function(){
+        showToast('🗑️ Review deleted!');
+      }).catch(function(){ showToast('❌ Error deleting. Try again.'); });
+    } else {
+      btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️ Tap again'; btn.classList.add('confirming');
+      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️ Delete'; btn.classList.remove('confirming'); }, 3000);
     }
   }
   function renderInventory() {
