@@ -231,13 +231,22 @@
       display:none; position:fixed; bottom:80px; left:50%;
       transform:translateX(-50%); z-index:99000;
       background:#1a1a1a; color:#fff; border-radius:30px;
-      padding:12px 24px; font-size:13px; font-weight:700;
+      padding:10px 12px 10px 24px; font-size:13px; font-weight:700;
       box-shadow:0 4px 20px rgba(0,0,0,0.25);
-      cursor:pointer; white-space:nowrap;
+      white-space:nowrap;
       animation:fadeUp 0.4s ease;
       border:2px solid #e31837;
+      max-width:calc(100vw - 32px);
+      align-items:center; gap:10px;
     }
-    #auth-scroll-prompt span { color:#e31837; }
+    #auth-scroll-prompt.open { display:flex; }
+    #auth-scroll-prompt > span:first-child { cursor:pointer; overflow:hidden; text-overflow:ellipsis; }
+    #auth-scroll-prompt button {
+      background:rgba(255,255,255,0.15); border:none; color:#fff;
+      width:24px; height:24px; border-radius:50%; flex-shrink:0;
+      font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    #auth-scroll-prompt button:hover { background:rgba(255,255,255,0.3); }
 
     /* Navbar user button */
     .nav-user-btn {
@@ -361,6 +370,9 @@
   // having to fetch every review for every product just to render the grid.
   window.fbSubmitReview = async function(productId, rating, comment, customerName) {
     var productRef = doc(db, 'products', String(productId));
+    // The review itself is what matters most — save it first, and let this
+    // step's failure (auth issue, network, etc.) be the one that surfaces
+    // to the customer as "please try again".
     await addDoc(collection(db, 'reviews'), {
       productId:    String(productId),
       uid:          window.mrcUser ? window.mrcUser.uid : null,
@@ -369,16 +381,25 @@
       comment:      comment || '',
       date:         new Date().toISOString()
     });
-    await runTransaction(db, async function(tx) {
-      var snap = await tx.get(productRef);
-      if (!snap.exists()) return;
-      var data     = snap.data();
-      var oldCount = data.reviewCount || 0;
-      var oldAvg   = data.avgRating || 0;
-      var newCount = oldCount + 1;
-      var newAvg   = ((oldAvg * oldCount) + rating) / newCount;
-      tx.update(productRef, { avgRating: newAvg, reviewCount: newCount });
-    });
+    // Updating the running average on the product doc is a nice-to-have for
+    // the card-grid star display. If the store's security rules only allow
+    // staff to write to 'products' (common setup), this step will fail —
+    // that should NOT make the review submission look like it failed, since
+    // the review above already saved successfully.
+    try {
+      await runTransaction(db, async function(tx) {
+        var snap = await tx.get(productRef);
+        if (!snap.exists()) return;
+        var data     = snap.data();
+        var oldCount = data.reviewCount || 0;
+        var oldAvg   = data.avgRating || 0;
+        var newCount = oldCount + 1;
+        var newAvg   = ((oldAvg * oldCount) + rating) / newCount;
+        tx.update(productRef, { avgRating: newAvg, reviewCount: newCount });
+      });
+    } catch (aggErr) {
+      console.warn('Review saved, but could not update the product\'s average rating (likely a Firestore security rule restricting writes to "products"):', aggErr);
+    }
   };
 
   window.fbListenReviews = function(productId, callback) {
@@ -483,8 +504,9 @@
   <input type="hidden" id="category-filter" value="all"/>
 
   <!-- AUTH SCROLL PROMPT -->
-  <div id="auth-scroll-prompt" onclick="openAuthModal()">
-    ✨ <span>Login</span> for a personalised experience
+  <div id="auth-scroll-prompt">
+    <span onclick="openAuthModal()">✨ <span style="color:#e31837;">Login</span> for a personalised experience</span>
+    <button onclick="dismissAuthScrollPrompt()" aria-label="Dismiss">✕</button>
   </div>
 
   <!-- AUTH MODAL -->
@@ -765,6 +787,7 @@
 
     // ── CUSTOMER AUTH ─────────────────────────────────────────────
   var authScrollShown = false;
+  var authScrollDismissTimer = null;
 
   window.addEventListener('scroll', function() {
     if (authScrollShown || window.mrcUser) return;
@@ -772,17 +795,22 @@
     if (scrollPct >= 50) {
       authScrollShown = true;
       var prompt = document.getElementById('auth-scroll-prompt');
-      prompt.style.display = 'block';
-      setTimeout(function() {
-        prompt.style.opacity = '0';
-        prompt.style.transition = 'opacity 0.5s';
-        setTimeout(function(){ prompt.style.display = 'none'; }, 500);
-      }, 8000);
+      prompt.style.opacity = '1';
+      prompt.classList.add('open');
+      authScrollDismissTimer = setTimeout(dismissAuthScrollPrompt, 8000);
     }
   }, { passive: true });
 
+  function dismissAuthScrollPrompt() {
+    var prompt = document.getElementById('auth-scroll-prompt');
+    if (authScrollDismissTimer) { clearTimeout(authScrollDismissTimer); authScrollDismissTimer = null; }
+    prompt.style.opacity = '0';
+    prompt.style.transition = 'opacity 0.3s';
+    setTimeout(function(){ prompt.classList.remove('open'); }, 300);
+  }
+
   function openAuthModal() {
-    document.getElementById('auth-scroll-prompt').style.display = 'none';
+    dismissAuthScrollPrompt();
     if (window.mrcUser) { showUserMenu(); return; }
     document.getElementById('auth-overlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
