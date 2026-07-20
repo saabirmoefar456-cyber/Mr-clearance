@@ -23,7 +23,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
   <style>
-    /* ── PRODUCT DETAIL MODAL (Temu/Shein style) ── */
+    /* ── PRODUCT DETAIL MODAL (Takealot-style: informative & trustworthy) ── */
     #pdp-overlay {
       display:none; position:fixed; inset:0;
       background:rgba(0,0,0,0.6); z-index:300000;
@@ -38,8 +38,17 @@
     }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
     @media(min-width:600px){
-      #pdp-overlay { align-items:center; }
-      #pdp-modal { border-radius:16px; max-height:88vh; }
+      #pdp-overlay { align-items:center; padding:20px; }
+      #pdp-modal { border-radius:16px; max-height:90vh; }
+    }
+    @media(min-width:900px){
+      #pdp-modal {
+        max-width:980px; display:grid;
+        grid-template-columns:1fr 1fr; align-items:start;
+        padding-bottom:0;
+      }
+      .pdp-gallery { position:sticky; top:0; }
+      .pdp-action-bar { grid-column:1/-1; }
     }
     .pdp-close {
       position:absolute; top:14px; right:14px;
@@ -48,12 +57,24 @@
       font-size:18px; cursor:pointer; z-index:10;
       display:flex; align-items:center; justify-content:center;
     }
+    .pdp-img-main-wrap { position:relative; cursor:zoom-in; }
     .pdp-img-main {
       width:100%; height:320px; object-fit:contain;
       background:#fafafa; border-radius:20px 20px 0 0;
-      display:block;
+      display:block; transition:opacity 0.15s;
     }
-    @media(min-width:600px){ .pdp-img-main{ border-radius:16px 16px 0 0; height:380px; } }
+    @media(min-width:600px){ .pdp-img-main{ border-radius:16px 0 0 0; height:380px; } }
+    @media(min-width:900px){ .pdp-img-main{ border-radius:16px 0 0 0; height:460px; } }
+    .pdp-zoom-hint {
+      position:absolute; bottom:10px; right:10px;
+      background:rgba(0,0,0,0.55); color:#fff; font-size:11px; font-weight:700;
+      padding:5px 10px; border-radius:20px; pointer-events:none;
+    }
+    .pdp-img-counter {
+      position:absolute; top:14px; left:14px;
+      background:rgba(0,0,0,0.55); color:#fff; font-size:11px; font-weight:800;
+      padding:4px 10px; border-radius:20px; pointer-events:none;
+    }
     .pdp-img-strip {
       display:flex; gap:8px; padding:10px 16px;
       overflow-x:auto; background:#fafafa;
@@ -67,18 +88,30 @@
       cursor:pointer; flex-shrink:0; transition:border-color 0.2s;
     }
     .pdp-thumb.active { border-color:#e31837; }
-    .pdp-body { padding:16px 18px 8px; }
+    .pdp-body { padding:18px 20px 8px; }
     .pdp-badge {
       display:inline-block; background:#e31837; color:#fff;
       font-size:10px; font-weight:800; letter-spacing:1px;
       padding:3px 10px; border-radius:4px; text-transform:uppercase; margin-bottom:8px;
     }
-    .pdp-name { font-size:18px; font-weight:900; color:#1a1a1a; margin-bottom:6px; line-height:1.3; }
-    .pdp-price { font-size:28px; font-weight:900; color:#e31837; letter-spacing:-1px; margin-bottom:8px; }
-    .pdp-desc { font-size:14px; color:#666; line-height:1.6; margin-bottom:16px; font-weight:600; }
+    .pdp-name { font-size:19px; font-weight:900; color:#1a1a1a; margin-bottom:8px; line-height:1.3; }
+    .pdp-rating-row {
+      display:flex; align-items:center; gap:6px; margin-bottom:12px;
+      font-size:13px; font-weight:700; color:#666; cursor:pointer; width:fit-content;
+    }
+    .pdp-rating-row .stars-mini { color:#f5a623; font-size:15px; letter-spacing:1px; }
+    .pdp-rating-row:hover { text-decoration:underline; }
+    .pdp-price { font-size:30px; font-weight:900; color:#e31837; letter-spacing:-1px; display:block; margin-bottom:12px; }
+    .pdp-trust-strip {
+      display:flex; flex-wrap:wrap; gap:8px 14px; margin-bottom:16px;
+      padding:10px 14px; background:#fafafa; border-radius:10px;
+    }
+    .pdp-trust-strip span { font-size:11.5px; font-weight:700; color:#555; white-space:nowrap; }
+    .pdp-divider { height:1px; background:#f0f0f0; margin:16px 0; }
+    .pdp-desc { font-size:14px; color:#555; line-height:1.65; font-weight:600; }
     .pdp-section-label {
       font-size:12px; font-weight:800; letter-spacing:1px;
-      text-transform:uppercase; color:#555; margin-bottom:8px; display:block;
+      text-transform:uppercase; color:#555; margin-bottom:10px; display:block;
     }
     .pdp-sizes { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
     .pdp-size-btn {
@@ -92,15 +125,25 @@
     .pdp-size-btn:hover { border-color:#e31837; color:#e31837; }
     .pdp-size-btn.selected { border-color:#e31837; background:#e31837; color:#fff; }
     .pdp-size-btn.unavailable { opacity:0.35; text-decoration:line-through; cursor:not-allowed; pointer-events:none; }
-    .pdp-specs-table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    .pdp-card-section { border:1px solid #f0f0f0; border-radius:12px; padding:16px; margin-bottom:16px; }
+    .pdp-specs-table { width:100%; border-collapse:collapse; }
     .pdp-specs-table tr { border-bottom:1px solid #f0f0f0; }
+    .pdp-specs-table tr:last-child { border-bottom:none; }
     .pdp-specs-table td { padding:9px 4px; font-size:13px; font-weight:600; color:#555; }
     .pdp-specs-table td:first-child { font-weight:800; color:#1a1a1a; width:40%; padding-right:12px; }
 
     /* Reviews */
     .card-rating { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#999; margin:2px 0 6px; }
     .card-rating .stars-mini { color:#f5a623; letter-spacing:1px; }
-    .pdp-rating-summary { display:flex; align-items:center; gap:8px; margin:-6px 0 14px; font-size:13px; font-weight:700; color:#666; }
+    .pdp-reviews-header { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+    .pdp-reviews-header .pdp-section-label { margin-bottom:0; }
+    .pdp-write-review-btn {
+      background:#fff; border:2px solid #e31837; color:#e31837;
+      border-radius:20px; padding:6px 14px; font-family:'Nunito Sans',sans-serif;
+      font-size:11.5px; font-weight:800; cursor:pointer; white-space:nowrap; transition:all 0.15s;
+    }
+    .pdp-write-review-btn:hover { background:#e31837; color:#fff; }
+    .pdp-rating-summary { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:13px; font-weight:700; color:#666; }
     .pdp-rating-summary .stars-mini { color:#f5a623; font-size:16px; letter-spacing:2px; }
     .star-input { display:flex; gap:4px; font-size:28px; line-height:1; cursor:pointer; user-select:none; }
     .star-input span { color:#ddd; transition:color 0.12s, transform 0.12s; }
@@ -585,9 +628,19 @@
       <div class="pdp-body">
         <span class="pdp-badge" id="pdp-badge" style="display:none"></span>
         <h2 class="pdp-name" id="pdp-name"></h2>
+        <div class="pdp-rating-row" id="pdp-rating-row" onclick="scrollToPdpReviews()" style="display:none;">
+          <span class="stars-mini" id="pdp-rating-row-stars"></span>
+          <span id="pdp-rating-row-text"></span>
+        </div>
         <div class="pdp-price" id="pdp-price"></div>
+        <div class="pdp-trust-strip">
+          <span>🚚 Fast PAXI / PUDO Delivery</span>
+          <span>🔒 Secure PayFast Checkout</span>
+          <span>↩️ Easy Returns</span>
+        </div>
         <p class="pdp-desc" id="pdp-desc"></p>
-        <div id="pdp-sizes-section" style="display:none;margin-bottom:16px;">
+
+        <div id="pdp-sizes-section" style="display:none;margin-top:16px;">
           <span class="pdp-section-label">Select Size: <strong id="pdp-selected-size-label" style="color:#e31837;"></strong></span>
           <div class="pdp-sizes" id="pdp-sizes"></div>
           <div id="pdp-size-guide-wrap" style="display:none;margin-bottom:8px;">
@@ -595,25 +648,28 @@
             <table class="pdp-specs-table" id="pdp-size-guide-table"></table>
           </div>
         </div>
-        <div id="pdp-specs-section" style="display:none;margin-bottom:8px;">
+
+        <div id="pdp-specs-section" class="pdp-card-section" style="display:none;margin-top:16px;">
           <span class="pdp-section-label">Product Details</span>
           <table class="pdp-specs-table" id="pdp-specs-table"></table>
         </div>
 
-        <div id="pdp-reviews-section" style="margin-top:8px;border-top:1px solid #f0f0f0;padding-top:16px;">
-          <span class="pdp-section-label">Reviews</span>
+        <div class="pdp-divider"></div>
+
+        <div id="pdp-reviews-section">
+          <div class="pdp-reviews-header">
+            <span class="pdp-section-label">Reviews</span>
+            <button class="pdp-write-review-btn" id="pdp-write-review-toggle" onclick="togglePdpReviewForm()">✍️ Write a Review</button>
+          </div>
           <div class="pdp-rating-summary" id="pdp-rating-summary">No reviews yet — be the first!</div>
 
-          <div class="review-form-box" id="pdp-review-form-box">
-            <div style="font-size:12px;font-weight:800;color:#1a1a1a;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Leave a Review</div>
+          <div class="review-form-box" id="pdp-review-form-box" style="display:none;">
+            <div style="font-size:12px;font-weight:800;color:#1a1a1a;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Your Rating</div>
             <div class="star-input" id="pdp-star-input">
               <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
             </div>
             <textarea id="pdp-review-text" rows="3" placeholder="What did you think of this product? (optional)" style="width:100%;background:#fff;border:2px solid #e0e0e0;color:#1a1a1a;padding:10px 12px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:13px;font-weight:600;outline:none;resize:vertical;margin-top:10px;"></textarea>
             <button onclick="submitPdpReview()" style="margin-top:10px;background:#e31837;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-family:'Nunito Sans',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">Submit Review</button>
-          </div>
-          <div id="pdp-review-login-prompt" style="display:none;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:16px;margin:14px 0;text-align:center;font-size:13px;font-weight:700;color:#666;">
-            <a href="#" onclick="closePdp();openAuthModal();return false;" style="color:#e31837;text-decoration:none;">Log in</a> to leave a review
           </div>
 
           <div id="pdp-review-list"></div>
@@ -1130,10 +1186,20 @@
     highlightPdpStars(0);
     var reviewTextEl = document.getElementById('pdp-review-text');
     if (reviewTextEl) reviewTextEl.value = '';
-    var formBox = document.getElementById('pdp-review-form-box');
-    var loginPrompt = document.getElementById('pdp-review-login-prompt');
-    if (window.mrcUser) { formBox.style.display = 'block'; loginPrompt.style.display = 'none'; }
-    else { formBox.style.display = 'none'; loginPrompt.style.display = 'block'; }
+    document.getElementById('pdp-review-form-box').style.display = 'none';
+    document.getElementById('pdp-write-review-toggle').textContent = '✍️ Write a Review';
+
+    // Instant paint of the rating row (under the title) from the product's
+    // cached average, so it doesn't sit empty while the live query loads.
+    var ratingRow = document.getElementById('pdp-rating-row');
+    if (p.reviewCount) {
+      ratingRow.style.display = 'flex';
+      document.getElementById('pdp-rating-row-stars').textContent = starsString(p.avgRating || 0);
+      document.getElementById('pdp-rating-row-text').textContent = (p.avgRating||0).toFixed(1) + ' (' + p.reviewCount + ')';
+    } else {
+      ratingRow.style.display = 'none';
+    }
+
     if (pdpReviewUnsub) { pdpReviewUnsub(); pdpReviewUnsub = null; }
     document.getElementById('pdp-rating-summary').textContent = 'Loading reviews…';
     document.getElementById('pdp-review-list').innerHTML = '';
@@ -1182,14 +1248,21 @@
   function renderPdpReviews(reviews) {
     var summaryEl = document.getElementById('pdp-rating-summary');
     var listEl = document.getElementById('pdp-review-list');
+    var ratingRow = document.getElementById('pdp-rating-row');
     if (!summaryEl || !listEl) return;
     if (!reviews.length) {
       summaryEl.textContent = 'No reviews yet — be the first!';
       listEl.innerHTML = '';
+      if (ratingRow) ratingRow.style.display = 'none';
       return;
     }
     var avg = reviews.reduce(function(s,r){ return s + (r.rating||0); }, 0) / reviews.length;
     summaryEl.innerHTML = '<span class="stars-mini">' + starsString(avg) + '</span> ' + avg.toFixed(1) + ' out of 5 (' + reviews.length + ' review' + (reviews.length !== 1 ? 's' : '') + ')';
+    if (ratingRow) {
+      ratingRow.style.display = 'flex';
+      document.getElementById('pdp-rating-row-stars').textContent = starsString(avg);
+      document.getElementById('pdp-rating-row-text').textContent = avg.toFixed(1) + ' (' + reviews.length + ')';
+    }
     listEl.innerHTML = reviews.map(function(r){
       var d = r.date ? new Date(r.date).toLocaleDateString('en-ZA') : '';
       return '<div class="review-item">' +
@@ -1203,6 +1276,21 @@
     }).join('');
   }
 
+  function togglePdpReviewForm() {
+    if (!window.mrcUser) { closePdp(); openAuthModal(); return; }
+    var box = document.getElementById('pdp-review-form-box');
+    var btn = document.getElementById('pdp-write-review-toggle');
+    var isOpen = box.style.display === 'block';
+    box.style.display = isOpen ? 'none' : 'block';
+    btn.textContent = isOpen ? '✍️ Write a Review' : '✕ Cancel';
+    if (!isOpen) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function scrollToPdpReviews() {
+    var el = document.getElementById('pdp-reviews-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function submitPdpReview() {
     if (!window.mrcUser) { showToast('❌ Please log in to leave a review'); return; }
     if (!pdpSelectedRating) { showToast('❌ Tap a star rating first'); return; }
@@ -1214,6 +1302,8 @@
       document.getElementById('pdp-review-text').value = '';
       pdpSelectedRating = 0;
       highlightPdpStars(0);
+      document.getElementById('pdp-review-form-box').style.display = 'none';
+      document.getElementById('pdp-write-review-toggle').textContent = '✍️ Write a Review';
     }).catch(function(err){
       console.error('Review submission failed:', err);
       if (err && err.code === 'permission-denied') {
