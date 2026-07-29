@@ -85,6 +85,15 @@
 
   .share-box { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:16px; margin-top:16px; }
   .share-box .slabel { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#999; margin-bottom:8px; }
+
+  .progress-box { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:20px; margin-top:16px; text-align:center; }
+  .progress-box .ptitle { font-size:13px; font-weight:800; color:#1a1a1a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px; }
+  .progress-dots { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .progress-dot { width:34px; height:34px; border-radius:50%; border:2px solid #e31837; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#e31837; background:#fff; transition:all 0.2s; }
+  .progress-dot.filled { background:#e31837; color:#fff; }
+  .progress-status { font-size:14px; font-weight:800; color:#1a1a1a; }
+  .progress-status.ready { color:#e31837; }
+  .progress-sub { font-size:12px; color:#999; font-weight:600; margin-top:4px; }
   .share-row { display:flex; gap:8px; }
   .share-row input { flex:1; background:#f5f5f5; border:2px solid #e0e0e0; border-radius:8px; padding:10px 12px; font-size:13px; font-weight:600; color:#555; }
   .share-row button { background:#1a1a1a; color:#fff; border:none; border-radius:8px; padding:0 16px; font-size:12px; font-weight:800; cursor:pointer; }
@@ -102,7 +111,7 @@
       position: absolute; top: 0; left: 0; margin: 0; padding: 0;
       width: 500px; /* fixed reference width — keeps every internal font/padding value rendering at its designed proportion */
     }
-    .card-actions, .share-box { display: none !important; }
+    .card-actions, .share-box, .progress-box { display: none !important; }
     .loyalty-card {
       width: 500px;
       aspect-ratio: 1.586 / 1;
@@ -201,6 +210,13 @@
         <button class="action-btn" onclick="window.print()">🖨️ Print Physical Card</button>
       </div>
 
+      <div class="progress-box" id="progress-box">
+        <div class="ptitle">Your Stamps</div>
+        <div class="progress-dots" id="progress-dots"></div>
+        <div class="progress-status" id="progress-status"></div>
+        <div class="progress-sub" id="progress-sub"></div>
+      </div>
+
       <div class="share-box">
         <div class="slabel">Your card link (bookmark or share this to reopen your card anytime)</div>
         <div class="share-row">
@@ -219,7 +235,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
@@ -235,6 +251,7 @@
   window.mrcLoyaltyDoc = doc;
   window.mrcLoyaltySetDoc = setDoc;
   window.mrcLoyaltyGetDoc = getDoc;
+  window.mrcLoyaltyOnSnapshot = onSnapshot;
 
   window.mrcLoyaltyReady = true;
   if (window.mrcLoyaltyOnReady) window.mrcLoyaltyOnReady();
@@ -306,6 +323,8 @@
         issuedVia: 'loyalty-card.html'
       });
       renderCard(name, rawNumber);
+      renderProgress(0);
+      watchLoyaltyProgress(rawNumber);
       document.getElementById('signup-view').style.display = 'none';
       document.getElementById('intro-block').style.display = 'none';
     } catch (e) {
@@ -325,6 +344,35 @@
     var link = window.location.origin + window.location.pathname + '?card=' + rawNumber;
     document.getElementById('share-link').value = link;
     document.getElementById('card-result').style.display = 'block';
+  }
+
+  function renderProgress(stamps) {
+    stamps = Math.max(0, Math.min(7, stamps || 0));
+    var dotsEl = document.getElementById('progress-dots');
+    var html = '';
+    for (var i = 1; i <= 7; i++) {
+      html += '<div class="progress-dot' + (i <= stamps ? ' filled' : '') + '">' + (i <= stamps ? '✓' : i) + '</div>';
+    }
+    dotsEl.innerHTML = html;
+    var statusEl = document.getElementById('progress-status');
+    var subEl = document.getElementById('progress-sub');
+    if (stamps >= 7) {
+      statusEl.textContent = '🎁 Reward ready!';
+      statusEl.className = 'progress-status ready';
+      subEl.textContent = 'Show this card in-store to redeem your free item.';
+    } else {
+      var remaining = 7 - stamps;
+      statusEl.textContent = stamps + ' of 7 stamps collected';
+      statusEl.className = 'progress-status';
+      subEl.textContent = remaining + ' more purchase' + (remaining === 1 ? '' : 's') + ' until your free reward!';
+    }
+  }
+
+  function watchLoyaltyProgress(cardId) {
+    var ref = window.mrcLoyaltyDoc(window.mrcLoyaltyDb, 'loyaltyCards', cardId);
+    window.mrcLoyaltyOnSnapshot(ref, function(snap) {
+      if (snap.exists()) renderProgress(snap.data().stamps || 0);
+    });
   }
 
   function copyShareLink() {
@@ -365,6 +413,8 @@
         var data = snap.data();
         document.getElementById('intro-block').style.display = 'none';
         renderCard(data.name, data.cardNumber);
+        renderProgress(data.stamps || 0);
+        watchLoyaltyProgress(data.cardNumber || cardId);
       });
     }
     tryLoad();
