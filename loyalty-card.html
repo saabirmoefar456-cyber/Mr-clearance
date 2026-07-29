@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Loyalty Card — Mr Clearance</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e31837'/%3E%3Ctext x='50' y='68' font-family='Arial, sans-serif' font-weight='900' font-size='50' fill='white' text-anchor='middle'%3EMC%3C/text%3E%3C/svg%3E"/>
+<link rel="stylesheet" href="style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  body { font-family:'Nunito Sans',sans-serif; background:#f5f5f5; }
+  .loyalty-page { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  .back-btn { display: inline-block; background: #e31837; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 800; text-decoration: none; margin-bottom: 24px; }
+  .back-btn:hover { background: #c01230; }
+
+  .intro { text-align:center; margin-bottom:28px; }
+  .intro h1 { font-size: clamp(22px,4vw,30px); font-weight:900; color:#1a1a1a; margin-bottom:8px; }
+  .intro p { font-size:14px; color:#666; font-weight:600; max-width:480px; margin:0 auto; }
+
+  /* ── STEP TABS (Sign up vs Already have a card) ── */
+  .tabs { display:flex; gap:8px; background:#fff; border-radius:10px; padding:6px; margin-bottom:24px; border:1px solid #e5e5e5; }
+  .tab-btn { flex:1; padding:12px; text-align:center; border-radius:8px; font-size:13px; font-weight:800; color:#666; cursor:pointer; background:transparent; border:none; }
+  .tab-btn.active { background:#e31837; color:#fff; }
+
+  /* ── SIGNUP FORM ── */
+  .card-form { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:28px 24px; margin-bottom:24px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#555; margin-bottom:6px; }
+  .form-group input, .form-group select { width:100%; background:#f5f5f5; border:2px solid #e0e0e0; color:#1a1a1a; padding:12px 14px; border-radius:8px; font-family:'Nunito Sans',sans-serif; font-size:15px; font-weight:600; outline:none; }
+  .form-group input:focus, .form-group select:focus { border-color:#e31837; }
+  .form-hint { font-size:12px; color:#999; font-weight:600; margin-top:6px; }
+  .submit-btn { width:100%; padding:16px; background:#e31837; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer; }
+  .submit-btn:hover { background:#c01230; }
+  .submit-btn:disabled { background:#ccc; cursor:not-allowed; }
+  .form-error { color:#e31837; font-size:13px; font-weight:700; margin-top:10px; display:none; }
+
+  .staff-note { background:#fff8e1; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#7d5a00; font-weight:700; }
+
+  /* ── THE CARD ITSELF ── */
+  #card-result { display:none; }
+  .card-shell { max-width:520px; margin:0 auto; }
+  .loyalty-card {
+    background: linear-gradient(135deg,#e31837,#a80f24);
+    border-radius: 18px;
+    padding: 22px 24px 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(227,24,55,0.35);
+    aspect-ratio: 1.586 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .loyalty-card::before {
+    content:''; position:absolute; top:-60px; right:-60px; width:180px; height:180px;
+    background: rgba(255,255,255,0.06); border-radius:50%;
+  }
+  .card-top { display:flex; gap:14px; align-items:flex-start; }
+  .card-seal { width:88px; height:88px; flex-shrink:0; }
+  .card-heading { flex:1; }
+  .card-heading .kicker { font-size:10px; font-weight:800; letter-spacing:2px; color:rgba(255,255,255,0.75); text-transform:uppercase; }
+  .card-heading h2 { font-size: clamp(18px,4.2vw,24px); font-weight:900; color:#fff; line-height:1.1; margin-top:2px; }
+  .card-heading .sub { font-size:10.5px; color:rgba(255,255,255,0.85); font-weight:700; margin-top:6px; line-height:1.5; }
+  .card-icons { display:flex; gap:14px; margin-top:10px; }
+  .card-icons span { font-size:9px; font-weight:800; color:rgba(255,255,255,0.9); text-align:center; display:block; }
+  .card-icons .ico { font-size:16px; display:block; margin-bottom:2px; }
+
+  .card-bottom { display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:end; }
+  .card-field .flabel { font-size:8.5px; font-weight:800; letter-spacing:1.5px; color:rgba(255,255,255,0.7); text-transform:uppercase; margin-bottom:4px; }
+  .card-field .fvalue { background:rgba(255,255,255,0.95); border-radius:6px; padding:7px 10px; font-size:14px; font-weight:800; color:#1a1a1a; min-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .barcode-box { background:#fff; border-radius:6px; padding:6px 8px 4px; text-align:center; }
+  .barcode-box svg { width:100%; height:34px; }
+  .barcode-box .num { font-size:9px; font-weight:800; color:#1a1a1a; letter-spacing:1px; margin-top:1px; }
+
+  .card-footer-strip { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.25); }
+  .card-footer-strip .tagline { font-size:9px; font-weight:800; color:#fff; letter-spacing:0.3px; }
+  .card-footer-strip .site { font-size:9px; font-weight:800; color:rgba(255,255,255,0.85); }
+
+  .card-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+  .action-btn { padding:13px; border-radius:8px; font-size:13px; font-weight:800; text-align:center; cursor:pointer; border:2px solid #e31837; background:#fff; color:#e31837; }
+  .action-btn.primary { background:#e31837; color:#fff; }
+  .action-btn:hover { opacity:0.85; }
+
+  .share-box { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:16px; margin-top:16px; }
+  .share-box .slabel { font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#999; margin-bottom:8px; }
+  .share-row { display:flex; gap:8px; }
+  .share-row input { flex:1; background:#f5f5f5; border:2px solid #e0e0e0; border-radius:8px; padding:10px 12px; font-size:13px; font-weight:600; color:#555; }
+  .share-row button { background:#1a1a1a; color:#fff; border:none; border-radius:8px; padding:0 16px; font-size:12px; font-weight:800; cursor:pointer; }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1a1a1a; color:#fff; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:700; opacity:0; transition:all 0.25s; pointer-events:none; z-index:9999; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .loader { text-align:center; padding:60px 0; color:#999; font-weight:700; font-size:14px; }
+
+  @media print {
+    body * { visibility:hidden; }
+    .card-shell, .card-shell * { visibility:visible; }
+    .card-shell { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:85.6mm; }
+    .loyalty-card { aspect-ratio:auto; width:85.6mm; height:53.98mm; border-radius:3mm; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left"><div class="nav-logo">Mr <span>Clearance</span></div></div>
+    <div class="nav-right"><a href="index.html" style="color:#fff;font-size:14px;font-weight:700;text-decoration:none;">← Back to Store</a></div>
+  </nav>
+
+  <div class="loyalty-page">
+    <a href="index.html" class="back-btn">← Back to Store</a>
+
+    <div class="intro" id="intro-block">
+      <h1>Mr Clearance Loyalty Card</h1>
+      <p>Sign up once and get a card you can use online or in store — collect a card number, get discounts, and go virtual or physical, your choice.</p>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-view">
+      <div class="staff-note">
+        🧾 <strong>Staff:</strong> this same form works for in-store sign-ups — fill it in with the customer at the counter, then print their physical card or show them the link for their virtual card.
+      </div>
+
+      <div class="card-form">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="f-name" placeholder="e.g. S. Allie"/>
+        </div>
+        <div class="form-group">
+          <label>WhatsApp Number or Email *</label>
+          <input type="text" id="f-contact" placeholder="e.g. 0821234567 or name@email.com"/>
+          <div class="form-hint">Used to send your card link and let us know about your discounts.</div>
+        </div>
+        <div class="form-group">
+          <label>How would you like your card?</label>
+          <select id="f-type">
+            <option value="virtual">Virtual only (on your phone)</option>
+            <option value="physical">Physical only (printed in-store)</option>
+            <option value="both" selected>Both — virtual now, physical in-store</option>
+          </select>
+        </div>
+        <button class="submit-btn" id="submit-btn" onclick="createLoyaltyCard()">🎉 Get My Card</button>
+        <div class="form-error" id="form-error"></div>
+      </div>
+    </div>
+
+    <!-- LOADER (used when opening an existing card via ?card=) -->
+    <div class="loader" id="loader-view" style="display:none;">Loading your card…</div>
+
+    <!-- CARD RESULT -->
+    <div id="card-result">
+      <div class="card-shell" id="card-shell">
+        <div class="loyalty-card" id="loyalty-card-el">
+          <div class="card-top">
+            <svg class="card-seal" viewBox="0 0 200 200">
+              <defs>
+                <path id="arcTop" d="M 26,100 A 74,74 0 0 1 174,100" />
+                <path id="arcBottom" d="M 174,108 A 74,74 0 0 1 26,108" />
+              </defs>
+              <circle cx="100" cy="100" r="92" fill="none" stroke="#fff" stroke-width="2" opacity="0.9"/>
+              <circle cx="100" cy="100" r="72" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+              <text font-size="12.5" font-weight="900" fill="#fff" letter-spacing="2">
+                <textPath href="#arcTop" startOffset="50%" text-anchor="middle">STOCK CLEARANCE</textPath>
+              </text>
+              <text font-size="12.5" font-weight="900" fill="#fff" letter-spacing="2">
+                <textPath href="#arcBottom" startOffset="50%" text-anchor="middle">STOCK CLEARANCE</textPath>
+              </text>
+              <text x="100" y="94" font-size="19" font-weight="900" fill="#fff" text-anchor="middle">MR CLEARANCE</text>
+              <text x="100" y="112" font-size="10" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="1">ONLINE</text>
+            </svg>
+            <div class="card-heading">
+              <div class="kicker">Loyalty Discount Card</div>
+              <h2>Thank you for<br/>shopping with us!</h2>
+              <div class="sub">Enjoy exclusive discounts &amp; rewards.</div>
+              <div class="card-icons">
+                <span><span class="ico">🎁</span>Novelties</span>
+                <span><span class="ico">👕</span>Clothing</span>
+                <span><span class="ico">🦺</span>Corporate</span>
+                <span><span class="ico">➕</span>More</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-bottom">
+            <div class="card-field">
+              <div class="flabel">Cardholder</div>
+              <div class="fvalue" id="card-name-out">&nbsp;</div>
+            </div>
+            <div class="barcode-box">
+              <svg id="barcode-svg"></svg>
+              <div class="num" id="card-number-out"></div>
+            </div>
+          </div>
+
+          <div class="card-footer-strip">
+            <div class="tagline">🛒 BIG BRANDS. LOW PRICES. BIGGER SAVINGS.</div>
+            <div class="site">mrclearance.co.za</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions" id="card-actions">
+        <button class="action-btn primary" onclick="downloadCardImage()">⬇️ Save Virtual Card</button>
+        <button class="action-btn" onclick="window.print()">🖨️ Print Physical Card</button>
+      </div>
+
+      <div class="share-box">
+        <div class="slabel">Your card link (bookmark or share this to reopen your card anytime)</div>
+        <div class="share-row">
+          <input type="text" id="share-link" readonly/>
+          <button onclick="copyShareLink()">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer class="footer">
+    <p>© 2026 Mr Clearance. All rights reserved. | <a href="terms.html" style="color:rgba(255,255,255,0.6);">Terms &amp; Conditions</a> | <a href="refund-policy.html" style="color:rgba(255,255,255,0.6);">Refund Policy</a></p>
+  </footer>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB9cnrgBoz4-3XSXDBUtLWURJ_ntisZwoM",
+    authDomain: "mr-clearance.firebaseapp.com",
+    projectId: "mr-clearance",
+    storageBucket: "mr-clearance.firebasestorage.app",
+    messagingSenderId: "427065460022",
+    appId: "1:427065460022:web:77f93829d76cd9c2fd5f97"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window.mrcLoyaltyDb = db;
+  window.mrcLoyaltyDoc = doc;
+  window.mrcLoyaltySetDoc = setDoc;
+  window.mrcLoyaltyGetDoc = getDoc;
+
+  window.mrcLoyaltyReady = true;
+  if (window.mrcLoyaltyOnReady) window.mrcLoyaltyOnReady();
+</script>
+
+<script>
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  // ── Unique card number: MC + 12 digits, grouped like MC7825 4190 6372 ──
+  function randomDigits(n) {
+    var s = '';
+    for (var i = 0; i < n; i++) s += Math.floor(Math.random() * 10);
+    return s;
+  }
+  function formatCardNumber(raw) {
+    // raw = "MC" + 12 digits -> "MC7825 4190 6372"
+    var digits = raw.slice(2);
+    return 'MC' + digits.slice(0,4) + ' ' + digits.slice(4,8) + ' ' + digits.slice(8,12);
+  }
+
+  async function generateUniqueCardNumber() {
+    for (var attempt = 0; attempt < 6; attempt++) {
+      var raw = 'MC' + randomDigits(12); // this is also the Firestore doc ID (no spaces)
+      var ref = window.mrcLoyaltyDoc(window.mrcLoyaltyDb, 'loyaltyCards', raw);
+      var snap = await window.mrcLoyaltyGetDoc(ref);
+      if (!snap.exists()) return raw;
+    }
+    throw new Error('Could not generate a unique card number — please try again.');
+  }
+
+  async function createLoyaltyCard() {
+    var name    = document.getElementById('f-name').value.trim();
+    var contact = document.getElementById('f-contact').value.trim();
+    var type    = document.getElementById('f-type').value;
+    var errEl   = document.getElementById('form-error');
+    var btn     = document.getElementById('submit-btn');
+    errEl.style.display = 'none';
+
+    if (!name || !contact) {
+      errEl.textContent = '❌ Please fill in your name and WhatsApp number or email.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!window.mrcLoyaltyReady) {
+      errEl.textContent = '⏳ Still connecting — please wait a second and try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating your card…';
+
+    try {
+      var rawNumber = await generateUniqueCardNumber();
+      var ref = window.mrcLoyaltyDoc(window.mrcLoyaltyDb, 'loyaltyCards', rawNumber);
+      await window.mrcLoyaltySetDoc(ref, {
+        cardNumber: rawNumber,
+        displayNumber: formatCardNumber(rawNumber),
+        name: name,
+        contact: contact,
+        cardType: type,
+        stamps: 0,
+        issuedAt: new Date().toISOString(),
+        issuedVia: 'loyalty-card.html'
+      });
+      renderCard(name, rawNumber);
+      document.getElementById('signup-view').style.display = 'none';
+      document.getElementById('intro-block').style.display = 'none';
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = '❌ Something went wrong creating your card. Please try again.';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🎉 Get My Card';
+    }
+  }
+
+  function renderCard(name, rawNumber) {
+    document.getElementById('card-name-out').textContent = name;
+    document.getElementById('card-number-out').textContent = formatCardNumber(rawNumber);
+    JsBarcode('#barcode-svg', rawNumber, { format:'CODE128', displayValue:false, width:1.6, height:34, margin:0 });
+    var link = window.location.origin + window.location.pathname + '?card=' + rawNumber;
+    document.getElementById('share-link').value = link;
+    document.getElementById('card-result').style.display = 'block';
+  }
+
+  function copyShareLink() {
+    var input = document.getElementById('share-link');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function(){ showToast('✅ Link copied!'); });
+  }
+
+  function downloadCardImage() {
+    var el = document.getElementById('loyalty-card-el');
+    html2canvas(el, { scale: 3, backgroundColor: null }).then(function(canvas) {
+      var link = document.createElement('a');
+      link.download = 'mr-clearance-loyalty-card.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
+
+  // ── If opened with ?card=XXXX, load and show that existing card ──
+  async function loadExistingCardIfLinked() {
+    var params = new URLSearchParams(window.location.search);
+    var cardId = params.get('card');
+    if (!cardId) return;
+
+    document.getElementById('signup-view').style.display = 'none';
+    document.getElementById('loader-view').style.display = 'block';
+
+    function tryLoad() {
+      if (!window.mrcLoyaltyReady) { setTimeout(tryLoad, 150); return; }
+      var ref = window.mrcLoyaltyDoc(window.mrcLoyaltyDb, 'loyaltyCards', cardId);
+      window.mrcLoyaltyGetDoc(ref).then(function(snap) {
+        document.getElementById('loader-view').style.display = 'none';
+        if (!snap.exists()) {
+          document.getElementById('intro-block').innerHTML = '<h1>Card not found</h1><p>This loyalty card link looks incorrect. <a href="loyalty-card.html">Sign up for a new card</a>.</p>';
+          return;
+        }
+        var data = snap.data();
+        document.getElementById('intro-block').style.display = 'none';
+        renderCard(data.name, data.cardNumber);
+      });
+    }
+    tryLoad();
+  }
+  loadExistingCardIfLinked();
+</script>
+</body>
+</html>
