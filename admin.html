@@ -3377,7 +3377,8 @@
       var adVal = adLink.value;
       var html = '<option value="">-- Choose where it links to --</option>' +
                  buildCategoryOptionsHtml(true) +
-                 '<option value="#deals">🔥 Daily Deals Section</option>';
+                 '<option value="#deals">🔥 Daily Deals Section</option>' +
+                 '<option value="loyalty">🎫 Loyalty Card Sign-Up</option>';
       adLink.innerHTML = html;
       if (adVal) adLink.value = adVal;
     }
