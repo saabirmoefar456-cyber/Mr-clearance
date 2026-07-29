@@ -1884,8 +1884,12 @@ function sendTelegramNotification(orderData) {
     var hasOrig  = ad.originalPrice && Number(ad.originalPrice) > Number(ad.price);
     var link     = ad.link ? escHtml(ad.link) : '';
     var clickAttr = link
-      ? 'onclick="' + (link.indexOf('#') === 0 || link.indexOf('http') === 0 ? "window.location.href='" + link + "'" : "selectCat('" + link + "')") + '"'
+      ? 'onclick="' + (
+          link === 'loyalty' ? "window.location.href='loyalty-card.html'" :
+          (link.indexOf('#') === 0 || link.indexOf('http') === 0 ? "window.location.href='" + link + "'" : "selectCat('" + link + "')")
+        ) + '"'
       : '';
+    var defaultBtnText = link === 'loyalty' ? 'Join Now →' : 'Shop Now →';
     innerEl.innerHTML =
       '<div class="ad-promo" ' + clickAttr + '>' +
         (ad.image ? '<div class="ad-promo-img-wrap"><img src="' + escHtml(ad.image) + '" alt="' + escHtml(ad.headline) + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"/></div>' : '') +
@@ -1893,7 +1897,7 @@ function sendTelegramNotification(orderData) {
           (ad.tag ? '<span class="ad-promo-tag">' + escHtml(ad.tag) + '</span>' : '') +
           '<strong class="ad-promo-text">' + escHtml(ad.headline) + '</strong>' +
           (hasPrice ? '<div class="ad-promo-price-row">' + (hasOrig ? '<span class="ad-promo-price-was">R ' + Number(ad.originalPrice).toLocaleString() + '</span>' : '') + '<span class="ad-promo-price">R ' + Number(ad.price).toLocaleString() + '</span></div>' : '') +
-          '<button class="ad-promo-btn" type="button">' + (ad.btnText ? escHtml(ad.btnText) : 'Shop Now →') + '</button>' +
+          '<button class="ad-promo-btn" type="button">' + (ad.btnText ? escHtml(ad.btnText) : defaultBtnText) + '</button>' +
         '</div>' +
       '</div>';
   }
