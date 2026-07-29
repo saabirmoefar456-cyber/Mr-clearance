@@ -95,10 +95,21 @@
   .loader { text-align:center; padding:60px 0; color:#999; font-weight:700; font-size:14px; }
 
   @media print {
+    @page { margin: 15mm; }
     body * { visibility:hidden; }
     .card-shell, .card-shell * { visibility:visible; }
-    .card-shell { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:85.6mm; }
-    .loyalty-card { aspect-ratio:auto; width:85.6mm; height:53.98mm; border-radius:3mm; box-shadow:none; }
+    .card-shell {
+      position: absolute; top: 0; left: 0; margin: 0; padding: 0;
+      width: 500px; /* fixed reference width — keeps every internal font/padding value rendering at its designed proportion */
+    }
+    .card-actions, .share-box { display: none !important; }
+    .loyalty-card {
+      width: 500px;
+      aspect-ratio: 1.586 / 1;
+      transform: scale(0.647); /* scales the 500px design down to an 85.6mm-wide physical card */
+      transform-origin: top left;
+      box-shadow: none;
+    }
   }
 </style>
 </head>
