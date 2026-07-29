@@ -394,6 +394,34 @@
       await deleteDoc(doc(db, 'customers', uid));
     };
 
+    // ── LOYALTY CARDS ────────────────────────────────────────────
+    // Cards are created by the public loyalty-card.html sign-up page
+    // (online or in-store) — the admin panel only reads, updates stamps,
+    // and redeems/removes them from here.
+    window.fbListenLoyaltyCards = function(callback) {
+      return onSnapshot(collection(db, 'loyaltyCards'), function(snap) {
+        var cards = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+        cards.sort(function(a,b){ return new Date(b.issuedAt || 0) - new Date(a.issuedAt || 0); });
+        callback(cards);
+      });
+    };
+
+    window.fbSetLoyaltyStamps = async function(cardId, newCount) {
+      await updateDoc(doc(db, 'loyaltyCards', cardId), { stamps: newCount });
+    };
+
+    window.fbRedeemLoyaltyReward = async function(cardId, redeemedCountSoFar) {
+      await updateDoc(doc(db, 'loyaltyCards', cardId), {
+        stamps: 0,
+        redeemedCount: (redeemedCountSoFar || 0) + 1,
+        lastRedeemedAt: new Date().toISOString()
+      });
+    };
+
+    window.fbDeleteLoyaltyCard = async function(cardId) {
+      await deleteDoc(doc(db, 'loyaltyCards', cardId));
+    };
+
     // ── REVIEWS (moderation) ──────────────────────────────────────
     window.fbListenAllReviews = function(callback) {
       return onSnapshot(collection(db, 'reviews'), function(snap) {
@@ -579,6 +607,7 @@
     <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
     <button class="tab-btn" onclick="showTab('about')">ℹ️ About Page</button>
     <button class="tab-btn" onclick="showTab('customers')">👥 Customers</button>
+    <button class="tab-btn" onclick="showTab('loyalty')">🎫 Loyalty</button>
     <button class="tab-btn" onclick="showTab('reviews')">⭐ Reviews</button>
     <button class="tab-btn" onclick="showTab('invoices')">🧾 Invoices</button>
     <button class="tab-btn owner-only" onclick="showTab('settings')" id="settings-tab">⚙️ Settings</button>
@@ -1458,6 +1487,25 @@
     </div>
   </div>
 
+  <!-- LOYALTY -->
+  <div class="tab-panel" id="tab-loyalty">
+    <div class="section-card">
+      <h2>🎫 Loyalty Cards</h2>
+      <p style="font-size:12px;color:var(--text-light);font-weight:600;margin:-6px 0 12px;">Everyone signed up via the loyalty card page — online or in-store. Add stamps per visit and redeem once a customer reaches 7.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <span id="loyalty-count-badge" style="background:var(--red-soft);border:1px solid var(--red-border);color:var(--red);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;">Loading...</span>
+        <div style="display:flex;gap:8px;">
+          <a href="loyalty-card.html" target="_blank" class="btn-secondary" style="font-size:12px;padding:8px 14px;text-decoration:none;display:inline-block;">➕ Issue New Card</a>
+          <button onclick="loadLoyaltyCards()" class="btn-secondary" style="font-size:12px;padding:8px 14px;">🔄 Refresh</button>
+        </div>
+      </div>
+      <input type="text" id="loyalty-search" placeholder="🔍 Search by name, contact, or card number..." oninput="filterLoyaltyList()" style="width:100%;background:#f5f5f5;border:2px solid var(--border);color:var(--text);padding:11px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:14px;font-weight:600;outline:none;margin-bottom:14px;box-sizing:border-box;"/>
+      <div id="loyalty-list" style="display:flex;flex-direction:column;gap:8px;">
+        <p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">Loading loyalty cards...</p>
+      </div>
+    </div>
+  </div>
+
   <!-- REVIEWS -->
   <div class="tab-panel" id="tab-reviews">
     <div class="section-card">
@@ -1701,7 +1749,7 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','reviews','invoices','settings'];
+    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','loyalty','reviews','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
@@ -1710,6 +1758,7 @@
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
     if (tab === 'customers')  { loadCustomers(); }
+    if (tab === 'loyalty')    { loadLoyaltyCards(); }
     if (tab === 'reviews')    { loadReviews(); }
     if (tab === 'invoices')   { renderCustomersList(); renderInvoicesList(); loadInvCompanyForm(); populateInvoiceCustomerDropdown(); }
     if (tab === 'orders')     { renderOrdersList(); markOrdersSeen(); }
@@ -4443,6 +4492,97 @@
     if (btn.getAttribute('data-confirming') === 'true') {
       window.fbDeleteCustomerProfile(uid).then(function(){
         showToast('🗑️ Customer removed!');
+      }).catch(function(){ showToast('❌ Error deleting. Try again.'); });
+    } else {
+      btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️'; btn.classList.add('confirming');
+      setTimeout(function(){ btn.setAttribute('data-confirming','false'); btn.textContent = '🗑️'; btn.classList.remove('confirming'); }, 3000);
+    }
+  }
+
+  // ── LOYALTY CARDS ────────────────────────────────────────────
+  var cachedLoyaltyCards = [];
+
+  function escLoyalty(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function loadLoyaltyCards() {
+    if (!window.fbListenLoyaltyCards) return;
+    window.fbListenLoyaltyCards(function(cards) {
+      cachedLoyaltyCards = cards;
+      var badge = document.getElementById('loyalty-count-badge');
+      if (badge) badge.textContent = cards.length + ' Card' + (cards.length !== 1 ? 's' : '');
+      filterLoyaltyList();
+    });
+  }
+
+  function filterLoyaltyList() {
+    var q = (document.getElementById('loyalty-search') || {}).value || '';
+    q = q.trim().toLowerCase();
+    var filtered = !q ? cachedLoyaltyCards : cachedLoyaltyCards.filter(function(c) {
+      return (c.name || '').toLowerCase().indexOf(q) > -1 ||
+             (c.contact || '').toLowerCase().indexOf(q) > -1 ||
+             (c.displayNumber || '').toLowerCase().indexOf(q) > -1 ||
+             (c.cardNumber || '').toLowerCase().indexOf(q) > -1;
+    });
+    renderLoyaltyList(filtered);
+  }
+
+  function renderLoyaltyList(cards) {
+    var list = document.getElementById('loyalty-list');
+    if (!list) return;
+    if (cards.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-light);font-size:14px;font-weight:600;text-align:center;padding:20px;">No loyalty cards yet — they appear here once a customer signs up online or in-store.</p>';
+      return;
+    }
+    list.innerHTML = cards.map(function(c) {
+      var stamps  = c.stamps || 0;
+      var ready   = stamps >= 7;
+      var issued  = c.issuedAt ? new Date(c.issuedAt).toLocaleDateString('en-ZA') : '—';
+      var typeLbl = c.cardType === 'virtual' ? '📱 Virtual' : c.cardType === 'physical' ? '🖨️ Physical' : '📱🖨️ Both';
+      var dots = '';
+      for (var i = 0; i < 7; i++) dots += '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;background:' + (i < stamps ? 'var(--red)' : '#e5e5e5') + ';"></span>';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;">' +
+        '<div style="width:40px;height:40px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;">' + (c.name ? escLoyalty(c.name[0].toUpperCase()) : '?') + '</div>' +
+        '<div style="flex:1;min-width:160px;">' +
+          '<div style="font-size:14px;font-weight:800;color:var(--text);">' + escLoyalty(c.name || 'No name') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-light);font-weight:600;">' + escLoyalty(c.contact || '') + ' · ' + escLoyalty(c.displayNumber || c.cardNumber || '') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-light);font-weight:700;margin-top:2px;">' + typeLbl + ' · Joined ' + issued + (c.redeemedCount ? ' · Redeemed ' + c.redeemedCount + 'x' : '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:center;flex-shrink:0;">' +
+          '<div style="font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">' + stamps + '/7 Stamps</div>' +
+          '<div>' + dots + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+          (ready
+            ? '<button class="btn-secondary" style="font-size:12px;padding:8px 12px;background:var(--red);color:#fff;" onclick="redeemLoyaltyReward(\'' + c.id + '\',' + (c.redeemedCount || 0) + ')">🎁 Redeem</button>'
+            : '<button class="btn-secondary" style="font-size:12px;padding:8px 12px;" onclick="addLoyaltyStamp(\'' + c.id + '\',' + stamps + ')">➕ Stamp</button>') +
+          '<a href="loyalty-card.html?card=' + encodeURIComponent(c.cardNumber || c.id) + '" target="_blank" class="btn-secondary" style="font-size:12px;padding:8px 12px;text-decoration:none;">👁️ View</a>' +
+          '<button class="btn-delete-item" data-confirming="false" onclick="deleteLoyaltyCard(\'' + c.id + '\', this)">🗑️</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function addLoyaltyStamp(cardId, currentStamps) {
+    var newCount = Math.min(7, (currentStamps || 0) + 1);
+    window.fbSetLoyaltyStamps(cardId, newCount).then(function() {
+      showToast(newCount >= 7 ? '🎉 Card full — reward ready!' : '✅ Stamp added (' + newCount + '/7)');
+    }).catch(function(){ showToast('❌ Error adding stamp. Try again.'); });
+  }
+
+  function redeemLoyaltyReward(cardId, redeemedCountSoFar) {
+    window.fbRedeemLoyaltyReward(cardId, redeemedCountSoFar).then(function() {
+      showToast('🎁 Reward redeemed — stamps reset!');
+    }).catch(function(){ showToast('❌ Error redeeming. Try again.'); });
+  }
+
+  function deleteLoyaltyCard(cardId, btn) {
+    if (btn.getAttribute('data-confirming') === 'true') {
+      window.fbDeleteLoyaltyCard(cardId).then(function(){
+        showToast('🗑️ Loyalty card removed!');
       }).catch(function(){ showToast('❌ Error deleting. Try again.'); });
     } else {
       btn.setAttribute('data-confirming','true'); btn.textContent = '⚠️'; btn.classList.add('confirming');
