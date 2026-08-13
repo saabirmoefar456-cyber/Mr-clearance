@@ -604,6 +604,7 @@
     <button class="tab-btn" onclick="showTab('barcodes')">🏷️ Barcodes</button>
     <button class="tab-btn" onclick="showTab('deals')">🔥 Daily Deals</button>
     <button class="tab-btn" onclick="showTab('ads')">📢 Ads</button>
+    <button class="tab-btn" onclick="showTab('hero')">🎯 Hero</button>
     <button class="tab-btn" onclick="showTab('categories')">🗂️ Categories</button>
     <button class="tab-btn" onclick="showTab('about')">ℹ️ About Page</button>
     <button class="tab-btn" onclick="showTab('customers')">👥 Customers</button>
@@ -1131,6 +1132,80 @@
         <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryAdsSync()">🔄 Retry Cloud Sync</button>
       </div>
       <div id="ads-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
+
+  <!-- HERO (homepage top banner — badge, title, urgency timer, stats, ticker) -->
+  <div class="tab-panel" id="tab-hero">
+    <div class="section-card">
+      <h2>🎯 Homepage Hero</h2>
+      <div class="info-box">
+        <strong>How it works:</strong> This is the big red banner at the very top of the store. Changes here go live for every visitor as soon as you hit Save — no need to touch any code.
+      </div>
+
+      <div class="form-group">
+        <label>Small Badge Text</label>
+        <input type="text" id="hero-badge" placeholder="e.g. Clearance Deals — Cape Town 🇿🇦" maxlength="60"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Title — Line 1</label>
+          <input type="text" id="hero-title" placeholder="e.g. Shop Smart," maxlength="30"/>
+        </div>
+        <div class="form-group">
+          <label>Title — Line 2 (highlighted colour)</label>
+          <input type="text" id="hero-title-accent" placeholder="e.g. Save Big" maxlength="30"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Subtitle</label>
+        <input type="text" id="hero-subtitle" placeholder="e.g. Handpicked clearance products delivered to your door" maxlength="100"/>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="hero-urgency-enabled" style="width:18px;height:18px;cursor:pointer;"/>
+        <label style="margin:0;">Show countdown timer (resets to midnight every day)</label>
+      </div>
+      <div class="form-group">
+        <label>Countdown Label</label>
+        <input type="text" id="hero-urgency-text" placeholder="e.g. Flash clearance ends in" maxlength="40"/>
+      </div>
+
+      <h3 style="font-size:14px;font-weight:800;margin:20px 0 10px;color:#1a1a1a;">Trust Row (up to 3 short lines under the button)</h3>
+      <div class="form-group"><input type="text" id="hero-trust-1" placeholder="e.g. 🔒 Secure PayFast Checkout" maxlength="40"/></div>
+      <div class="form-group"><input type="text" id="hero-trust-2" placeholder="e.g. 🚚 PAXI / PUDO Delivery" maxlength="40"/></div>
+      <div class="form-group"><input type="text" id="hero-trust-3" placeholder="e.g. 💬 Order Support on WhatsApp" maxlength="40"/></div>
+
+      <h3 style="font-size:14px;font-weight:800;margin:20px 0 10px;color:#1a1a1a;">Stat Counters (3 numbers that count up)</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:6px;">
+        <input type="number" id="hero-stat1-val" placeholder="500"/>
+        <input type="text" id="hero-stat1-suffix" placeholder="+ (suffix)" maxlength="6"/>
+        <input type="text" id="hero-stat1-label" placeholder="Happy Customers" maxlength="30"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:6px;">
+        <input type="number" id="hero-stat2-val" placeholder="60"/>
+        <input type="text" id="hero-stat2-suffix" placeholder="% (suffix)" maxlength="6"/>
+        <input type="text" id="hero-stat2-label" placeholder="Max Discount" maxlength="30"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:16px;">
+        <input type="number" id="hero-stat3-val" placeholder="24"/>
+        <input type="text" id="hero-stat3-suffix" placeholder="hr (suffix)" maxlength="6"/>
+        <input type="text" id="hero-stat3-label" placeholder="Order Turnaround" maxlength="30"/>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="hero-ticker-enabled" style="width:18px;height:18px;cursor:pointer;"/>
+        <label style="margin:0;">Show scrolling "recent orders" strip under the hero</label>
+      </div>
+      <div class="form-group">
+        <label>Ticker Lines — one per line, e.g. "Zainab in Bellville just ordered a Dinner Set"</label>
+        <textarea id="hero-ticker-items" rows="5" placeholder="One line per item..." style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;color:#1a1a1a;padding:12px 14px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:13px;font-weight:600;outline:none;resize:vertical;"></textarea>
+      </div>
+
+      <div class="btn-actions">
+        <button class="btn-primary" onclick="saveHeroSettings()">💾 Save Hero</button>
+        <button class="btn-secondary" onclick="resetHeroForm()">Reset to Defaults</button>
+      </div>
     </div>
   </div>
 
@@ -1771,12 +1846,13 @@
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
     document.getElementById('tab-' + tab).classList.add('active');
-    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','categories','about','customers','loyalty','reviews','invoices','settings'];
+    var names = ['dashboard','orders','add','manage','inventory','barcodes','deals','ads','hero','categories','about','customers','loyalty','reviews','invoices','settings'];
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
     if (tab === 'deals')      renderDealsList();
     if (tab === 'ads')        renderAdsList();
+    if (tab === 'hero')       loadHeroSettings();
     if (tab === 'categories') renderCategoriesList();
     if (tab === 'about')      loadAboutPageForm();
     if (tab === 'customers')  { loadCustomers(); }
@@ -1817,6 +1893,95 @@
       payfastMode: document.getElementById('s-payfast-mode').value
     }));
     showToast('✅ Settings saved!');
+  }
+
+  // ── HERO (homepage banner) ───────────────────────────────────
+  var HERO_FORM_DEFAULTS = {
+    badge: 'Clearance Deals — Cape Town 🇿🇦',
+    title: 'Shop Smart,',
+    titleAccent: 'Save Big',
+    subtitle: 'Handpicked clearance products delivered to your door',
+    urgencyEnabled: false,
+    urgencyText: 'Flash clearance ends in',
+    trustItems: ['🔒 Secure PayFast Checkout', '🚚 PAXI / PUDO Delivery', '💬 Order Support on WhatsApp'],
+    stats: [
+      { value: 500, suffix: '+',  label: 'Happy Customers' },
+      { value: 60,  suffix: '%',  label: 'Max Discount' },
+      { value: 24,  suffix: 'hr', label: 'Order Turnaround' }
+    ],
+    tickerEnabled: false,
+    tickerItems: []
+  };
+
+  function fillHeroForm(s) {
+    document.getElementById('hero-badge').value = s.badge || '';
+    document.getElementById('hero-title').value = s.title || '';
+    document.getElementById('hero-title-accent').value = s.titleAccent || '';
+    document.getElementById('hero-subtitle').value = s.subtitle || '';
+    document.getElementById('hero-urgency-enabled').checked = !!s.urgencyEnabled;
+    document.getElementById('hero-urgency-text').value = s.urgencyText || '';
+
+    var trust = s.trustItems || [];
+    document.getElementById('hero-trust-1').value = trust[0] || '';
+    document.getElementById('hero-trust-2').value = trust[1] || '';
+    document.getElementById('hero-trust-3').value = trust[2] || '';
+
+    var stats = s.stats || [];
+    for (var i = 0; i < 3; i++) {
+      var st = stats[i] || {};
+      document.getElementById('hero-stat' + (i+1) + '-val').value = st.value != null ? st.value : '';
+      document.getElementById('hero-stat' + (i+1) + '-suffix').value = st.suffix || '';
+      document.getElementById('hero-stat' + (i+1) + '-label').value = st.label || '';
+    }
+
+    document.getElementById('hero-ticker-enabled').checked = !!s.tickerEnabled;
+    document.getElementById('hero-ticker-items').value = (s.tickerItems || []).join('\n');
+  }
+
+  async function loadHeroSettings() {
+    try {
+      var saved = window.fbGetStoreData ? await window.fbGetStoreData('heroSettings') : null;
+      fillHeroForm(Object.assign({}, HERO_FORM_DEFAULTS, saved || {}));
+    } catch (e) {
+      console.error('Could not load hero settings:', e);
+      fillHeroForm(HERO_FORM_DEFAULTS);
+    }
+  }
+
+  function resetHeroForm() { fillHeroForm(HERO_FORM_DEFAULTS); }
+
+  async function saveHeroSettings() {
+    var data = {
+      badge: document.getElementById('hero-badge').value.trim() || HERO_FORM_DEFAULTS.badge,
+      title: document.getElementById('hero-title').value.trim() || HERO_FORM_DEFAULTS.title,
+      titleAccent: document.getElementById('hero-title-accent').value.trim() || HERO_FORM_DEFAULTS.titleAccent,
+      subtitle: document.getElementById('hero-subtitle').value.trim() || HERO_FORM_DEFAULTS.subtitle,
+      urgencyEnabled: document.getElementById('hero-urgency-enabled').checked,
+      urgencyText: document.getElementById('hero-urgency-text').value.trim() || HERO_FORM_DEFAULTS.urgencyText,
+      trustItems: [
+        document.getElementById('hero-trust-1').value.trim(),
+        document.getElementById('hero-trust-2').value.trim(),
+        document.getElementById('hero-trust-3').value.trim()
+      ].filter(Boolean),
+      stats: [1,2,3].map(function(i){
+        return {
+          value: parseInt(document.getElementById('hero-stat' + i + '-val').value, 10) || 0,
+          suffix: document.getElementById('hero-stat' + i + '-suffix').value.trim(),
+          label: document.getElementById('hero-stat' + i + '-label').value.trim()
+        };
+      }),
+      tickerEnabled: document.getElementById('hero-ticker-enabled').checked,
+      tickerItems: document.getElementById('hero-ticker-items').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean)
+    };
+
+    if (!window.fbSaveStoreData) { showToast('❌ Not connected yet — try again in a moment'); return; }
+    try {
+      await window.fbSaveStoreData('heroSettings', data);
+      showToast('✅ Hero saved! Live on the store now.');
+    } catch (e) {
+      console.error('Could not save hero settings:', e);
+      showToast('❌ Could not save — check your connection');
+    }
   }
 
   // ── DASHBOARD ─────────────────────────────────────────────────
