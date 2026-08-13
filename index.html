@@ -2089,12 +2089,9 @@ function sendTelegramNotification(orderData) {
       }
     }
 
-    var heroStatsAnimated = false;
     function animateHeroStats() {
       var heroEl = document.getElementById('hero-section');
       function run() {
-        if (heroStatsAnimated) return;
-        heroStatsAnimated = true;
         document.querySelectorAll('.hero-stat-num').forEach(function(el){
           var target = parseInt(el.dataset.target, 10) || 0;
           var suffix = el.dataset.suffix || '';
