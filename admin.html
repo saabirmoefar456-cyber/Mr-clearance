@@ -959,6 +959,13 @@
       </div>
 
       <div class="form-group">
+        <label>⚡ Load From an Existing Product (optional — fills in the fields below for you)</label>
+        <select id="d-load-product" onchange="loadDealFromProduct(this.value)">
+          <option value="">-- Choose a product to base this deal on --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Deal Name *</label>
         <input type="text" id="d-name" placeholder="e.g. Heavy Duty Broom"/>
       </div>
@@ -1850,7 +1857,7 @@
     document.querySelectorAll('.tab-btn').forEach(function(b,i){ if(names[i]===tab) b.classList.add('active'); });
     if (tab === 'manage')     renderProductList();
     if (tab === 'dashboard')  renderDashboard();
-    if (tab === 'deals')      renderDealsList();
+    if (tab === 'deals')      { renderDealsList(); populateDealProductPicker(); }
     if (tab === 'ads')        renderAdsList();
     if (tab === 'hero')       loadHeroSettings();
     if (tab === 'categories') renderCategoriesList();
@@ -1872,6 +1879,7 @@
       cachedProducts = await window.fbGetProducts();
       renderProductList();
       renderDashboard();
+      populateDealProductPicker();
     } catch(e) { console.error('Firebase load error:', e); }
   }
 
@@ -2619,6 +2627,37 @@
     document.getElementById('d-preview-wrap').style.display = 'none';
     document.getElementById('d-photo-msg').textContent = 'No photo added yet.';
     document.getElementById('d-photo-msg').style.color = '#999';
+  }
+
+  // Fills the "Load From an Existing Product" dropdown in the Deals tab
+  // with the current product catalog, so a deal can be created in one
+  // click instead of retyping everything by hand.
+  function populateDealProductPicker() {
+    var sel = document.getElementById('d-load-product');
+    if (!sel) return;
+    var products = getProducts();
+    var current = sel.value;
+    sel.innerHTML = '<option value="">-- Choose a product to base this deal on --</option>' +
+      products.map(function(p){ return '<option value="' + escAdminHtml(p.id) + '">' + escAdminHtml(p.name) + ' (R' + (p.price||0).toLocaleString() + ')</option>'; }).join('');
+    if (current) sel.value = current;
+  }
+
+  function loadDealFromProduct(productId) {
+    if (!productId) return;
+    var p = getProducts().find(function(pr){ return String(pr.id) === String(productId); });
+    if (!p) return;
+
+    document.getElementById('d-name').value = p.name || '';
+    document.getElementById('d-price').value = p.price || '';
+    document.getElementById('d-desc').value = p.desc || '';
+    var dCat = document.getElementById('d-category');
+    if (dCat && p.category) dCat.value = p.category;
+
+    var img = (p.images && p.images[0]) ? p.images[0] : '';
+    if (img) { dealCurrentImage = img; showDealPreview(img); }
+    else { clearDealImage(); }
+
+    showToast('✅ Loaded "' + p.name + '" — set your deal price / discount, then Save Deal');
   }
 
   function clearDealForm() {
