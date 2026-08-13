@@ -21,6 +21,7 @@
 
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Archivo+Black&family=Oswald:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Bebas+Neue&family=Space+Mono:wght@500;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
   <style>
     /* ── PRODUCT DETAIL MODAL (Takealot-style: informative & trustworthy) ── */
@@ -383,6 +384,18 @@
     return addDoc(collection(db, 'orders'), order).catch(function(err){
       console.error('Could not save order to database:', err);
       throw err;
+    });
+  };
+
+  // Generic store-wide settings, keyed by name — the admin panel writes here
+  // via fbSaveStoreData(key, value); the storefront just reads/listens.
+  window.fbGetStoreData = async function(key) {
+    const snap = await getDoc(doc(db, 'store_data', key));
+    return snap.exists() ? snap.data().value : null;
+  };
+  window.fbListenStoreData = function(key, callback) {
+    return onSnapshot(doc(db, 'store_data', key), function(snap){
+      callback(snap.exists() ? snap.data().value : null);
     });
   };
 
@@ -752,19 +765,37 @@
   </div>
   <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
 
-  <!-- HERO -->
-  <section class="hero" id="hero-section">
+  <!-- HERO (content below is populated live from Firestore 'store_data/heroSettings',
+       edited from the admin panel's 🎯 Hero tab — see renderHeroFromSettings() near the
+       bottom of this file for the defaults used until the owner sets custom values) -->
+  <section class="hero hero-v2" id="hero-section">
     <div id="hero-banner-slot" style="display:none;position:absolute;inset:0;z-index:5;"></div>
     <div class="hero-content" id="hero-default-content">
-      <p class="hero-badge">Clearance Deals — Cape Town 🇿🇦</p>
-      <h1 class="hero-title">Shop Smart,<br/><span class="hero-accent">Save Big</span></h1>
-      <p class="hero-subtitle">Handpicked clearance products delivered to your door</p>
+      <p class="hero-badge" id="hero-badge-text">Clearance Deals — Cape Town 🇿🇦</p>
+      <h1 class="hero-title"><span id="hero-title-text">Shop Smart,</span><br/><span class="hero-accent" id="hero-title-accent">Save Big</span></h1>
+      <p class="hero-subtitle" id="hero-subtitle-text">Handpicked clearance products delivered to your door</p>
+
+      <div class="hero-urgency" id="hero-urgency" style="display:none;">
+        <span class="pulse-dot"></span>
+        <span id="hero-urgency-text">Flash clearance ends in</span>
+        <span class="hero-timer" id="hero-timer">--:--:--</span>
+      </div>
+
       <div class="hero-btns">
         <button class="cta-btn" onclick="document.querySelector('.products-section').scrollIntoView({behavior:'smooth'})">Shop Now</button>
       </div>
+
+      <div class="hero-trust-row" id="hero-trust-row"></div>
+
+      <div class="hero-stats" id="hero-stats"></div>
     </div>
     <div class="hero-skew"></div>
   </section>
+
+  <!-- Live activity ticker — social proof, edited from the same admin Hero tab -->
+  <div class="activity-ticker" id="activity-ticker" style="display:none;">
+    <div class="ticker-track" id="ticker-track"></div>
+  </div>
 
   <!-- AD SLOT 2 — between Hero and Products.
        Default: self-promo banner managed from the admin panel (Ads tab).
@@ -1972,6 +2003,148 @@ function sendTelegramNotification(orderData) {
     <button id="confirm-order-btn" onclick="submitOrder()" style="width:100%;padding:16px;background:#e31837;color:#fff;border:none;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:15px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;" onmouseover="this.style.background='#c01230'" onmouseout="this.style.background='#e31837'">✅ Confirm &amp; Pay with PayFast</button>
     <div style="text-align:center;font-size:12px;color:#999;margin-top:10px;font-weight:600;">You'll get a WhatsApp confirmation, then we'll take you to PayFast to pay</div>
   </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HERO — editable content. Reads 'store_data/heroSettings' from
+       Firestore (written by the admin panel's 🎯 Hero tab) and fills
+       in the hero markup above. Falls back to these defaults until
+       the owner saves anything.
+       ══════════════════════════════════════════════════════════════ -->
+  <script>
+  (function(){
+    var HERO_DEFAULTS = {
+      badge: 'Clearance Deals — Cape Town 🇿🇦',
+      title: 'Shop Smart,',
+      titleAccent: 'Save Big',
+      subtitle: 'Handpicked clearance products delivered to your door',
+      urgencyEnabled: false,
+      urgencyText: 'Flash clearance ends in',
+      trustItems: ['🔒 Secure PayFast Checkout', '🚚 PAXI / PUDO Delivery', '💬 Order Support on WhatsApp'],
+      stats: [
+        { value: 500, suffix: '+',  label: 'Happy Customers' },
+        { value: 60,  suffix: '%',  label: 'Max Discount' },
+        { value: 24,  suffix: 'hr', label: 'Order Turnaround' }
+      ],
+      tickerEnabled: false,
+      tickerItems: []
+    };
+
+    function escHeroHtml(s){
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+      });
+    }
+
+    function renderHeroFromSettings(saved) {
+      var s = Object.assign({}, HERO_DEFAULTS, saved || {});
+
+      var badgeEl = document.getElementById('hero-badge-text');
+      var titleEl = document.getElementById('hero-title-text');
+      var accentEl = document.getElementById('hero-title-accent');
+      var subEl = document.getElementById('hero-subtitle-text');
+      if (badgeEl)  badgeEl.textContent  = s.badge;
+      if (titleEl)  titleEl.textContent  = s.title;
+      if (accentEl) accentEl.textContent = s.titleAccent;
+      if (subEl)    subEl.textContent    = s.subtitle;
+
+      // Urgency countdown (resets to midnight each day while enabled)
+      var urgencyBox = document.getElementById('hero-urgency');
+      if (urgencyBox) {
+        urgencyBox.style.display = s.urgencyEnabled ? 'inline-flex' : 'none';
+        var urgencyTextEl = document.getElementById('hero-urgency-text');
+        if (urgencyTextEl) urgencyTextEl.textContent = s.urgencyText;
+      }
+
+      // Trust row
+      var trustRow = document.getElementById('hero-trust-row');
+      if (trustRow) {
+        trustRow.innerHTML = (s.trustItems || []).filter(Boolean)
+          .map(function(t){ return '<span>' + escHeroHtml(t) + '</span>'; }).join('');
+      }
+
+      // Stat counters — animate up from 0 the first time the hero is on screen
+      var statsBox = document.getElementById('hero-stats');
+      if (statsBox) {
+        statsBox.innerHTML = (s.stats || []).map(function(st){
+          return '<div class="hero-stat">' +
+            '<span class="hero-stat-num" data-target="' + parseInt(st.value,10) + '" data-suffix="' + escHeroHtml(st.suffix||'') + '">0</span>' +
+            '<span class="hero-stat-label">' + escHeroHtml(st.label||'') + '</span></div>';
+        }).join('');
+        animateHeroStats();
+      }
+
+      // Activity ticker
+      var ticker = document.getElementById('activity-ticker');
+      var track = document.getElementById('ticker-track');
+      var items = (s.tickerItems || []).filter(Boolean);
+      if (ticker && track) {
+        if (s.tickerEnabled && items.length) {
+          var html = items.map(function(t){ return '<span class="ticker-item">🛍️ <b>' + escHeroHtml(t) + '</b></span>'; }).join('');
+          track.innerHTML = html + html; // duplicate for seamless loop
+          ticker.style.display = 'block';
+        } else {
+          ticker.style.display = 'none';
+          track.innerHTML = '';
+        }
+      }
+    }
+
+    var heroStatsAnimated = false;
+    function animateHeroStats() {
+      var heroEl = document.getElementById('hero-section');
+      function run() {
+        if (heroStatsAnimated) return;
+        heroStatsAnimated = true;
+        document.querySelectorAll('.hero-stat-num').forEach(function(el){
+          var target = parseInt(el.dataset.target, 10) || 0;
+          var suffix = el.dataset.suffix || '';
+          if (window.gsap) {
+            var obj = { val: 0 };
+            gsap.to(obj, {
+              val: target, duration: 1.4, ease: 'power2.out',
+              onUpdate: function(){ el.textContent = Math.round(obj.val) + suffix; }
+            });
+          } else {
+            el.textContent = target + suffix;
+          }
+        });
+      }
+      if (heroEl && 'IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function(entries){
+          entries.forEach(function(e){ if (e.isIntersecting) { run(); io.disconnect(); } });
+        }, { threshold: 0.4 });
+        io.observe(heroEl);
+      } else {
+        run();
+      }
+    }
+
+    // Live countdown clock (only ticks while the urgency banner is enabled)
+    setInterval(function(){
+      var el = document.getElementById('hero-timer');
+      var box = document.getElementById('hero-urgency');
+      if (!el || !box || box.style.display === 'none') return;
+      var d = new Date(); d.setHours(24,0,0,0);
+      var diff = d - new Date();
+      var h = String(Math.floor(diff/3600000)).padStart(2,'0');
+      var m = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+      var sec = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+      el.textContent = h + ':' + m + ':' + sec;
+    }, 1000);
+
+    // Paint defaults immediately so the hero never appears empty while Firebase connects
+    renderHeroFromSettings(null);
+
+    // Then load + live-sync the owner's saved hero settings
+    function initHeroFromFirebase() {
+      if (!window.fbGetStoreData) return;
+      window.fbGetStoreData('heroSettings').then(renderHeroFromSettings).catch(function(){});
+      if (window.fbListenStoreData) window.fbListenStoreData('heroSettings', renderHeroFromSettings);
+    }
+    if (window.firebaseReady) { initHeroFromFirebase(); }
+    else { window.addEventListener('firebase-ready', initHeroFromFirebase); }
+  })();
+  </script>
 
 </body>
 </html>
