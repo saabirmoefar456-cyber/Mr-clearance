@@ -797,6 +797,40 @@
     <div class="ticker-track" id="ticker-track"></div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════
+       THIS WEEK'S RACK — 3D drag carousel. Pulls its cards from the
+       same Deals data as the deals-section further down (managed
+       from the admin panel's Deals tab). Hidden automatically when
+       there are no deals set. Real Add to Cart via the same
+       addToCart()/product-card pattern used everywhere else.
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="rack-section" id="rack-section" style="display:none;">
+    <div class="rack-header">
+      <div>
+        <div class="rack-brand">THIS WEEK'S <span>RACK</span></div>
+        <div class="rack-tagline">Cape Town · Online Clearance Store</div>
+      </div>
+      <div class="rack-badge-corner">
+        <strong>SWIPE TO BROWSE</strong>
+        Drag or use the arrows
+      </div>
+    </div>
+
+    <div class="rack-carousel-wrap">
+      <div class="rack-floor"></div>
+      <div class="rack-viewport" id="rack-viewport">
+        <div class="rack-track" id="rack-track"></div>
+      </div>
+    </div>
+
+    <div class="rack-controls">
+      <button class="rack-nav-btn" id="rack-prev" aria-label="Previous item">&#8592;</button>
+      <div class="rack-dots" id="rack-dots"></div>
+      <button class="rack-nav-btn" id="rack-next" aria-label="Next item">&#8594;</button>
+    </div>
+    <div class="rack-swipe-hint">&#8592; swipe to browse &#8594;</div>
+  </section>
+
   <!-- AD SLOT 2 — between Hero and Products.
        Default: self-promo banner managed from the admin panel (Ads tab).
        Swap ad-slot-2-inner's contents for an AdSense <ins> tag once approved. -->
@@ -1892,6 +1926,145 @@ function sendTelegramNotification(orderData) {
         '<div class="deal-qty-row"><div class="qty-control"><button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button></div>' +
         '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button></div></div></div>';
     }).join('');
+    renderDealsCarousel(deals);
+  }
+
+  // ── THIS WEEK'S RACK (3D drag carousel, same deals data as above) ──
+  var rackState = { cards: [], dots: [], currentIndex: 0, dragOffsetUnits: 0, dragging: false, startX: 0, startIndex: 0, wired: false };
+
+  function renderDealsCarousel(deals) {
+    var section = document.getElementById('rack-section');
+    var track = document.getElementById('rack-track');
+    var dotsWrap = document.getElementById('rack-dots');
+    if (!section || !track || !dotsWrap) return;
+
+    if (!deals || deals.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+
+    track.innerHTML = '';
+    dotsWrap.innerHTML = '';
+    rackState.currentIndex = 0;
+    rackState.dragOffsetUnits = 0;
+
+    rackState.cards = deals.map(function(d, i){
+      var hasOrig = d.originalPrice && d.originalPrice > d.price;
+      var pct = hasOrig ? Math.round((1 - d.price / d.originalPrice) * 100) : null;
+      var el = document.createElement('div');
+      el.className = 'rack-card product-card';
+      el.setAttribute('data-name', d.name || '');
+      el.setAttribute('data-price', d.price || 0);
+      el.setAttribute('data-category', d.category || '');
+      el.innerHTML =
+        '<div class="rack-photo">' +
+          (pct ? '<span class="rack-discount-tag">' + pct + '% OFF</span>' : '') +
+          '<img src="' + escHtml(d.image||'') + '" alt="' + escHtml(d.name) + '" loading="lazy" onerror="this.style.display=\'none\'"/>' +
+        '</div>' +
+        '<div class="rack-card-body">' +
+          '<div class="rack-card-cat">' + escHtml(d.category||'Clearance') + '</div>' +
+          '<div class="rack-card-name">' + escHtml(d.name) + '</div>' +
+          '<div class="rack-price-row">' +
+            '<span class="rack-price-now">R ' + (d.price||0).toLocaleString() + '</span>' +
+            (hasOrig ? '<span class="rack-price-was">R ' + d.originalPrice.toLocaleString() + '</span>' : '') +
+          '</div>' +
+          '<span class="qty-val" style="display:none;">1</span>' +
+          '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">Add to Cart</button>' +
+        '</div>';
+      track.appendChild(el);
+      return el;
+    });
+
+    rackState.dots = deals.map(function(){
+      var d = document.createElement('div');
+      d.className = 'rack-dot';
+      dotsWrap.appendChild(d);
+      return d;
+    });
+
+    rackLayout(false);
+    if (!rackState.wired) wireRackCarousel();
+  }
+
+  function rackSpacing(){ return Math.min(window.innerWidth * 0.3, 210); }
+
+  function rackLayout(animate){
+    var spacing = rackSpacing();
+    var isMobile = window.innerWidth < 720;
+    var rotAngle = isMobile ? 24 : 34;
+
+    rackState.cards.forEach(function(el, i){
+      var offset = (i - rackState.currentIndex) - rackState.dragOffsetUnits;
+      var absOff = Math.abs(offset);
+      var props = {
+        x: offset * spacing,
+        z: -absOff * 130,
+        rotationY: -offset * rotAngle,
+        scale: Math.max(1 - absOff * 0.16, 0.55),
+        opacity: absOff > 3.2 ? 0 : Math.max(1 - absOff * 0.32, 0),
+        transformPerspective: 1400,
+        zIndex: Math.round(100 - absOff * 10),
+        overwrite: 'auto'
+      };
+      if (window.gsap) {
+        if (animate) gsap.to(el, Object.assign({ duration:0.55, ease:'power3.out' }, props));
+        else gsap.set(el, props);
+      } else {
+        el.style.transform = 'translate(-50%,-50%) translateX(' + props.x + 'px)';
+        el.style.opacity = props.opacity;
+        el.style.zIndex = props.zIndex;
+      }
+    });
+
+    rackState.dots.forEach(function(d, i){ d.classList.toggle('active', i === rackState.currentIndex); });
+  }
+
+  function rackGoTo(i){
+    rackState.currentIndex = Math.max(0, Math.min(rackState.cards.length - 1, i));
+    rackState.dragOffsetUnits = 0;
+    rackLayout(true);
+  }
+
+  function wireRackCarousel(){
+    rackState.wired = true;
+    var viewport = document.getElementById('rack-viewport');
+    var prevBtn = document.getElementById('rack-prev');
+    var nextBtn = document.getElementById('rack-next');
+    if (!viewport) return;
+
+    prevBtn.addEventListener('click', function(){ rackGoTo(rackState.currentIndex - 1); });
+    nextBtn.addEventListener('click', function(){ rackGoTo(rackState.currentIndex + 1); });
+
+    viewport.addEventListener('pointerdown', function(e){
+      rackState.dragging = true;
+      rackState.startX = e.clientX;
+      rackState.startIndex = rackState.currentIndex;
+      rackState.dragOffsetUnits = 0;
+      viewport.classList.add('dragging');
+      viewport.setPointerCapture(e.pointerId);
+    });
+    viewport.addEventListener('pointermove', function(e){
+      if (!rackState.dragging) return;
+      var dx = e.clientX - rackState.startX;
+      rackState.dragOffsetUnits = -dx / rackSpacing();
+      rackLayout(false);
+    });
+    function endRackDrag(){
+      if (!rackState.dragging) return;
+      rackState.dragging = false;
+      viewport.classList.remove('dragging');
+      var rounded = Math.round(rackState.dragOffsetUnits);
+      rackGoTo(rackState.startIndex + rounded);
+    }
+    viewport.addEventListener('pointerup', endRackDrag);
+    viewport.addEventListener('pointercancel', endRackDrag);
+    viewport.addEventListener('pointerleave', function(){ if (rackState.dragging) endRackDrag(); });
+
+    viewport.setAttribute('tabindex', '0');
+    viewport.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight') rackGoTo(rackState.currentIndex + 1);
+      if (e.key === 'ArrowLeft') rackGoTo(rackState.currentIndex - 1);
+    });
+
+    window.addEventListener('resize', function(){ rackLayout(false); });
   }
 
   // ── AD SLOTS ──────────────────────────────────────────────────
