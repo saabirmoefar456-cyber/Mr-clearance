@@ -1955,26 +1955,28 @@ function sendTelegramNotification(orderData) {
     rackState.cards = products.map(function(p, i){
       var imgs = getImages(p);
       var hasSizes = p.sizes && p.sizes.length > 0;
+      var pid = p.id || i;
       var el = document.createElement('div');
       el.className = 'rack-card product-card';
       el.setAttribute('data-name', p.name || '');
       el.setAttribute('data-price', p.price || 0);
       el.setAttribute('data-category', p.category || '');
       el.innerHTML =
-        '<div class="rack-photo">' +
+        '<div class="rack-photo" onclick="rackViewProduct(\'' + pid + '\')">' +
           (p.badge ? '<span class="rack-discount-tag">' + escHtml(p.badge) + '</span>' : '') +
+          '<span class="rack-view-pill">👁 View</span>' +
           '<img src="' + escHtml(imgs[0]||'') + '" alt="' + escHtml(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'"/>' +
         '</div>' +
         '<div class="rack-card-body">' +
           '<div class="rack-card-cat">' + escHtml(p.category||'Clearance') + '</div>' +
-          '<div class="rack-card-name">' + escHtml(p.name) + '</div>' +
+          '<div class="rack-card-name" onclick="rackViewProduct(\'' + pid + '\')" style="cursor:pointer;">' + escHtml(p.name) + '</div>' +
           '<div class="rack-price-row">' +
             '<span class="rack-price-now">R ' + (p.price||0).toLocaleString() + '</span>' +
           '</div>' +
           '<span class="qty-val" style="display:none;">1</span>' +
           (hasSizes
-            ? '<button class="rack-add-btn" onclick="event.stopPropagation();openPdp(\'' + (p.id||i) + '\')">Choose Size</button>'
-            : '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">Add to Cart</button>') +
+            ? '<button class="rack-add-btn" onclick="event.stopPropagation();openPdp(\'' + pid + '\')">🛒 Choose Size</button>'
+            : '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">🛒 Add to Cart</button>') +
         '</div>';
       track.appendChild(el);
       return el;
@@ -1989,6 +1991,11 @@ function sendTelegramNotification(orderData) {
 
     rackLayout(false);
     if (!rackState.wired) wireRackCarousel();
+  }
+
+  function rackViewProduct(productId){
+    if (rackState.dragMoved) return; // was a swipe, not a tap — don't open the product
+    if (typeof openPdp === 'function') openPdp(productId);
   }
 
   function rackSpacing(){ return Math.min(window.innerWidth * 0.3, 210); }
@@ -2042,6 +2049,7 @@ function sendTelegramNotification(orderData) {
 
     viewport.addEventListener('pointerdown', function(e){
       rackState.dragging = true;
+      rackState.dragMoved = false;
       rackState.startX = e.clientX;
       rackState.startIndex = rackState.currentIndex;
       rackState.dragOffsetUnits = 0;
@@ -2051,6 +2059,7 @@ function sendTelegramNotification(orderData) {
     viewport.addEventListener('pointermove', function(e){
       if (!rackState.dragging) return;
       var dx = e.clientX - rackState.startX;
+      if (Math.abs(dx) > 6) rackState.dragMoved = true;
       rackState.dragOffsetUnits = -dx / rackSpacing();
       rackLayout(false);
     });
@@ -2060,6 +2069,8 @@ function sendTelegramNotification(orderData) {
       viewport.classList.remove('dragging');
       var rounded = Math.round(rackState.dragOffsetUnits);
       rackGoTo(rackState.startIndex + rounded);
+      // Let any click that follows this pointerup see the flag, then clear it
+      setTimeout(function(){ rackState.dragMoved = false; }, 50);
     }
     viewport.addEventListener('pointerup', endRackDrag);
     viewport.addEventListener('pointercancel', endRackDrag);
