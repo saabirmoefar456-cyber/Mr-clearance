@@ -798,11 +798,11 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
-       THIS WEEK'S RACK — 3D drag carousel. Pulls its cards from the
-       same Deals data as the deals-section further down (managed
-       from the admin panel's Deals tab). Hidden automatically when
-       there are no deals set. Real Add to Cart via the same
-       addToCart()/product-card pattern used everywhere else.
+       THIS WEEK'S RACK — 3D drag carousel. Pulls its cards straight
+       from your real Products (same data as the main grid below) —
+       no separate entry needed. Hidden automatically when there are
+       no products. Real Add to Cart / Choose Size via the same
+       addToCart()/openPdp() flow used everywhere else.
        ══════════════════════════════════════════════════════════════ -->
   <section class="rack-section" id="rack-section" style="display:none;">
     <div class="rack-header">
@@ -1167,6 +1167,7 @@
     }
     grid.innerHTML = html;
     document.getElementById('product-count').textContent = 'Showing ' + products.length + ' product' + (products.length !== 1 ? 's' : '');
+    renderProductsCarousel(products);
   }
 
   // ── IMAGE GALLERY (cards) ─────────────────────────────────────
@@ -1926,19 +1927,24 @@ function sendTelegramNotification(orderData) {
         '<div class="deal-qty-row"><div class="qty-control"><button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button></div>' +
         '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button></div></div></div>';
     }).join('');
-    renderDealsCarousel(deals);
   }
 
-  // ── THIS WEEK'S RACK (3D drag carousel, same deals data as above) ──
+  // ── THIS WEEK'S RACK (3D drag carousel) ──
+  // Pulls straight from your real Products — no separate Deals entry
+  // needed. Shows a "% OFF" tag automatically when a product has a
+  // wholesalePrice lower than price is not used for this (that's your
+  // cost, not a compare-at price) — instead it shows the product's
+  // badge text (the one you set in Add/Manage Products) as a tag, e.g.
+  // "SALE" or "20% OFF", if you've set one.
   var rackState = { cards: [], dots: [], currentIndex: 0, dragOffsetUnits: 0, dragging: false, startX: 0, startIndex: 0, wired: false };
 
-  function renderDealsCarousel(deals) {
+  function renderProductsCarousel(products) {
     var section = document.getElementById('rack-section');
     var track = document.getElementById('rack-track');
     var dotsWrap = document.getElementById('rack-dots');
     if (!section || !track || !dotsWrap) return;
 
-    if (!deals || deals.length === 0) { section.style.display = 'none'; return; }
+    if (!products || products.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
 
     track.innerHTML = '';
@@ -1946,34 +1952,35 @@ function sendTelegramNotification(orderData) {
     rackState.currentIndex = 0;
     rackState.dragOffsetUnits = 0;
 
-    rackState.cards = deals.map(function(d, i){
-      var hasOrig = d.originalPrice && d.originalPrice > d.price;
-      var pct = hasOrig ? Math.round((1 - d.price / d.originalPrice) * 100) : null;
+    rackState.cards = products.map(function(p, i){
+      var imgs = getImages(p);
+      var hasSizes = p.sizes && p.sizes.length > 0;
       var el = document.createElement('div');
       el.className = 'rack-card product-card';
-      el.setAttribute('data-name', d.name || '');
-      el.setAttribute('data-price', d.price || 0);
-      el.setAttribute('data-category', d.category || '');
+      el.setAttribute('data-name', p.name || '');
+      el.setAttribute('data-price', p.price || 0);
+      el.setAttribute('data-category', p.category || '');
       el.innerHTML =
         '<div class="rack-photo">' +
-          (pct ? '<span class="rack-discount-tag">' + pct + '% OFF</span>' : '') +
-          '<img src="' + escHtml(d.image||'') + '" alt="' + escHtml(d.name) + '" loading="lazy" onerror="this.style.display=\'none\'"/>' +
+          (p.badge ? '<span class="rack-discount-tag">' + escHtml(p.badge) + '</span>' : '') +
+          '<img src="' + escHtml(imgs[0]||'') + '" alt="' + escHtml(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'"/>' +
         '</div>' +
         '<div class="rack-card-body">' +
-          '<div class="rack-card-cat">' + escHtml(d.category||'Clearance') + '</div>' +
-          '<div class="rack-card-name">' + escHtml(d.name) + '</div>' +
+          '<div class="rack-card-cat">' + escHtml(p.category||'Clearance') + '</div>' +
+          '<div class="rack-card-name">' + escHtml(p.name) + '</div>' +
           '<div class="rack-price-row">' +
-            '<span class="rack-price-now">R ' + (d.price||0).toLocaleString() + '</span>' +
-            (hasOrig ? '<span class="rack-price-was">R ' + d.originalPrice.toLocaleString() + '</span>' : '') +
+            '<span class="rack-price-now">R ' + (p.price||0).toLocaleString() + '</span>' +
           '</div>' +
           '<span class="qty-val" style="display:none;">1</span>' +
-          '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">Add to Cart</button>' +
+          (hasSizes
+            ? '<button class="rack-add-btn" onclick="event.stopPropagation();openPdp(\'' + (p.id||i) + '\')">Choose Size</button>'
+            : '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">Add to Cart</button>') +
         '</div>';
       track.appendChild(el);
       return el;
     });
 
-    rackState.dots = deals.map(function(){
+    rackState.dots = products.map(function(){
       var d = document.createElement('div');
       d.className = 'rack-dot';
       dotsWrap.appendChild(d);
