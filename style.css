@@ -708,13 +708,19 @@ body {
   border-color:transparent;
 }
 .rack-card .rack-photo{
-  height:56%; position:relative; overflow:hidden; background:var(--bg);
+  height:56%; position:relative; overflow:hidden; background:var(--bg); cursor:pointer;
 }
 .rack-card .rack-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
 .rack-discount-tag{
   position:absolute; top:8px; right:-5px; background:var(--kraft); color:var(--ink);
   font-weight:800; font-size:11px; padding:3px 10px; transform:rotate(4deg);
   border-radius:3px; box-shadow:0 6px 14px rgba(0,0,0,0.3); font-family:var(--font-tag);
+}
+.rack-view-pill{
+  position:absolute; bottom:8px; left:8px; background:rgba(22,22,20,0.72); color:#fff;
+  font-family:var(--font-tag); font-size:10px; font-weight:700; letter-spacing:0.3px;
+  padding:4px 10px; border-radius:999px; pointer-events:none;
+  backdrop-filter:blur(2px);
 }
 .rack-card-body{ padding:10px 12px 12px; }
 .rack-card-cat{
@@ -725,15 +731,18 @@ body {
   font-size:13.5px; font-weight:800; margin-bottom:6px; line-height:1.25; color:var(--text);
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-.rack-price-row{ display:flex; align-items:baseline; gap:6px; margin-bottom:8px; }
+.rack-price-row{ display:flex; align-items:baseline; gap:6px; margin-bottom:10px; }
 .rack-price-now{ font-size:16px; font-weight:800; color:var(--red); font-family:var(--font-display); }
 .rack-price-was{ font-size:11px; color:var(--text-light); text-decoration:line-through; }
 .rack-add-btn{
-  width:100%; padding:7px 0; background:var(--red); color:#fff; border:none; border-radius:var(--radius-sm);
-  font-family:var(--font-tag); font-size:11px; font-weight:700; letter-spacing:0.4px;
-  text-transform:uppercase; cursor:pointer; transition:background 0.2s;
+  width:100%; padding:12px 0; background:var(--red); color:#fff; border:none; border-radius:6px;
+  font-family:var(--font-tag); font-size:13px; font-weight:800; letter-spacing:0.5px;
+  text-transform:uppercase; cursor:pointer; transition:background 0.2s, transform 0.15s;
+  box-shadow:0 6px 16px rgba(227,24,55,0.35);
 }
 .rack-add-btn:hover{ background:var(--red-dark); }
+.rack-add-btn:active{ transform:scale(0.97); }
+
 
 .rack-controls{ display:flex; align-items:center; justify-content:center; gap:20px; margin-top:6px; }
 .rack-nav-btn{
