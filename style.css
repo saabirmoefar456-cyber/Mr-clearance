@@ -692,6 +692,21 @@ body {
   box-shadow:0 30px 60px -20px rgba(0,0,0,0.55);
   will-change:transform, opacity;
 }
+/* The shared .product-card class (needed for addToCart/openPdp to find
+   this card) brings a "transition: transform 0.25s" + hover-lift +
+   fadeIn animation meant for the static grid. Those fight GSAP's
+   per-frame drag transform — the CSS kept trying to "ease" values GSAP
+   was already animating, which is what made dragging feel laggy
+   instead of 1:1. Cancel them here, GSAP handles all motion for these. */
+.rack-card.product-card{
+  transition:box-shadow 0.25s,border-color 0.25s;
+  animation:none;
+}
+.rack-card.product-card:hover{
+  transform:none;
+  box-shadow:0 34px 64px -18px rgba(0,0,0,0.6);
+  border-color:transparent;
+}
 .rack-card .rack-photo{
   height:56%; position:relative; overflow:hidden; background:var(--bg);
 }
