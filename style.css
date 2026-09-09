@@ -159,7 +159,7 @@ body {
 @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
 .hero {
-  min-height:420px; background:linear-gradient(160deg,#c01230 0%,#8b0a1f 100%);
+  min-height:420px; background:linear-gradient(160deg,var(--red-light) 0%,var(--red) 100%);
   display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden; padding:48px 24px;
   border-bottom:4px solid var(--ink);
@@ -636,7 +636,7 @@ body {
 
 .rack-section{
   position:relative;
-  background:var(--ink);
+  background:#3a352f; /* lighter warm charcoal than --ink — pure near-black read as too dark */
   padding: clamp(28px,5vw,48px) clamp(16px,4vw,40px) clamp(20px,4vw,36px);
   overflow:hidden;
 }
@@ -762,3 +762,15 @@ body {
 }
 @media (min-width:720px){ .rack-swipe-hint{ display:none; } }
 @media (prefers-reduced-motion: reduce){ .rack-section *{ transition:none !important; } }
+
+/* Cards were pinned at their clamp() minimum (180x240) on small phones —
+   too big relative to the screen. Scale them down further below 600px. */
+@media (max-width:600px){
+  .rack-carousel-wrap{ min-height:240px; margin:4vh auto 2vh; }
+  .rack-viewport{ height:clamp(220px,48vh,280px); }
+  .rack-card{
+    width:clamp(140px,46vw,180px); height:clamp(188px,62vw,240px);
+    margin-left:calc(clamp(140px,46vw,180px) / -2);
+    margin-top:calc(clamp(188px,62vw,240px) / -2);
+  }
+}
