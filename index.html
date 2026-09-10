@@ -60,10 +60,11 @@
     }
     .pdp-close {
       position:absolute; top:14px; right:14px;
-      background:rgba(0,0,0,0.45); border:none; color:#fff;
+      background:rgba(0,0,0,0.55); border:none; color:#fff;
       width:36px; height:36px; border-radius:50%;
-      font-size:18px; cursor:pointer; z-index:10;
+      font-size:18px; cursor:pointer; z-index:20;
       display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,0.3);
     }
     .pdp-img-main-wrap { position:relative; cursor:zoom-in; }
     .pdp-img-main {
@@ -96,6 +97,21 @@
       cursor:pointer; flex-shrink:0; transition:border-color 0.2s;
     }
     .pdp-thumb.active { border-color:#e31837; }
+
+    /* Full-screen tap-to-zoom */
+    #pdp-zoom-overlay {
+      display:none; position:fixed; inset:0; background:rgba(10,10,10,0.94);
+      z-index:400000; align-items:center; justify-content:center; padding:24px;
+      cursor:zoom-out;
+    }
+    #pdp-zoom-overlay.open { display:flex; }
+    #pdp-zoom-overlay img { max-width:100%; max-height:100%; object-fit:contain; cursor:default; }
+    .pdp-zoom-close {
+      position:absolute; top:16px; right:16px;
+      background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff;
+      width:42px; height:42px; border-radius:50%; font-size:18px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; z-index:2;
+    }
     .pdp-body { padding:18px 20px 8px; }
     .pdp-badge {
       display:inline-block; background:#e31837; color:#fff;
@@ -642,11 +658,21 @@
   </div>
 
   <!-- PRODUCT DETAIL MODAL -->
+  <div id="pdp-zoom-overlay" onclick="closePdpZoom()">
+    <button class="pdp-zoom-close" onclick="closePdpZoom()">✕</button>
+    <img id="pdp-zoom-img" src="" alt=""/>
+  </div>
   <div id="pdp-overlay" onclick="closePdpIfOutside(event)">
     <div id="pdp-modal">
       <button class="pdp-close" onclick="closePdp()">✕</button>
-      <img id="pdp-main-img" class="pdp-img-main" src="" alt=""/>
-      <div class="pdp-img-strip" id="pdp-img-strip"></div>
+      <div class="pdp-gallery">
+        <div class="pdp-img-main-wrap" onclick="openPdpZoom()">
+          <img id="pdp-main-img" class="pdp-img-main" src="" alt=""/>
+          <span class="pdp-zoom-hint">🔍 Tap to zoom</span>
+          <span class="pdp-img-counter" id="pdp-img-counter" style="display:none;"></span>
+        </div>
+        <div class="pdp-img-strip" id="pdp-img-strip"></div>
+      </div>
       <div class="pdp-body">
         <span class="pdp-badge" id="pdp-badge" style="display:none"></span>
         <h2 class="pdp-name" id="pdp-name"></h2>
@@ -1230,6 +1256,11 @@
       strip.style.display = 'flex';
       strip.innerHTML = imgs.map(function(src,i){ return '<img class="pdp-thumb' + (i===0?' active':'') + '" src="' + escHtml(src) + '" onclick="pdpSetImg(this,\'' + escHtml(src) + '\')" loading="lazy"/>'; }).join('');
     } else { strip.style.display = 'none'; strip.innerHTML = ''; }
+    var counterEl = document.getElementById('pdp-img-counter');
+    if (counterEl) {
+      if (imgs.length > 1) { counterEl.textContent = '1 / ' + imgs.length; counterEl.style.display = 'block'; }
+      else { counterEl.style.display = 'none'; }
+    }
     // Sizes
     var sizesSection = document.getElementById('pdp-sizes-section');
     if (p.sizes && p.sizes.length > 0) {
@@ -1391,6 +1422,21 @@
     document.getElementById('pdp-main-img').src = src;
     document.querySelectorAll('.pdp-thumb').forEach(function(t){ t.classList.remove('active'); });
     thumb.classList.add('active');
+    var thumbs = Array.prototype.slice.call(document.querySelectorAll('.pdp-thumb'));
+    var idx = thumbs.indexOf(thumb);
+    var counterEl = document.getElementById('pdp-img-counter');
+    if (counterEl && idx > -1) counterEl.textContent = (idx + 1) + ' / ' + thumbs.length;
+  }
+  // Tap-to-zoom — full-screen view of whatever's currently in the main
+  // image slot (kept in sync with the thumbnail strip via pdpSetImg).
+  function openPdpZoom() {
+    var src = document.getElementById('pdp-main-img').src;
+    if (!src) return;
+    document.getElementById('pdp-zoom-img').src = src;
+    document.getElementById('pdp-zoom-overlay').classList.add('open');
+  }
+  function closePdpZoom() {
+    document.getElementById('pdp-zoom-overlay').classList.remove('open');
   }
   function pdpSelectSize(btn, label) {
     if (btn.classList.contains('unavailable')) return;
@@ -1448,6 +1494,7 @@
       if (e.key==='ArrowRight') lbSlide(1); if (e.key==='ArrowLeft') lbSlide(-1);
       if (e.key==='Escape') { document.getElementById('lightbox-overlay').classList.remove('open'); document.body.style.overflow = ''; }
     }
+    if (e.key==='Escape' && document.getElementById('pdp-zoom-overlay').classList.contains('open')) { closePdpZoom(); return; }
     if (document.getElementById('pdp-overlay').classList.contains('open') && e.key==='Escape') closePdp();
   });
   var lbTouchX = 0;
