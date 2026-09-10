@@ -48,6 +48,7 @@
     @media(min-width:600px){
       #pdp-overlay { align-items:center; padding:20px; }
       #pdp-modal { border-radius:16px; max-height:90vh; }
+      .pdp-close { position:absolute; top:14px; right:14px; }
     }
     @media(min-width:900px){
       #pdp-modal {
@@ -58,8 +59,15 @@
       .pdp-gallery { position:sticky; top:0; }
       .pdp-action-bar { grid-column:1/-1; }
     }
+    /* position:fixed below 600px — #pdp-modal scrolls internally
+       (overflow-y:auto) and spans edge-to-edge on phones (no overlay
+       padding yet), so a plain position:absolute close button here
+       scrolls away with the content the moment someone reads down the
+       description. Fixed-to-viewport keeps it in place regardless.
+       At >=600px the overlay gets padding and the modal is a smaller,
+       centered box, so it switches back to being modal-relative. */
     .pdp-close {
-      position:absolute; top:14px; right:14px;
+      position:fixed; top:14px; right:14px;
       background:rgba(0,0,0,0.55); border:none; color:#fff;
       width:36px; height:36px; border-radius:50%;
       font-size:18px; cursor:pointer; z-index:20;
