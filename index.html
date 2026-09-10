@@ -472,6 +472,7 @@
     if (Array.isArray(cats) && cats.length) localStorage.setItem('mrc_categories', JSON.stringify(cats));
     if (typeof renderCategorySidebar === 'function') renderCategorySidebar();
     if (typeof renderCategoryRail === 'function') renderCategoryRail();
+    if (typeof renderShelves === 'function') renderShelves();
   });
 
   onSnapshot(doc(db, 'store_data', 'ads'), function(snap) {
@@ -823,38 +824,15 @@
   </section>
 
   <!-- ══════════════════════════════════════════════════════════════
-       THIS WEEK'S RACK — 3D drag carousel. Pulls its cards straight
-       from your real Products (same data as the main grid below) —
-       no separate entry needed. Hidden automatically when there are
-       no products. Real Add to Cart / Choose Size via the same
-       addToCart()/openPdp() flow used everywhere else.
+       SHELVES — one glass shelf per category, built straight from your
+       real Products and Categories (same data as everywhere else on
+       the site — nothing new to manage in admin). A category with no
+       products just doesn't get a shelf. Clicking a product opens the
+       existing product popup, with a smooth "grow into view" transition.
+       Hidden entirely while a search is active (search-input) or
+       there are no products yet — see renderShelves() near the bottom.
        ══════════════════════════════════════════════════════════════ -->
-  <section class="rack-section" id="rack-section" style="display:none;">
-    <div class="rack-header">
-      <div>
-        <div class="rack-brand">THIS WEEK'S <span>RACK</span></div>
-        <div class="rack-tagline">Cape Town · Online Clearance Store</div>
-      </div>
-      <div class="rack-badge-corner">
-        <strong>SWIPE TO BROWSE</strong>
-        Drag or use the arrows
-      </div>
-    </div>
-
-    <div class="rack-carousel-wrap">
-      <div class="rack-floor"></div>
-      <div class="rack-viewport" id="rack-viewport">
-        <div class="rack-track" id="rack-track"></div>
-      </div>
-    </div>
-
-    <div class="rack-controls">
-      <button class="rack-nav-btn" id="rack-prev" aria-label="Previous item">&#8592;</button>
-      <div class="rack-dots" id="rack-dots"></div>
-      <button class="rack-nav-btn" id="rack-next" aria-label="Next item">&#8594;</button>
-    </div>
-    <div class="rack-swipe-hint">&#8592; swipe to browse &#8594;</div>
-  </section>
+  <section class="shelves-section" id="shelves-section" style="display:none;"></section>
 
   <!-- AD SLOT 2 — between Hero and Products.
        Default: self-promo banner managed from the admin panel (Ads tab).
@@ -865,7 +843,7 @@
   </div>
 
   <!-- PRODUCTS -->
-  <section class="products-section">
+  <section class="products-section" style="display:none;">
     <div class="section-header">
       <h2 class="section-title">Featured Products</h2>
       <p class="product-count" id="product-count">Loading products...</p>
@@ -1192,7 +1170,7 @@
     }
     grid.innerHTML = html;
     document.getElementById('product-count').textContent = 'Showing ' + products.length + ' product' + (products.length !== 1 ? 's' : '');
-    renderProductsCarousel(products);
+    renderShelves();
   }
 
   // ── IMAGE GALLERY (cards) ─────────────────────────────────────
@@ -1305,6 +1283,8 @@
     document.body.style.overflow = '';
     pdpCurrentProduct = null; pdpSelectedSize = '';
     if (pdpReviewUnsub) { pdpReviewUnsub(); pdpReviewUnsub = null; }
+    var pdpImg = document.getElementById('pdp-main-img');
+    if (pdpImg) pdpImg.style.viewTransitionName = ''; // defensive, in case openShelfProduct's transition never settled
   }
   function closePdpIfOutside(e) { if (e.target === document.getElementById('pdp-overlay')) closePdp(); }
 
@@ -1490,6 +1470,8 @@
   // ── SEARCH & FILTER ───────────────────────────────────────────
   function filterProducts() {
     var query = document.getElementById('search-input').value.toLowerCase();
+    if (!query) { showShelvesView(); return; }
+    showSearchView();
     var category = document.getElementById('category-filter').value;
     var cards = document.querySelectorAll('#products-grid .product-card');
     var visible = 0;
@@ -1905,11 +1887,110 @@ function sendTelegramNotification(orderData) {
     }).join('');
   }
 
+  // ── SHELVES — one glass shelf per category, built from real products
+  // and real category data (same source as the sidebar/rail above).
+  // Replaces the old rack carousel and the default flat grid; the flat
+  // grid (#products-grid) is kept only for search results.
+  function renderShelves(){
+    var section = document.getElementById('shelves-section');
+    if (!section) return;
+    var cats = [];
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+      cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
+    } catch(e) { cats = DEFAULT_CATEGORIES_SITE; }
+    var products = getProducts();
+    if (!products.length) { section.innerHTML = ''; section.style.display = 'none'; return; }
+
+    var used = {};
+    var html = '';
+    cats.forEach(function(cat){
+      var items = products.filter(function(p){ return p.category === cat.key; });
+      if (!items.length) return;
+      items.forEach(function(p, i){ used[p.id || ('n' + i + p.name)] = true; });
+      html += shelfRowHtml(cat.key, cat.name, items);
+    });
+    // Products whose category doesn't match any defined category still
+    // need to be reachable — never let a real product silently vanish.
+    var orphans = products.filter(function(p, i){ return !used[p.id || ('n' + i + p.name)]; });
+    if (orphans.length) html += shelfRowHtml('more', 'More From Mr Clearance', orphans);
+
+    section.innerHTML = html;
+    section.style.display = html ? 'block' : 'none';
+    if (typeof showShelvesView === 'function' && !document.getElementById('search-input').value) showShelvesView();
+  }
+
+  function shelfRowHtml(key, name, items){
+    var itemsHtml = items.map(shelfItemHtml).join('');
+    var reflHtml = items.map(function(p){
+      return '<img src="' + escHtml(getImages(p)[0]) + '" alt="" loading="lazy"/>';
+    }).join('');
+    return '<div class="shelf-row" id="shelf-' + escHtml(key) + '">' +
+      '<div class="shelf-row-label"><h2>' + escHtml(name) + '</h2><span class="rule"></span><span class="count">' + items.length + '</span></div>' +
+      '<div class="shelf-items">' + itemsHtml + '</div>' +
+      '<div class="shelf-surface"><div class="shelf-reflection">' + reflHtml + '</div><div class="shelf-glass"></div></div>' +
+    '</div>';
+  }
+
+  function shelfItemHtml(p, i){
+    var pid = p.id || i;
+    var img = getImages(p)[0];
+    return '<button class="shelf-item" type="button" onclick="openShelfProduct(\'' + pid + '\', this)">' +
+      '<div class="shelf-item-plate"><img src="' + escHtml(img) + '" alt="' + escHtml(p.name) + '" loading="lazy" ' +
+      'onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/></div>' +
+      '<div class="shelf-item-name">' + escHtml(p.name) + '</div>' +
+      '<div class="shelf-item-price">R ' + (p.price||0).toLocaleString() + '</div>' +
+    '</button>';
+  }
+
+  // Opens the existing product popup with a "grow into view" transition
+  // from the shelf tile that was clicked — same openPdp() as everywhere
+  // else on the site, just wrapped in the View Transition API where the
+  // browser supports it (it's ignored harmlessly where it doesn't).
+  function openShelfProduct(pid, tileEl){
+    var imgEl = tileEl.querySelector('.shelf-item-plate img');
+    var pdpImg = document.getElementById('pdp-main-img');
+    if (!document.startViewTransition) { openPdp(pid); return; }
+    if (imgEl) imgEl.style.viewTransitionName = 'shelf-pdp-photo';
+    var t = document.startViewTransition(function(){
+      if (imgEl) imgEl.style.viewTransitionName = '';
+      if (pdpImg) pdpImg.style.viewTransitionName = 'shelf-pdp-photo';
+      openPdp(pid);
+    });
+    t.finished.catch(function(){}).then(function(){ if (pdpImg) pdpImg.style.viewTransitionName = ''; });
+  }
+
+  // ── Toggle between the shelves (default browse) and the flat grid
+  // (search results only) ──
+  function showShelvesView(){
+    var shelves = document.getElementById('shelves-section');
+    var flat = document.querySelector('.products-section');
+    if (shelves) shelves.style.display = shelves.innerHTML ? 'block' : 'none';
+    if (flat) flat.style.display = 'none';
+  }
+  function showSearchView(){
+    var shelves = document.getElementById('shelves-section');
+    var flat = document.querySelector('.products-section');
+    if (shelves) shelves.style.display = 'none';
+    if (flat) flat.style.display = '';
+  }
+
   function toggleCatMenu(){ document.getElementById('cat-sidebar').classList.toggle('open'); document.getElementById('cat-overlay').classList.toggle('open'); }
   function selectCat(category){
-    document.getElementById('category-filter').value = category;
-    filterProducts(); toggleCatMenu(); showCategoryBanner(category);
-    document.querySelector('.products-section').scrollIntoView({behavior:'smooth'});
+    toggleCatMenu();
+    showCategoryBanner(category);
+    document.getElementById('search-input').value = '';
+    showShelvesView();
+    var target = category === 'all' ? document.getElementById('shelves-section') : document.getElementById('shelf-' + category);
+    if (!target) target = document.getElementById('shelves-section');
+    if (target) {
+      target.scrollIntoView({behavior:'smooth', block:'start'});
+      if (target.classList.contains('shelf-row')) {
+        target.classList.remove('flash');
+        void target.offsetWidth; // restart the animation
+        target.classList.add('flash');
+      }
+    }
   }
   function showCategoryBanner(category) {
     var banner = document.getElementById('category-banner');
@@ -2006,162 +2087,6 @@ function sendTelegramNotification(orderData) {
         '<div class="deal-qty-row"><div class="qty-control"><button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button></div>' +
         '<button class="add-btn" onclick="addToCart(this)">Add to Cart</button></div></div></div>';
     }).join('');
-  }
-
-  // ── THIS WEEK'S RACK (3D drag carousel) ──
-  // Pulls straight from your real Products — no separate Deals entry
-  // needed. Shows a "% OFF" tag automatically when a product has a
-  // wholesalePrice lower than price is not used for this (that's your
-  // cost, not a compare-at price) — instead it shows the product's
-  // badge text (the one you set in Add/Manage Products) as a tag, e.g.
-  // "SALE" or "20% OFF", if you've set one.
-  var rackState = { cards: [], dots: [], currentIndex: 0, dragOffsetUnits: 0, dragging: false, startX: 0, startIndex: 0, wired: false };
-
-  function renderProductsCarousel(products) {
-    var section = document.getElementById('rack-section');
-    var track = document.getElementById('rack-track');
-    var dotsWrap = document.getElementById('rack-dots');
-    if (!section || !track || !dotsWrap) return;
-
-    if (!products || products.length === 0) { section.style.display = 'none'; return; }
-    section.style.display = '';
-
-    track.innerHTML = '';
-    dotsWrap.innerHTML = '';
-    rackState.currentIndex = 0;
-    rackState.dragOffsetUnits = 0;
-
-    rackState.cards = products.map(function(p, i){
-      var imgs = getImages(p);
-      var hasSizes = p.sizes && p.sizes.length > 0;
-      var pid = p.id || i;
-      var el = document.createElement('div');
-      el.className = 'rack-card product-card';
-      el.setAttribute('data-name', p.name || '');
-      el.setAttribute('data-price', p.price || 0);
-      el.setAttribute('data-category', p.category || '');
-      el.innerHTML =
-        '<div class="rack-photo" onclick="rackViewProduct(\'' + pid + '\')">' +
-          (p.badge ? '<span class="rack-discount-tag">' + escHtml(p.badge) + '</span>' : '') +
-          '<span class="rack-view-pill">👁 View</span>' +
-          '<img src="' + escHtml(imgs[0]||'') + '" alt="' + escHtml(p.name) + '" loading="lazy" onerror="this.style.display=\'none\'"/>' +
-        '</div>' +
-        '<div class="rack-card-body">' +
-          '<div class="rack-card-cat">' + escHtml(p.category||'Clearance') + '</div>' +
-          '<div class="rack-card-name" onclick="rackViewProduct(\'' + pid + '\')" style="cursor:pointer;">' + escHtml(p.name) + '</div>' +
-          '<div class="rack-price-row">' +
-            '<span class="rack-price-now">R ' + (p.price||0).toLocaleString() + '</span>' +
-          '</div>' +
-          '<span class="qty-val" style="display:none;">1</span>' +
-          (hasSizes
-            ? '<button class="rack-add-btn" onclick="event.stopPropagation();openPdp(\'' + pid + '\')">🛒 Choose Size</button>'
-            : '<button class="rack-add-btn" onclick="event.stopPropagation();addToCart(this)">🛒 Add to Cart</button>') +
-        '</div>';
-      track.appendChild(el);
-      return el;
-    });
-
-    rackState.dots = products.map(function(){
-      var d = document.createElement('div');
-      d.className = 'rack-dot';
-      dotsWrap.appendChild(d);
-      return d;
-    });
-
-    rackLayout(false);
-    if (!rackState.wired) wireRackCarousel();
-  }
-
-  function rackViewProduct(productId){
-    if (rackState.dragMoved) return; // was a swipe, not a tap — don't open the product
-    if (typeof openPdp === 'function') openPdp(productId);
-  }
-
-  function rackSpacing(){ return Math.min(window.innerWidth * 0.3, 210); }
-
-  function rackLayout(animate){
-    var spacing = rackSpacing();
-    var isMobile = window.innerWidth < 720;
-    var rotAngle = isMobile ? 24 : 34;
-
-    rackState.cards.forEach(function(el, i){
-      var offset = (i - rackState.currentIndex) - rackState.dragOffsetUnits;
-      var absOff = Math.abs(offset);
-      var props = {
-        x: offset * spacing,
-        z: -absOff * 130,
-        rotationY: -offset * rotAngle,
-        scale: Math.max(1 - absOff * 0.16, 0.55),
-        opacity: absOff > 3.2 ? 0 : Math.max(1 - absOff * 0.32, 0),
-        transformPerspective: 1400,
-        zIndex: Math.round(100 - absOff * 10),
-        overwrite: 'auto'
-      };
-      if (window.gsap) {
-        if (animate) gsap.to(el, Object.assign({ duration:0.55, ease:'power3.out' }, props));
-        else gsap.set(el, props);
-      } else {
-        el.style.transform = 'translate(-50%,-50%) translateX(' + props.x + 'px)';
-        el.style.opacity = props.opacity;
-        el.style.zIndex = props.zIndex;
-      }
-    });
-
-    rackState.dots.forEach(function(d, i){ d.classList.toggle('active', i === rackState.currentIndex); });
-  }
-
-  function rackGoTo(i){
-    rackState.currentIndex = Math.max(0, Math.min(rackState.cards.length - 1, i));
-    rackState.dragOffsetUnits = 0;
-    rackLayout(true);
-  }
-
-  function wireRackCarousel(){
-    rackState.wired = true;
-    var viewport = document.getElementById('rack-viewport');
-    var prevBtn = document.getElementById('rack-prev');
-    var nextBtn = document.getElementById('rack-next');
-    if (!viewport) return;
-
-    prevBtn.addEventListener('click', function(){ rackGoTo(rackState.currentIndex - 1); });
-    nextBtn.addEventListener('click', function(){ rackGoTo(rackState.currentIndex + 1); });
-
-    viewport.addEventListener('pointerdown', function(e){
-      rackState.dragging = true;
-      rackState.dragMoved = false;
-      rackState.startX = e.clientX;
-      rackState.startIndex = rackState.currentIndex;
-      rackState.dragOffsetUnits = 0;
-      viewport.classList.add('dragging');
-      viewport.setPointerCapture(e.pointerId);
-    });
-    viewport.addEventListener('pointermove', function(e){
-      if (!rackState.dragging) return;
-      var dx = e.clientX - rackState.startX;
-      if (Math.abs(dx) > 6) rackState.dragMoved = true;
-      rackState.dragOffsetUnits = -dx / rackSpacing();
-      rackLayout(false);
-    });
-    function endRackDrag(){
-      if (!rackState.dragging) return;
-      rackState.dragging = false;
-      viewport.classList.remove('dragging');
-      var rounded = Math.round(rackState.dragOffsetUnits);
-      rackGoTo(rackState.startIndex + rounded);
-      // Let any click that follows this pointerup see the flag, then clear it
-      setTimeout(function(){ rackState.dragMoved = false; }, 50);
-    }
-    viewport.addEventListener('pointerup', endRackDrag);
-    viewport.addEventListener('pointercancel', endRackDrag);
-    viewport.addEventListener('pointerleave', function(){ if (rackState.dragging) endRackDrag(); });
-
-    viewport.setAttribute('tabindex', '0');
-    viewport.addEventListener('keydown', function(e){
-      if (e.key === 'ArrowRight') rackGoTo(rackState.currentIndex + 1);
-      if (e.key === 'ArrowLeft') rackGoTo(rackState.currentIndex - 1);
-    });
-
-    window.addEventListener('resize', function(){ rackLayout(false); });
   }
 
   // ── AD SLOTS ──────────────────────────────────────────────────
