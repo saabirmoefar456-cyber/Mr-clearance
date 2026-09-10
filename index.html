@@ -471,6 +471,7 @@
     var cats = snap.exists() ? snap.data().value : null;
     if (Array.isArray(cats) && cats.length) localStorage.setItem('mrc_categories', JSON.stringify(cats));
     if (typeof renderCategorySidebar === 'function') renderCategorySidebar();
+    if (typeof renderCategoryRail === 'function') renderCategoryRail();
   });
 
   onSnapshot(doc(db, 'store_data', 'ads'), function(snap) {
@@ -803,6 +804,15 @@
   <div class="activity-ticker" id="activity-ticker" style="display:none;">
     <div class="ticker-track" id="ticker-track"></div>
   </div>
+
+  <!-- CATEGORY RAIL — quick-browse tiles built from the same category
+       data as the sidebar (renderCategorySidebar) and admin's category
+       manager. Icon is whatever emoji the owner set per category, in a
+       solid red tile rather than raw text so it reads as a deliberate
+       icon set. Hidden automatically when there are no categories. -->
+  <section class="cat-rail-section" id="cat-rail-section" style="display:none;">
+    <div class="cat-rail" id="cat-rail"></div>
+  </section>
 
   <!-- ══════════════════════════════════════════════════════════════
        THIS WEEK'S RACK — 3D drag carousel. Pulls its cards straight
@@ -1456,7 +1466,7 @@
   // ── LOADER ────────────────────────────────────────────────────
   function hideLoader() { var l = document.getElementById('loader'); if (l) { l.style.opacity='0'; setTimeout(function(){ l.style.display='none'; }, 600); } }
   setTimeout(hideLoader, 2000);
-  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderAds(); renderCategorySidebar(); setupPdpStarInput(); };
+  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderAds(); renderCategorySidebar(); renderCategoryRail(); setupPdpStarInput(); };
 
   // ── TOAST ─────────────────────────────────────────────────────
   function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2800); }
@@ -1867,6 +1877,24 @@ function sendTelegramNotification(orderData) {
       cats.map(function(c){
         return '<li onclick="selectCat(\'' + c.key + '\')">' + (c.icon||'') + ' ' + escHtml(c.name) + '</li>';
       }).join('');
+  }
+
+  function renderCategoryRail() {
+    var cats = [];
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+      cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
+    } catch(e) { cats = DEFAULT_CATEGORIES_SITE; }
+    var section = document.getElementById('cat-rail-section');
+    var rail = document.getElementById('cat-rail');
+    if (!rail || !section) return;
+    if (!cats.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    rail.innerHTML = cats.map(function(c){
+      return '<div class="cat-rail-item" onclick="selectCat(\'' + c.key + '\')">' +
+        '<span class="cat-rail-icon">' + (c.icon||'🏷️') + '</span>' +
+        '<span class="cat-rail-label">' + escHtml(c.name) + '</span></div>';
+    }).join('');
   }
 
   function toggleCatMenu(){ document.getElementById('cat-sidebar').classList.toggle('open'); document.getElementById('cat-overlay').classList.toggle('open'); }
