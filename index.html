@@ -2051,24 +2051,44 @@ function sendTelegramNotification(orderData) {
     var photoBox = document.getElementById('hero-visual-photo');
     var tagBox = document.getElementById('hero-visual-tag');
     if (!photoBox || !tagBox) return;
-    var placeholderSvg = '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#d8d5cc" stroke-width="1.3"><rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="8.5" cy="10" r="1.5"/><path d="M3 16l5-5 4 4 3-3 5 5"/></svg>';
 
+    function showPlaceholder(){
+      photoBox.innerHTML = '';
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width','52'); svg.setAttribute('height','52'); svg.setAttribute('viewBox','0 0 24 24');
+      svg.setAttribute('fill','none'); svg.setAttribute('stroke','#d8d5cc'); svg.setAttribute('stroke-width','1.3');
+      svg.innerHTML = '<rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="8.5" cy="10" r="1.5"/><path d="M3 16l5-5 4 4 3-3 5 5"/>';
+      photoBox.appendChild(svg);
+    }
+
+    // Owner can pin a specific product via Admin -> Hero -> Featured
+    // Product (see renderHeroFromSettings); falls back to the top
+    // deal, then the first product.
+    var products = getProducts();
     var deals = [];
     try { deals = JSON.parse(localStorage.getItem('mrc_deals') || '[]'); } catch(e) {}
-    var source = deals[0];
+    var featuredId = window._heroFeaturedProductId || '';
+
+    var source = null;
+    if (featuredId) source = products.find(function(p){ return String(p.id) === String(featuredId); }) || null;
+    if (!source) source = deals[0] || null;
     var pct = null;
     if (source && source.originalPrice && source.originalPrice > source.price) {
       pct = Math.round((1 - source.price / source.originalPrice) * 100);
     }
-    if (!source) {
-      var products = getProducts();
-      source = products.length ? products[0] : null;
-    }
+    if (!source) source = products.length ? products[0] : null;
 
     var img = source ? (source.image || (source.images && source.images[0]) || '') : '';
-    photoBox.innerHTML = img
-      ? '<img src="' + escHtml(img) + '" alt="' + escHtml(source.name||'') + '" onerror="this.parentElement.innerHTML=\'' + placeholderSvg.replace(/'/g,"\\'") + '\'"/>'
-      : placeholderSvg;
+    if (!img) { showPlaceholder(); }
+    else {
+      photoBox.innerHTML = '';
+      var imgEl = document.createElement('img');
+      imgEl.src = img;
+      imgEl.alt = source.name || '';
+      imgEl.onerror = showPlaceholder;
+      photoBox.appendChild(imgEl);
+    }
 
     if (pct && pct > 0) {
       tagBox.textContent = 'Up to ' + pct + '% Off';
@@ -2230,7 +2250,8 @@ function sendTelegramNotification(orderData) {
         { value: 24,  suffix: 'hr', label: 'Order Turnaround' }
       ],
       tickerEnabled: false,
-      tickerItems: []
+      tickerItems: [],
+      featuredProductId: ''
     };
 
     function escHeroHtml(s){
@@ -2291,6 +2312,13 @@ function sendTelegramNotification(orderData) {
           track.innerHTML = '';
         }
       }
+
+      // Owner's pinned "featured in the hero" product, set from
+      // Admin -> Hero -> Featured Product. Stashed on window so
+      // renderHeroVisual() (called from several places) can read it
+      // without needing this settings object threaded through.
+      window._heroFeaturedProductId = s.featuredProductId || '';
+      if (typeof renderHeroVisual === 'function') renderHeroVisual();
     }
 
     function animateHeroStats() {

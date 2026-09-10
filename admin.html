@@ -1170,6 +1170,11 @@
         <label>Subtitle</label>
         <input type="text" id="hero-subtitle" placeholder="e.g. Handpicked clearance products delivered to your door" maxlength="100"/>
       </div>
+      <div class="form-group">
+        <label>Featured Product (the photo shown in the hero)</label>
+        <select id="hero-featured-product"><option value="">-- Auto (today's top deal, or your first product) --</option></select>
+        <p style="font-size:11px;color:var(--text-light);margin:6px 0 0;">Pick a product to always show here, or leave on Auto to let it follow your deals.</p>
+      </div>
 
       <div class="form-group" style="display:flex;align-items:center;gap:10px;">
         <input type="checkbox" id="hero-urgency-enabled" style="width:18px;height:18px;cursor:pointer;"/>
@@ -1879,6 +1884,7 @@
       renderProductList();
       renderDashboard();
       populateDealProductPicker();
+      populateHeroProductPicker();
     } catch(e) { console.error('Firebase load error:', e); }
   }
 
@@ -1917,7 +1923,8 @@
       { value: 24,  suffix: 'hr', label: 'Order Turnaround' }
     ],
     tickerEnabled: false,
-    tickerItems: []
+    tickerItems: [],
+    featuredProductId: ''
   };
 
   function fillHeroForm(s) {
@@ -1925,6 +1932,8 @@
     document.getElementById('hero-title').value = s.title || '';
     document.getElementById('hero-title-accent').value = s.titleAccent || '';
     document.getElementById('hero-subtitle').value = s.subtitle || '';
+    var featuredSel = document.getElementById('hero-featured-product');
+    if (featuredSel) featuredSel.value = s.featuredProductId || '';
     document.getElementById('hero-urgency-enabled').checked = !!s.urgencyEnabled;
     document.getElementById('hero-urgency-text').value = s.urgencyText || '';
 
@@ -1963,6 +1972,7 @@
       title: document.getElementById('hero-title').value.trim() || HERO_FORM_DEFAULTS.title,
       titleAccent: document.getElementById('hero-title-accent').value.trim() || HERO_FORM_DEFAULTS.titleAccent,
       subtitle: document.getElementById('hero-subtitle').value.trim() || HERO_FORM_DEFAULTS.subtitle,
+      featuredProductId: document.getElementById('hero-featured-product').value,
       urgencyEnabled: document.getElementById('hero-urgency-enabled').checked,
       urgencyText: document.getElementById('hero-urgency-text').value.trim() || HERO_FORM_DEFAULTS.urgencyText,
       trustItems: [
@@ -2637,6 +2647,16 @@
     var products = getProducts();
     var current = sel.value;
     sel.innerHTML = '<option value="">-- Choose a product to base this deal on --</option>' +
+      products.map(function(p){ return '<option value="' + escAdminHtml(p.id) + '">' + escAdminHtml(p.name) + ' (R' + (p.price||0).toLocaleString() + ')</option>'; }).join('');
+    if (current) sel.value = current;
+  }
+
+  function populateHeroProductPicker() {
+    var sel = document.getElementById('hero-featured-product');
+    if (!sel) return;
+    var products = getProducts();
+    var current = sel.value;
+    sel.innerHTML = '<option value="">-- Auto (today\'s top deal, or your first product) --</option>' +
       products.map(function(p){ return '<option value="' + escAdminHtml(p.id) + '">' + escAdminHtml(p.name) + ' (R' + (p.price||0).toLocaleString() + ')</option>'; }).join('');
     if (current) sel.value = current;
   }
