@@ -539,8 +539,8 @@ body {
   .hero-grid { grid-template-columns:1fr; gap:24px; text-align:center; }
   .hero-content { text-align:center; }
   .hero-btns { justify-content:center; }
-  .hero-visual { max-width:200px; margin:0 auto; }
-  .hero-visual-photo { height:170px; }
+  .hero-visual { max-width:280px; margin:0 auto; }
+  .hero-visual-photo { height:230px; }
   .hero-title { font-size:30px; }
   .hero-subtitle { font-size:14px; }
   .cta-btn { padding:12px 28px; font-size:13px; }
@@ -771,9 +771,10 @@ body {
 .shelf-reflection img{ width:100%; aspect-ratio:1/1; object-fit:contain; transform:scaleY(-1); border-radius:8px; }
 
 @media (max-width:600px){
-  .shelves-section{ padding:32px 16px 8px; }
-  .shelf-items, .shelf-reflection{ grid-template-columns:repeat(3,1fr); gap:16px 10px; }
+  .shelves-section{ padding:32px 10px 8px; }
+  .shelf-items, .shelf-reflection{ grid-template-columns:repeat(3,1fr); gap:14px 8px; }
   .shelf-item-plate{ margin-bottom:8px; }
-  .shelf-item-name{ font-size:11px; }
-  .shelf-item-price{ font-size:12px; }
+  .shelf-item-plate img{ padding:4px; }
+  .shelf-item-name{ font-size:12px; }
+  .shelf-item-price{ font-size:13px; }
 }
