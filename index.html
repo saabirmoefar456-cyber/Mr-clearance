@@ -1980,13 +1980,10 @@ function sendTelegramNotification(orderData) {
 
   function shelfRowHtml(key, name, items){
     var itemsHtml = items.map(shelfItemHtml).join('');
-    var reflHtml = items.map(function(p){
-      return '<img src="' + escHtml(getImages(p)[0]) + '" alt="" loading="lazy"/>';
-    }).join('');
     return '<div class="shelf-row" id="shelf-' + escHtml(key) + '">' +
       '<div class="shelf-row-label"><h2>' + escHtml(name) + '</h2><span class="rule"></span><span class="count">' + items.length + '</span></div>' +
       '<div class="shelf-items">' + itemsHtml + '</div>' +
-      '<div class="shelf-surface"><div class="shelf-reflection">' + reflHtml + '</div><div class="shelf-glass"></div></div>' +
+      '<div class="shelf-surface"><div class="shelf-glass"></div></div>' +
     '</div>';
   }
 
