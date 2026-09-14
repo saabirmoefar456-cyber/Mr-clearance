@@ -869,6 +869,7 @@
        Hidden entirely while a search is active (search-input) or
        there are no products yet — see renderShelves() near the bottom.
        ══════════════════════════════════════════════════════════════ -->
+  <p id="shelves-tagline" style="display:none;text-align:center;font-family:var(--font-tag);font-size:13px;font-weight:600;letter-spacing:0.5px;color:var(--ink);opacity:0.7;margin:0 auto 18px;padding:0 16px;"></p>
   <section class="shelves-section" id="shelves-section" style="display:none;"></section>
 
   <!-- AD SLOT 2 — between Hero and Products.
@@ -1958,33 +1959,93 @@ function sendTelegramNotification(orderData) {
       cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
     } catch(e) { cats = DEFAULT_CATEGORIES_SITE; }
     var products = getProducts();
-    if (!products.length) { section.innerHTML = ''; section.style.display = 'none'; return; }
+    var taglineEl = document.getElementById('shelves-tagline');
+    if (!products.length) {
+      section.innerHTML = ''; section.style.display = 'none';
+      if (taglineEl) taglineEl.style.display = 'none';
+      return;
+    }
+    var settings = window._shelfSettings || {};
 
     var used = {};
     var html = '';
     cats.forEach(function(cat){
+      if (cat.theme && cat.theme.shelfHidden) return;
       var items = products.filter(function(p){ return p.category === cat.key; });
       if (!items.length) return;
       items.forEach(function(p, i){ used[p.id || ('n' + i + p.name)] = true; });
-      html += shelfRowHtml(cat.key, cat.name, items);
+      html += shelfRowHtml(cat.key, cat.name, items, settings.itemLimit);
     });
-    // Products whose category doesn't match any defined category still
-    // need to be reachable — never let a real product silently vanish.
+    // Products whose category doesn't match any defined category (or
+    // whose category's shelf is hidden) still need to be reachable —
+    // never let a real product silently vanish.
     var orphans = products.filter(function(p, i){ return !used[p.id || ('n' + i + p.name)]; });
-    if (orphans.length) html += shelfRowHtml('more', 'More From Mr Clearance', orphans);
+    if (orphans.length) html += shelfRowHtml('more', settings.catchallTitle || 'More From Mr Clearance', orphans, settings.itemLimit);
 
     section.innerHTML = html;
     section.style.display = html ? 'block' : 'none';
+    if (taglineEl) {
+      if (html && settings.tagline) { taglineEl.textContent = settings.tagline; taglineEl.style.display = 'block'; }
+      else { taglineEl.style.display = 'none'; }
+    }
     if (typeof showShelvesView === 'function' && !document.getElementById('search-input').value) showShelvesView();
   }
 
-  function shelfRowHtml(key, name, items){
-    var itemsHtml = items.map(shelfItemHtml).join('');
+  function shelfRowHtml(key, name, items, limit){
+    var shown = items;
+    var remaining = 0;
+    if (limit && items.length > limit) {
+      shown = items.slice(0, limit);
+      remaining = items.length - limit;
+    }
+    var itemsHtml = shown.map(shelfItemHtml).join('');
+    if (remaining > 0) itemsHtml += shelfViewAllHtml(key, remaining);
     return '<div class="shelf-row" id="shelf-' + escHtml(key) + '">' +
       '<div class="shelf-row-label"><h2>' + escHtml(name) + '</h2><span class="rule"></span><span class="count">' + items.length + '</span></div>' +
       '<div class="shelf-items">' + itemsHtml + '</div>' +
       '<div class="shelf-surface"><div class="shelf-glass"></div></div>' +
     '</div>';
+  }
+
+  function shelfViewAllHtml(key, remaining){
+    return '<button class="shelf-item shelf-item-viewall" type="button" onclick="viewFullCategory(\'' + escHtml(key) + '\')">' +
+      '<div class="shelf-item-plate" style="display:flex;align-items:center;justify-content:center;">' +
+        '<span style="font-family:var(--font-tag);font-weight:700;font-size:13px;color:var(--red);text-align:center;padding:0 8px;">View All<br/>+' + remaining + ' more</span>' +
+      '</div>' +
+    '</button>';
+  }
+
+  // Used by the shelf's "View All" tile when a category has more products
+  // than the admin's "Products Per Shelf" limit — reuses the existing flat
+  // grid + category-filter dropdown rather than building a second grid.
+  function viewFullCategory(key){
+    // The "more"/catch-all shelf isn't a real category — it's whatever
+    // products don't match any current category key — so it's filtered
+    // differently from a normal shelf.
+    var knownKeys = null;
+    if (key === 'more') {
+      try {
+        var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+        var cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
+        knownKeys = {}; cats.forEach(function(c){ knownKeys[c.key] = true; });
+      } catch(e) { knownKeys = {}; }
+    }
+    var catFilter = document.getElementById('category-filter');
+    if (catFilter && !knownKeys) catFilter.value = key;
+    document.getElementById('search-input').value = '';
+    showSearchView();
+    var cards = document.querySelectorAll('#products-grid .product-card');
+    var visible = 0;
+    cards.forEach(function(card){
+      var cat = card.getAttribute('data-category') || '';
+      var ok = knownKeys ? !knownKeys[cat] : (cat === key);
+      card.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    document.getElementById('product-count').textContent = 'Showing ' + visible + ' product' + (visible !== 1 ? 's' : '');
+    document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    if (!knownKeys) applyCategoryTheme(key);
+    document.querySelector('.products-section').scrollIntoView({behavior:'smooth', block:'start'});
   }
 
   function shelfItemHtml(p, i){
@@ -2131,7 +2192,10 @@ function sendTelegramNotification(orderData) {
     }
     if (!source) source = products.length ? products[0] : null;
 
-    var img = source ? (source.image || (source.images && source.images[0]) || '') : '';
+    // A custom photo uploaded via Admin -> Hero always wins over the
+    // product photo — it's for lifestyle shots/banner graphics that
+    // aren't tied to any single product.
+    var img = window._heroCustomImage || (source ? (source.image || (source.images && source.images[0]) || '') : '');
     if (!img) { showPlaceholder(); }
     else {
       photoBox.innerHTML = '';
@@ -2303,7 +2367,8 @@ function sendTelegramNotification(orderData) {
       ],
       tickerEnabled: false,
       tickerItems: [],
-      featuredProductId: ''
+      featuredProductId: '',
+      customImage: ''
     };
 
     function escHeroHtml(s){
@@ -2370,6 +2435,7 @@ function sendTelegramNotification(orderData) {
       // renderHeroVisual() (called from several places) can read it
       // without needing this settings object threaded through.
       window._heroFeaturedProductId = s.featuredProductId || '';
+      window._heroCustomImage = s.customImage || '';
       if (typeof renderHeroVisual === 'function') renderHeroVisual();
     }
 
@@ -2424,6 +2490,23 @@ function sendTelegramNotification(orderData) {
     }
     if (window.firebaseReady) { initHeroFromFirebase(); }
     else { window.addEventListener('firebase-ready', initHeroFromFirebase); }
+
+    // ── SHELF SETTINGS — Admin -> Categories -> Homepage Shelves
+    // (products-per-shelf limit, catch-all shelf title, tagline). Same
+    // load-then-live-sync pattern as the hero settings above.
+    var SHELF_SETTINGS_DEFAULTS = { itemLimit: null, catchallTitle: 'More From Mr Clearance', tagline: '' };
+    window._shelfSettings = SHELF_SETTINGS_DEFAULTS;
+    function applyShelfSettings(saved) {
+      window._shelfSettings = Object.assign({}, SHELF_SETTINGS_DEFAULTS, saved || {});
+      if (typeof renderShelves === 'function') renderShelves();
+    }
+    function initShelfSettingsFromFirebase() {
+      if (!window.fbGetStoreData) return;
+      window.fbGetStoreData('shelfSettings').then(applyShelfSettings).catch(function(){});
+      if (window.fbListenStoreData) window.fbListenStoreData('shelfSettings', applyShelfSettings);
+    }
+    if (window.firebaseReady) { initShelfSettingsFromFirebase(); }
+    else { window.addEventListener('firebase-ready', initShelfSettingsFromFirebase); }
   })();
   </script>
 

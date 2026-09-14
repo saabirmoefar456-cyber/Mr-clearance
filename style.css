@@ -746,6 +746,7 @@ body {
 }
 .shelf-item-plate img{ width:100%; height:100%; object-fit:contain; padding:8px; }
 .shelf-item:hover .shelf-item-plate{ transform:translateY(-4px); box-shadow:var(--shadow-md); }
+.shelf-item-viewall .shelf-item-plate{ background:#fff; border:1.5px dashed var(--red); }
 .shelf-item-name{
   font-size:13.5px; font-weight:700; color:var(--text); line-height:1.3; margin-bottom:4px;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
