@@ -690,6 +690,12 @@
         <textarea id="f-specs" placeholder="Material:100% Cotton&#10;Colour:Black&#10;Care:Machine wash cold" style="min-height:90px;"></textarea>
       </div>
 
+      <div class="form-group">
+        <label>Bundle With (optional)</label>
+        <p style="font-size:11px;color:var(--text-light);margin:-2px 0 6px;">Shown as "Frequently Bought Together" on this product's page, with a one-tap "Add Bundle to Cart". Hold Ctrl (Cmd on Mac) to pick more than one.</p>
+        <select id="f-bundle-with" multiple size="5" style="width:100%;background:#f5f5f5;border:2px solid #e0e0e0;border-radius:8px;padding:8px;font-family:'Nunito Sans',sans-serif;font-size:13px;color:#1a1a1a;"></select>
+      </div>
+
       <!-- PHOTO UPLOAD -->
       <div class="form-group">
         <div class="photo-section">
@@ -1952,6 +1958,7 @@
       renderDashboard();
       populateDealProductPicker();
       populateHeroProductPicker();
+      populateBundleWithPicker(editingId);
     } catch(e) { console.error('Firebase load error:', e); }
   }
 
@@ -2369,6 +2376,7 @@
     document.getElementById('f-specs').value      = '';
     document.getElementById('f-desc').value     = '';
     document.getElementById('f-category').value = 'footwear';
+    populateBundleWithPicker(null);
     document.getElementById('url-input-row').classList.remove('visible');
     currentImages = [];
     renderPreviews();
@@ -2399,7 +2407,8 @@
     var sizeGuide = sgRaw ? sgRaw.split('\n').map(function(row){ return row.split(',').map(function(c){return c.trim();}); }).filter(function(r){return r.length>0;}) : [];
     var specsRaw = document.getElementById('f-specs').value.trim();
     var specs = specsRaw ? specsRaw.split('\n').map(function(s){ var parts=s.split(':'); return parts.length>=2?{key:parts[0].trim(),value:parts.slice(1).join(':').trim()}:null; }).filter(Boolean) : [];
-    var productData = { name:name, price:price, wholesalePrice:wholesalePrice, stock:stock, category:category, badge:badge, images:images, desc:desc, sizes:sizes, sizeGuide:sizeGuide, specs:specs };
+    var bundleWith = Array.prototype.slice.call(document.getElementById('f-bundle-with').selectedOptions).map(function(o){ return o.value; }).filter(function(id){ return id !== String(editingId); });
+    var productData = { name:name, price:price, wholesalePrice:wholesalePrice, stock:stock, category:category, badge:badge, images:images, desc:desc, sizes:sizes, sizeGuide:sizeGuide, specs:specs, bundleWith:bundleWith };
     if (editingId !== null) {
       window.fbUpdateProduct(editingId, productData).then(function(){
         showToast('✅ Product updated!');
@@ -2433,6 +2442,9 @@
     document.getElementById('f-sizes').value      = p.sizes ? p.sizes.map(function(s){ return s.label+(s.unavailable?'❌':''); }).join('\n') : '';
     document.getElementById('f-size-guide').value = p.sizeGuide ? p.sizeGuide.map(function(r){ return r.join(','); }).join('\n') : '';
     document.getElementById('f-specs').value      = p.specs ? p.specs.map(function(s){ return s.key+':'+s.value; }).join('\n') : '';
+    populateBundleWithPicker(id);
+    var bundleWith = Array.isArray(p.bundleWith) ? p.bundleWith.map(String) : [];
+    Array.prototype.forEach.call(document.getElementById('f-bundle-with').options, function(o){ o.selected = bundleWith.indexOf(o.value) !== -1; });
     var imgs = p.images || (p.image ? [p.image] : []);
     currentImages = imgs.map(function(src){ return { src:src }; });
     renderPreviews();
@@ -2803,6 +2815,16 @@
     sel.innerHTML = '<option value="">-- Auto (today\'s top deal, or your first product) --</option>' +
       products.map(function(p){ return '<option value="' + escAdminHtml(p.id) + '">' + escAdminHtml(p.name) + ' (R' + (p.price||0).toLocaleString() + ')</option>'; }).join('');
     if (current) sel.value = current;
+  }
+
+  // Fills the "Bundle With" multi-select in the Add/Edit Product form —
+  // every other product, excluding whichever one is currently being
+  // edited (a product can't be bundled with itself).
+  function populateBundleWithPicker(excludeId) {
+    var sel = document.getElementById('f-bundle-with');
+    if (!sel) return;
+    var products = getProducts().filter(function(p){ return String(p.id) !== String(excludeId); });
+    sel.innerHTML = products.map(function(p){ return '<option value="' + escAdminHtml(p.id) + '">' + escAdminHtml(p.name) + ' (R' + (p.price||0).toLocaleString() + ')</option>'; }).join('');
   }
 
   function loadDealFromProduct(productId) {
