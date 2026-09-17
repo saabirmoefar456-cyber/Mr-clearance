@@ -1,0 +1,98 @@
+rules_version = '2';
+
+// Mr Clearance — Firestore security rules
+//
+// This file is NOT auto-deployed by pushing to GitHub — Firestore rules
+// only take effect once you paste them into Firebase Console -> Firestore
+// Database -> Rules -> Publish (or run `firebase deploy --only
+// firestore:rules` if you have the Firebase CLI set up). Keeping this
+// file in the repo just means there's one real source of truth to check
+// against, instead of the rules only existing in the console where
+// nobody can see if they've drifted from what the code actually needs.
+//
+// Derived directly from every read/write call in index.html, admin.html
+// and loyalty-card.html — see the collection-by-collection comments below
+// for why each rule is shaped the way it is.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner, Mum and Dad each sign in with their own real Firebase Auth
+    // account. A write only succeeds if it genuinely came from one of
+    // these three addresses — not from anyone who viewed page source,
+    // since the client-side "role" badges in admin.html are just UI,
+    // not security.
+    function isStaff() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          'owner@mrclearance.co.za',
+          'mum@mrclearance.co.za',
+          'dad@mrclearance.co.za'
+        ];
+    }
+
+    // Products — every visitor needs to browse the catalog; only staff
+    // can add/edit/delete a product.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Store-wide content: categories, ads, deals, about page, hero
+    // settings, shelf settings — one doc per key under store_data/.
+    // The storefront reads these live; only staff edit them from Admin.
+    match /store_data/{key} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Orders — checkout works for guests (not just logged-in customers),
+    // so creating an order must stay open to everyone. Reading the order
+    // list and updating status (Admin -> Orders) is staff-only. Nothing
+    // in the app ever deletes an order, so that stays closed.
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update: if isStaff();
+      allow delete: if false;
+    }
+
+    // Reviews — public read/write (anyone can leave a review without
+    // logging in), with basic shape checks so a write at least has to
+    // look like a real review (valid 1-5 rating, references a product)
+    // rather than accepting arbitrary junk. Only staff can remove one
+    // (Admin -> Reviews moderation) and reviews are never edited after
+    // the fact, only deleted.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.resource.data.rating is int
+                     && request.resource.data.rating >= 1
+                     && request.resource.data.rating <= 5
+                     && request.resource.data.productId is string;
+      allow update: if false;
+      allow delete: if isStaff();
+    }
+
+    // Customer profiles — a signed-in shopper can only ever read/write
+    // their OWN profile (doc id == their auth uid). Staff can read every
+    // profile for the Customers tab, and remove one if needed.
+    match /customers/{uid} {
+      allow read, write: if isStaff() || (request.auth != null && request.auth.uid == uid);
+    }
+
+    // Loyalty cards — the public sign-up page (loyalty-card.html) creates
+    // a card with no login required, then reads that exact card straight
+    // back by its known ID to show the card number/QR. "get" (fetch one
+    // known doc) stays public for that; "list" (enumerate every card) is
+    // staff-only, so a stranger can't browse everyone's loyalty cards.
+    // Only staff add stamps, redeem, or delete a card.
+    match /loyaltyCards/{cardId} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
+
+    // Anything not explicitly listed above is closed by default (the
+    // implicit Firestore behavior when no match block applies).
+  }
+}
