@@ -2504,6 +2504,7 @@
               '<span class="product-price">R ' + p.price.toLocaleString() + '</span>' +
               '<span class="product-cat">' + p.category + '</span>' +
               (p.badge ? '<span class="product-badge-label">' + p.badge + '</span>' : '') +
+              (Array.isArray(p.bundleWith) && p.bundleWith.length ? '<span style="font-size:11px;color:var(--text-light);font-weight:700;">🔗 Bundled with ' + p.bundleWith.length + '</span>' : '') +
             '</div>' +
           '</div>' +
           '<div class="item-actions">' +

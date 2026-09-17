@@ -1505,11 +1505,19 @@
     var wishBtn = document.getElementById('pdp-wishlist-btn');
     if (wishBtn) { wishBtn.textContent = isWishlisted(p.id||pid) ? '♥' : '♡'; wishBtn.classList.toggle('active', isWishlisted(p.id||pid)); }
 
-    // WhatsApp enquiry link, prefilled with this specific product
+    // WhatsApp enquiry link, prefilled with this specific product. Uses
+    // the number set in Admin -> About Page (same one the About modal's
+    // WhatsApp link uses) so it's admin-editable in one place — falls
+    // back to the order-notification number if that field is empty.
     var waBtn = document.getElementById('pdp-whatsapp-btn');
     if (waBtn) {
       var waMsg = 'Hi! I have a question about this product: ' + p.name + ' (R' + (p.price||0).toLocaleString() + ') on Mr Clearance.';
-      waBtn.href = 'https://wa.me/' + OWNER_WHATSAPP + '?text=' + encodeURIComponent(waMsg);
+      var waNumber = OWNER_WHATSAPP;
+      try {
+        var aboutData = JSON.parse(localStorage.getItem('mrc_about') || 'null');
+        if (aboutData && aboutData.whatsapp) waNumber = aboutData.whatsapp.replace(/\D/g, '');
+      } catch(e) {}
+      waBtn.href = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(waMsg);
     }
 
     // Track for "Recently Viewed" — most-recent-first, capped, deduped
