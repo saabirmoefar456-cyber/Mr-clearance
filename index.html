@@ -2608,13 +2608,29 @@ function sendTelegramNotification(orderData) {
     var img = window._heroCustomImage || (source ? (source.image || (source.images && source.images[0]) || '') : '');
     if (!img) { showPlaceholder(); }
     else {
-      photoBox.innerHTML = '';
-      var imgEl = document.createElement('img');
-      imgEl.fetchPriority = 'high'; // almost always the largest image on first paint
-      imgEl.src = img;
-      imgEl.alt = source.name || '';
-      imgEl.onerror = showPlaceholder;
-      photoBox.appendChild(imgEl);
+      // renderHeroVisual() runs several times during page load as each
+      // data source (cache, then Firebase) resolves. If the answer is
+      // the same photo we're already showing, touching the DOM again
+      // just causes a needless flicker — skip it. When the answer
+      // genuinely changes (e.g. no cached hero settings yet, so the
+      // very first guess differs from the real one once Firebase
+      // answers), fade the new photo in rather than popping it in.
+      var existingImg = photoBox.querySelector('img');
+      if (!existingImg || existingImg.src !== img) {
+        photoBox.innerHTML = '';
+        var imgEl = document.createElement('img');
+        imgEl.fetchPriority = 'high'; // almost always the largest image on first paint
+        imgEl.style.opacity = '0';
+        imgEl.style.transition = 'opacity 0.25s ease';
+        imgEl.src = img;
+        imgEl.alt = source.name || '';
+        imgEl.onerror = showPlaceholder;
+        imgEl.onload = function(){ imgEl.style.opacity = '1'; };
+        photoBox.appendChild(imgEl);
+        // Already cached/decoded (same URL loaded earlier this session) —
+        // onload may not fire again, so don't leave it stuck invisible.
+        if (imgEl.complete) imgEl.style.opacity = '1';
+      }
     }
 
     if (pct && pct > 0) {
@@ -2962,6 +2978,13 @@ function sendTelegramNotification(orderData) {
       window._heroFeaturedProductId = s.featuredProductId || '';
       window._heroCustomImage = s.customImage || '';
       if (typeof renderHeroVisual === 'function') renderHeroVisual();
+
+      // Cache the real (non-default) settings so next visit's very first
+      // paint already knows the right featured product/photo, instead of
+      // guessing blind and then visibly swapping once Firebase answers —
+      // that swap is exactly what looked like "the old photo appears,
+      // then the right one appears" on repeat visits.
+      if (saved) { try { localStorage.setItem('mrc_hero_settings', JSON.stringify(saved)); } catch(e) {} }
     }
 
     function animateHeroStats() {
@@ -3004,8 +3027,14 @@ function sendTelegramNotification(orderData) {
       el.textContent = h + ':' + m + ':' + sec;
     }, 1000);
 
-    // Paint defaults immediately so the hero never appears empty while Firebase connects
-    renderHeroFromSettings(null);
+    // Paint immediately from whatever we already know — last time's real
+    // settings if this browser has visited before (so the featured photo
+    // is right from frame one, no flash/swap), falling back to defaults
+    // only on a genuine first-ever visit so the hero never appears empty
+    // while Firebase connects.
+    var cachedHeroSettings = null;
+    try { cachedHeroSettings = JSON.parse(localStorage.getItem('mrc_hero_settings') || 'null'); } catch(e) {}
+    renderHeroFromSettings(cachedHeroSettings);
 
     // Then load + live-sync the owner's saved hero settings
     function initHeroFromFirebase() {
