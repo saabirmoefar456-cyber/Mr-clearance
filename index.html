@@ -26,6 +26,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="flavicon/apple-touch-icon.png"/>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e31837'/%3E%3Ctext x='50' y='68' font-family='Arial, sans-serif' font-weight='900' font-size='50' fill='white' text-anchor='middle'%3EMC%3C/text%3E%3C/svg%3E"/>
 
+  <!-- PWA: lets a phone "Add to Home Screen" and open the store like an app -->
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#e31837"/>
+
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -696,18 +700,21 @@
       </div>
       <div class="pdp-body">
         <span class="pdp-badge" id="pdp-badge" style="display:none"></span>
+        <button class="pdp-wishlist-btn" id="pdp-wishlist-btn" type="button" onclick="toggleWishlist(pdpCurrentProduct && (pdpCurrentProduct.id||''), this)" aria-label="Save to wishlist">♡</button>
         <h2 class="pdp-name" id="pdp-name"></h2>
         <div class="pdp-rating-row" id="pdp-rating-row" onclick="scrollToPdpReviews()" style="display:none;">
           <span class="stars-mini" id="pdp-rating-row-stars"></span>
           <span id="pdp-rating-row-text"></span>
         </div>
         <div class="pdp-price" id="pdp-price"></div>
+        <div class="low-stock-badge" id="pdp-stock-badge" style="display:none;"></div>
         <div class="pdp-trust-strip">
           <span>🚚 Fast PAXI / PUDO Delivery</span>
           <span>🔒 Secure PayFast Checkout</span>
           <span>↩️ Easy Returns</span>
         </div>
         <p class="pdp-desc" id="pdp-desc"></p>
+        <a id="pdp-whatsapp-btn" class="pdp-whatsapp-btn" target="_blank" rel="noopener">💬 Ask About This Product on WhatsApp</a>
 
         <div id="pdp-sizes-section" style="display:none;margin-top:16px;">
           <span class="pdp-section-label">Select Size: <strong id="pdp-selected-size-label" style="color:#e31837;"></strong></span>
@@ -721,6 +728,17 @@
         <div id="pdp-specs-section" class="pdp-card-section" style="display:none;margin-top:16px;">
           <span class="pdp-section-label">Product Details</span>
           <table class="pdp-specs-table" id="pdp-specs-table"></table>
+        </div>
+
+        <div id="pdp-bundle-section" style="display:none;margin-top:16px;">
+          <span class="pdp-section-label">Frequently Bought Together</span>
+          <div class="pdp-bundle-items" id="pdp-bundle-items"></div>
+          <button class="pdp-bundle-add-btn" id="pdp-bundle-add-btn" onclick="pdpAddBundleToCart()">🛒 Add Bundle to Cart</button>
+        </div>
+
+        <div id="pdp-related-section" style="display:none;margin-top:20px;">
+          <span class="pdp-section-label">You Might Also Like</span>
+          <div class="pdp-related-items" id="pdp-related-items"></div>
         </div>
 
         <div class="pdp-divider"></div>
@@ -750,7 +768,7 @@
           <span class="pdp-qty-val" id="pdp-qty">1</span>
           <button onclick="pdpChangeQty(1)">+</button>
         </div>
-        <button class="pdp-add-btn" onclick="pdpAddToCart()">🛒 Add to Cart</button>
+        <button class="pdp-add-btn" id="pdp-add-btn" onclick="pdpAddToCart()">🛒 Add to Cart</button>
       </div>
     </div>
   </div>
@@ -769,6 +787,24 @@
   <!-- CATEGORY BANNER -->
   <div id="category-banner"></div>
 
+  <!-- SMART ASSISTANT — free, rule-based product finder. Runs entirely
+       in the browser against the real product catalog: no API key, no
+       backend, no per-message cost, nothing to abuse. See
+       parseAssistantQuery() near the bottom of this file. -->
+  <button id="smart-assistant-btn" onclick="toggleSmartAssistant()" aria-label="Open shopping assistant">💬</button>
+  <div id="smart-assistant-panel">
+    <div class="sa-header">
+      <span>🛍️ Shopping Assistant</span>
+      <button onclick="toggleSmartAssistant()" aria-label="Close">✕</button>
+    </div>
+    <div class="sa-messages" id="sa-messages"></div>
+    <div class="sa-suggestions" id="sa-suggestions"></div>
+    <form class="sa-input-row" onsubmit="event.preventDefault();sendAssistantQuery();">
+      <input type="text" id="sa-input" placeholder="e.g. gift under R300"/>
+      <button type="submit">➤</button>
+    </form>
+  </div>
+
   <!-- NAVBAR -->
   <nav class="navbar">
     <div class="nav-left">
@@ -785,6 +821,7 @@
     <div class="nav-right">
       <input type="text" id="search-input" class="nav-search" placeholder="🔍 Search products..." oninput="filterProducts()"/>
       <button class="nav-user-btn" id="nav-user-btn" onclick="openAuthModal()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:7px 14px;border-radius:6px;font-family:'Nunito Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">👤 Login</button>
+      <div class="wishlist-icon" onclick="viewWishlist()" title="Your Wishlist">♡ <span class="wishlist-count" id="wishlist-count">0</span></div>
       <div class="cart-icon" onclick="toggleCart()">🛒 <span class="cart-count" id="cart-count">0</span></div>
     </div>
   </nav>
@@ -898,6 +935,15 @@
     <div class="section-header">
       <h2 class="section-title">Featured Products</h2>
       <p class="product-count" id="product-count">Loading products...</p>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <select id="filter-category" onchange="document.getElementById('category-filter').value=this.value;filterProducts();">
+        <option value="all">🛍️ All Categories</option>
+      </select>
+      <input type="number" id="filter-price-min" placeholder="Min R" min="0" oninput="filterProducts()"/>
+      <input type="number" id="filter-price-max" placeholder="Max R" min="0" oninput="filterProducts()"/>
+      <label class="filter-instock-label"><input type="checkbox" id="filter-instock" onchange="filterProducts()"/> In stock only</label>
+      <button type="button" class="filter-clear-btn" onclick="clearFilters()">✕ Clear</button>
     </div>
     <div class="products-grid" id="products-grid"></div>
     <p class="no-results" id="no-results" style="display:none;">😕 No products found. Try a different search.</p>
@@ -1172,6 +1218,186 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // Stock is optional per product (older/legacy products may never have
+  // had a number set) — only treat it as meaningful when it's an actual
+  // number, never when it's missing/undefined, so a product nobody has
+  // ever tracked stock for is never wrongly shown as sold out.
+  var LOW_STOCK_THRESHOLD = 5;
+  function stockInfo(p) {
+    var n = (typeof p.stock === 'number') ? p.stock : null;
+    return { tracked: n !== null, soldOut: n === 0, low: n !== null && n > 0 && n <= LOW_STOCK_THRESHOLD, count: n };
+  }
+
+  // ── SKELETON LOADING PLACEHOLDERS ───────────────────────────────
+  function skeletonCardsHtml(n) {
+    var card = '<div class="product-card skeleton-card"><div class="card-img-wrap skeleton-shimmer"></div><div class="card-body">' +
+      '<div class="skeleton-line" style="width:80%;height:16px;"></div><div class="skeleton-line" style="width:100%;height:12px;"></div>' +
+      '<div class="skeleton-line" style="width:40%;height:20px;"></div></div></div>';
+    var out = '';
+    for (var i = 0; i < n; i++) out += card;
+    return out;
+  }
+  function renderShelvesSkeleton() {
+    var section = document.getElementById('shelves-section');
+    if (!section || section.innerHTML) return; // never clobber real content that already loaded
+    var tile = '<div class="shelf-item"><div class="shelf-item-plate skeleton-shimmer"></div>' +
+      '<div class="skeleton-line" style="width:80%;"></div><div class="skeleton-line" style="width:40%;"></div></div>';
+    var row = '<div class="shelf-row"><div class="shelf-row-label"><div class="skeleton-line" style="width:140px;height:22px;"></div></div>' +
+      '<div class="shelf-items">' + tile.repeat(4) + '</div></div>';
+    section.innerHTML = row + row;
+    section.style.display = 'block';
+  }
+  renderShelvesSkeleton();
+
+  // ── WISHLIST — client-side only (localStorage), a heart on any
+  // product tile/PDP toggles membership. No account required. ──────
+  function getWishlist() {
+    try { var raw = JSON.parse(localStorage.getItem('mrc_wishlist') || '[]'); return Array.isArray(raw) ? raw : []; } catch(e) { return []; }
+  }
+  function isWishlisted(pid) { return getWishlist().indexOf(String(pid)) !== -1; }
+  function wishlistBtnHtml(pid) {
+    var active = isWishlisted(pid);
+    return '<span class="wishlist-btn' + (active?' active':'') + '" onclick="event.stopPropagation();toggleWishlist(\'' + escHtml(String(pid)) + '\', this)" role="button" tabindex="0" aria-label="Save to wishlist">' + (active?'♥':'♡') + '</span>';
+  }
+  function toggleWishlist(pid, el) {
+    if (pid === '' || pid == null) return;
+    pid = String(pid);
+    var list = getWishlist();
+    var idx = list.indexOf(pid);
+    var nowActive;
+    if (idx === -1) { list.push(pid); nowActive = true; } else { list.splice(idx, 1); nowActive = false; }
+    localStorage.setItem('mrc_wishlist', JSON.stringify(list));
+    showToast(nowActive ? '❤️ Saved to your wishlist' : '💔 Removed from wishlist');
+    if (el) { el.textContent = nowActive ? '♥' : '♡'; el.classList.toggle('active', nowActive); }
+    var pdpBtn = document.getElementById('pdp-wishlist-btn');
+    if (pdpBtn && pdpCurrentProduct && String(pdpCurrentProduct.id) === pid) {
+      pdpBtn.textContent = nowActive ? '♥' : '♡'; pdpBtn.classList.toggle('active', nowActive);
+    }
+    updateWishlistCount();
+  }
+  function updateWishlistCount() {
+    var el = document.getElementById('wishlist-count');
+    if (el) el.textContent = getWishlist().length;
+  }
+  var NO_RESULTS_DEFAULT_TEXT = '😕 No products found. Try a different search.';
+  function viewWishlist() {
+    var ids = getWishlist();
+    document.getElementById('search-input').value = '';
+    var catSel = document.getElementById('filter-category');
+    if (catSel) catSel.value = 'all';
+    document.getElementById('category-filter').value = 'all';
+    document.getElementById('filter-price-min').value = '';
+    document.getElementById('filter-price-max').value = '';
+    document.getElementById('filter-instock').checked = false;
+    showSearchView();
+    var cards = document.querySelectorAll('#products-grid .product-card');
+    var visible = 0;
+    cards.forEach(function(card){
+      var ok = ids.indexOf(String(card.getAttribute('data-id'))) !== -1;
+      card.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    document.getElementById('product-count').textContent = visible ? ('Showing ' + visible + ' saved item' + (visible !== 1 ? 's' : '')) : 'Your wishlist';
+    var noResults = document.getElementById('no-results');
+    noResults.textContent = visible === 0 ? '🤍 No saved items yet — tap the heart on any product to save it here.' : NO_RESULTS_DEFAULT_TEXT;
+    noResults.style.display = visible === 0 ? 'block' : 'none';
+    document.querySelector('.products-section').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  // ── RECENTLY VIEWED — tracked in openPdp(), most-recent-first ───
+  function getRecentlyViewed() {
+    try { var raw = JSON.parse(localStorage.getItem('mrc_recently_viewed') || '[]'); return Array.isArray(raw) ? raw : []; } catch(e) { return []; }
+  }
+  function trackRecentlyViewed(pid) {
+    pid = String(pid);
+    var list = getRecentlyViewed().filter(function(id){ return id !== pid; });
+    list.unshift(pid);
+    if (list.length > 12) list = list.slice(0, 12);
+    localStorage.setItem('mrc_recently_viewed', JSON.stringify(list));
+  }
+
+  // ── "YOU MIGHT ALSO LIKE" — same category first, falls back to any
+  // other product; simple, no tracking/personalization beyond that ──
+  function renderPdpRelated(p, products) {
+    var section = document.getElementById('pdp-related-section');
+    var wrap = document.getElementById('pdp-related-items');
+    if (!section || !wrap) return;
+    var pool = products.filter(function(x){ return String(x.id) !== String(p.id) && x.category === p.category; });
+    if (pool.length < 2) pool = products.filter(function(x){ return String(x.id) !== String(p.id); });
+    if (!pool.length) { section.style.display = 'none'; wrap.innerHTML = ''; return; }
+    var picks = pool.slice(0, 10).sort(function(){ return Math.random() - 0.5; }).slice(0, 4);
+    wrap.innerHTML = picks.map(function(x, i){ return shelfItemHtml(x, i); }).join('');
+    section.style.display = 'block';
+  }
+
+  // ── BUNDLES — admin picks other products to suggest alongside this
+  // one (Admin -> Manage Products -> "Bundle With"); purely optional ──
+  function renderPdpBundle(p, products) {
+    var section = document.getElementById('pdp-bundle-section');
+    var wrap = document.getElementById('pdp-bundle-items');
+    if (!section || !wrap) return;
+    var ids = Array.isArray(p.bundleWith) ? p.bundleWith : [];
+    var items = ids.map(function(id){ return products.find(function(x){ return String(x.id) === String(id); }); }).filter(Boolean);
+    if (!items.length) { section.style.display = 'none'; wrap.innerHTML = ''; return; }
+    wrap.innerHTML = items.map(function(x){
+      var img = getImages(x)[0];
+      return '<label class="pdp-bundle-item">' +
+        '<input type="checkbox" class="pdp-bundle-check" data-name="' + escHtml(x.name) + '" data-price="' + (x.price||0) + '" data-image="' + escHtml(img) + '" checked/>' +
+        '<img src="' + escHtml(img) + '" alt="' + escHtml(x.name) + '" loading="lazy"/>' +
+        '<span class="pdp-bundle-item-name">' + escHtml(x.name) + '</span>' +
+        '<span class="pdp-bundle-item-price">+R ' + (x.price||0).toLocaleString() + '</span>' +
+      '</label>';
+    }).join('');
+    section.style.display = 'block';
+  }
+  function pdpAddBundleToCart() {
+    if (!pdpCurrentProduct) return;
+    pdpAddToCart();
+    var checks = document.querySelectorAll('#pdp-bundle-items .pdp-bundle-check:checked');
+    checks.forEach(function(c){
+      var name = c.getAttribute('data-name');
+      var price = parseInt(c.getAttribute('data-price'), 10) || 0;
+      var image = c.getAttribute('data-image') || '';
+      var existing = cart.find(function(i){ return i.name === name; });
+      if (existing) existing.qty += 1; else cart.push({ name:name, price:price, qty:1, image:image });
+    });
+    updateCartUI();
+    showToast('✅ Bundle added to cart!');
+  }
+
+  // ── SEO — Product/ItemList structured data (JSON-LD), refreshed on
+  // every render so it always matches what's actually live ──────────
+  function updateProductsJsonLd(products) {
+    try {
+      var tag = document.getElementById('products-jsonld');
+      if (!tag) {
+        tag = document.createElement('script');
+        tag.type = 'application/ld+json';
+        tag.id = 'products-jsonld';
+        document.head.appendChild(tag);
+      }
+      var items = products.slice(0, 50).map(function(p, i){
+        var stock = stockInfo(p);
+        return {
+          '@type': 'ListItem', position: i + 1,
+          item: {
+            '@type': 'Product',
+            name: p.name,
+            image: getImages(p)[0],
+            description: p.desc || undefined,
+            offers: {
+              '@type': 'Offer',
+              price: p.price || 0,
+              priceCurrency: 'ZAR',
+              availability: stock.soldOut ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
+            }
+          }
+        };
+      });
+      tag.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: items });
+    } catch(e) { console.error('JSON-LD update failed:', e); }
+  }
+
   // ── RENDER PRODUCTS ───────────────────────────────────────────
   function renderProducts() {
     var products = getProducts();
@@ -1179,8 +1405,7 @@
     if (!grid) return;
     if (products.length === 0) {
       var stillLoading = !window.mrcProductsLoaded && !localStorage.getItem('mrc_products');
-      grid.innerHTML = stillLoading
-        ? '<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:#999;font-size:14px;font-weight:600;">🛍️ Loading products…</div>'
+      grid.innerHTML = stillLoading ? skeletonCardsHtml(6)
         : '<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:#999;font-size:14px;font-weight:600;">No products yet — check back soon!</div>';
       document.getElementById('product-count').textContent = stillLoading ? 'Loading…' : 'No products yet';
       return;
@@ -1192,7 +1417,8 @@
       var delay = (i * 0.08).toFixed(2);
       var cid = 'card-' + (p.id || i);
       var hasSizes = p.sizes && p.sizes.length > 0;
-      html += '<div class="product-card" id="' + cid + '" data-name="' + escHtml(p.name) + '" data-price="' + p.price + '" data-category="' + (p.category||'') + '" data-id="' + (p.id||i) + '" data-img-idx="0" data-imgs=\'' + JSON.stringify(imgs).replace(/'/g,"&#39;") + '\' style="animation-delay:' + delay + 's">';
+      var stock = stockInfo(p);
+      html += '<div class="product-card' + (stock.soldOut?' sold-out':'') + '" id="' + cid + '" data-name="' + escHtml(p.name) + '" data-price="' + p.price + '" data-category="' + (p.category||'') + '" data-id="' + (p.id||i) + '" data-img-idx="0" data-imgs=\'' + JSON.stringify(imgs).replace(/'/g,"&#39;") + '\' style="animation-delay:' + delay + 's">';
       html += '<div class="card-img-wrap" onclick="openPdp(\'' + (p.id||i) + '\')">';
       html += '<img src="' + escHtml(imgs[0]) + '" alt="' + escHtml(p.name) + '" class="card-img" id="img-' + cid + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/>';
       if (imgs.length > 1) {
@@ -1205,21 +1431,27 @@
       }
       if (p.badge) html += '<span class="badge-sale">' + escHtml(p.badge) + '</span>';
       if (hasSizes) html += '<span style="position:absolute;top:10px;right:10px;background:var(--ink);color:#fff;font-family:var(--font-tag);font-size:9px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;pointer-events:none;text-transform:uppercase;">Sizes</span>';
+      html += wishlistBtnHtml(p.id||i);
+      if (stock.soldOut) html += '<div class="sold-out-ribbon">Sold Out</div>';
       html += '</div>';
       html += '<div class="card-body">';
       html += '<h3>' + escHtml(p.name) + '</h3>';
       html += '<p>' + escHtml(p.desc||'') + '</p>';
       html += '<span class="price">R ' + (p.price||0).toLocaleString() + '</span>';
+      if (stock.low) html += '<div class="low-stock-badge">🔥 Only ' + stock.count + ' left!</div>';
       if (p.reviewCount) {
         html += '<div class="card-rating"><span class="stars-mini">' + starsString(p.avgRating||0) + '</span> (' + p.reviewCount + ')</div>';
       }
       html += '<div class="qty-row"><div class="qty-control">';
       html += '<button onclick="changeCardQty(this,-1)">−</button><span class="qty-val">1</span><button onclick="changeCardQty(this,1)">+</button>';
       html += '</div>';
-      html += '<button class="add-btn" onclick="event.stopPropagation();openPdp(\'' + (p.id||i) + '\')">' + (hasSizes ? 'Choose Size' : 'Add to Cart') + '</button>';
+      html += stock.soldOut
+        ? '<button class="add-btn" disabled style="opacity:0.5;cursor:not-allowed;">Sold Out</button>'
+        : '<button class="add-btn" onclick="event.stopPropagation();openPdp(\'' + (p.id||i) + '\')">' + (hasSizes ? 'Choose Size' : 'Add to Cart') + '</button>';
       html += '</div></div></div>';
     }
     grid.innerHTML = html;
+    updateProductsJsonLd(products);
     document.getElementById('product-count').textContent = 'Showing ' + products.length + ' product' + (products.length !== 1 ? 's' : '');
     renderShelves();
   }
@@ -1272,6 +1504,38 @@
     document.getElementById('pdp-qty').textContent   = '1';
     var badgeEl = document.getElementById('pdp-badge');
     if (p.badge) { badgeEl.textContent = p.badge; badgeEl.style.display = 'inline-block'; } else { badgeEl.style.display = 'none'; }
+
+    // Stock badge + sold-out handling
+    var stock = stockInfo(p);
+    var stockBadgeEl = document.getElementById('pdp-stock-badge');
+    if (stock.low) { stockBadgeEl.textContent = '🔥 Only ' + stock.count + ' left!'; stockBadgeEl.style.display = 'block'; }
+    else { stockBadgeEl.style.display = 'none'; }
+    var addBtn = document.getElementById('pdp-add-btn');
+    if (stock.soldOut) { addBtn.disabled = true; addBtn.textContent = 'Sold Out'; addBtn.style.opacity = '0.5'; addBtn.style.cursor = 'not-allowed'; }
+    else { addBtn.disabled = false; addBtn.textContent = '🛒 Add to Cart'; addBtn.style.opacity = ''; addBtn.style.cursor = ''; }
+
+    // Wishlist heart state
+    var wishBtn = document.getElementById('pdp-wishlist-btn');
+    if (wishBtn) { wishBtn.textContent = isWishlisted(p.id||pid) ? '♥' : '♡'; wishBtn.classList.toggle('active', isWishlisted(p.id||pid)); }
+
+    // WhatsApp enquiry link, prefilled with this specific product. Uses
+    // the number set in Admin -> About Page (same one the About modal's
+    // WhatsApp link uses) so it's admin-editable in one place — falls
+    // back to the order-notification number if that field is empty.
+    var waBtn = document.getElementById('pdp-whatsapp-btn');
+    if (waBtn) {
+      var waMsg = 'Hi! I have a question about this product: ' + p.name + ' (R' + (p.price||0).toLocaleString() + ') on Mr Clearance.';
+      var waNumber = OWNER_WHATSAPP;
+      try {
+        var aboutData = JSON.parse(localStorage.getItem('mrc_about') || 'null');
+        if (aboutData && aboutData.whatsapp) waNumber = aboutData.whatsapp.replace(/\D/g, '');
+      } catch(e) {}
+      waBtn.href = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(waMsg);
+    }
+
+    // Track for "Recently Viewed" — most-recent-first, capped, deduped
+    trackRecentlyViewed(p.id||pid);
+
     // Image strip
     var strip = document.getElementById('pdp-img-strip');
     if (imgs.length > 1) {
@@ -1305,6 +1569,9 @@
       specsSection.style.display = 'block';
       document.getElementById('pdp-specs-table').innerHTML = p.specs.map(function(s){ return '<tr><td>' + escHtml(s.key) + '</td><td>' + escHtml(s.value) + '</td></tr>'; }).join('');
     } else { specsSection.style.display = 'none'; }
+
+    renderPdpBundle(p, products);
+    renderPdpRelated(p, products);
 
     // Reviews
     pdpSelectedRating = 0;
@@ -1490,8 +1757,9 @@
       }
       var qty  = parseInt(document.getElementById('pdp-qty').textContent);
       var name = p.name + (pdpSelectedSize ? ' (' + pdpSelectedSize + ')' : '');
+      var image = getImages(p)[0] || '';
       var existing = cart.find(function(i){ return i.name === name; });
-      if (existing) existing.qty += qty; else cart.push({ name:name, price:p.price, qty:qty });
+      if (existing) existing.qty += qty; else cart.push({ name:name, price:p.price, qty:qty, image:image });
       updateCartUI();
       showToast('✅ ' + qty + 'x ' + name + ' added!');
       closePdp(); toggleCart();
@@ -1544,7 +1812,7 @@
   // ── LOADER ────────────────────────────────────────────────────
   function hideLoader() { var l = document.getElementById('loader'); if (l) { l.style.opacity='0'; setTimeout(function(){ l.style.display='none'; }, 600); } }
   setTimeout(hideLoader, 2000);
-  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderHeroVisual(); renderAds(); renderCategorySidebar(); renderCategoryRail(); setupPdpStarInput(); };
+  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderHeroVisual(); renderAds(); renderCategorySidebar(); renderCategoryRail(); setupPdpStarInput(); updateWishlistCount(); restoreCartFromStorage(); registerServiceWorker(); };
 
   // ── TOAST ─────────────────────────────────────────────────────
   function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2800); }
@@ -1558,23 +1826,59 @@
   }
 
   // ── SEARCH & FILTER ───────────────────────────────────────────
+  // Any active filter (category/price/in-stock) counts as "browsing",
+  // even with an empty search box, so the filter bar actually does
+  // something once a shopper touches it instead of only reacting to text.
+  function hasActiveFilters() {
+    var cat = document.getElementById('category-filter');
+    var min = document.getElementById('filter-price-min');
+    var max = document.getElementById('filter-price-max');
+    var inStock = document.getElementById('filter-instock');
+    return (cat && cat.value !== 'all') || (min && min.value) || (max && max.value) || (inStock && inStock.checked);
+  }
+
   function filterProducts() {
     var query = document.getElementById('search-input').value.toLowerCase();
-    if (!query) { showShelvesView(); return; }
+    if (!query && !hasActiveFilters()) { showShelvesView(); return; }
     showSearchView();
     var category = document.getElementById('category-filter').value;
+    var minPrice = parseFloat(document.getElementById('filter-price-min').value);
+    var maxPrice = parseFloat(document.getElementById('filter-price-max').value);
+    var inStockOnly = document.getElementById('filter-instock').checked;
     var cards = document.querySelectorAll('#products-grid .product-card');
+    var products = getProducts();
     var visible = 0;
     cards.forEach(function(card) {
       var name = (card.getAttribute('data-name')||'').toLowerCase();
       var cat  = card.getAttribute('data-category')||'';
-      var ok   = name.indexOf(query) !== -1 && (category === 'all' || cat === category);
+      var price = parseFloat(card.getAttribute('data-price')) || 0;
+      var ok = name.indexOf(query) !== -1 && (category === 'all' || cat === category);
+      if (ok && !isNaN(minPrice)) ok = price >= minPrice;
+      if (ok && !isNaN(maxPrice)) ok = price <= maxPrice;
+      if (ok && inStockOnly) {
+        var id = card.getAttribute('data-id');
+        var prod = products.find(function(p){ return String(p.id) === String(id); });
+        ok = !prod || !stockInfo(prod).soldOut;
+      }
       card.style.display = ok ? '' : 'none';
       if (ok) visible++;
     });
     document.getElementById('product-count').textContent = 'Showing ' + visible + ' product' + (visible !== 1 ? 's' : '');
-    document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    var noResults = document.getElementById('no-results');
+    noResults.textContent = NO_RESULTS_DEFAULT_TEXT;
+    noResults.style.display = visible === 0 ? 'block' : 'none';
     applyCategoryTheme(category);
+  }
+
+  function clearFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('category-filter').value = 'all';
+    var catSel = document.getElementById('filter-category');
+    if (catSel) catSel.value = 'all';
+    document.getElementById('filter-price-min').value = '';
+    document.getElementById('filter-price-max').value = '';
+    document.getElementById('filter-instock').checked = false;
+    filterProducts();
   }
 
   // ── CATEGORY THEMING ─────────────────────────────────────────────
@@ -1664,8 +1968,10 @@
     var price = parseInt(card.getAttribute('data-price'));
     var qtyEl = card.querySelector('.qty-val');
     var qty = parseInt(qtyEl.textContent);
+    var image = '';
+    try { image = JSON.parse(card.getAttribute('data-imgs'))[0] || ''; } catch(e) {}
     var existing = cart.find(function(i){ return i.name === name; });
-    if (existing) existing.qty += qty; else cart.push({ name:name, price:price, qty:qty });
+    if (existing) existing.qty += qty; else cart.push({ name:name, price:price, qty:qty, image:image });
     updateCartUI();
     showToast('✅ ' + qty + 'x ' + name + ' added!');
     var orig = button.textContent; button.textContent = 'Added ✓'; button.style.background = '#27ae60'; qtyEl.textContent = '1';
@@ -1685,15 +1991,39 @@
     var discRow = document.getElementById('discount-row');
     if (discountPct > 0 && discount > 0) { discRow.style.display=''; document.getElementById('cart-discount').textContent = '-R ' + discount.toLocaleString(); } else { discRow.style.display='none'; }
     var itemsDiv = document.getElementById('cart-items');
+    saveCartToStorage();
     if (cart.length === 0) { itemsDiv.innerHTML = '<p class="empty-msg">Your cart is empty.</p>'; return; }
     itemsDiv.innerHTML = cart.map(function(item){
       var n = item.name.replace(/'/g,"\\'");
-      return '<div class="cart-item"><span class="item-name">' + item.name + '</span><div class="item-controls"><button onclick="changeQty(\'' + n + '\',-1)">−</button><span>' + item.qty + '</span><button onclick="changeQty(\'' + n + '\',1)">+</button></div><span class="item-price">R ' + (item.price*item.qty).toLocaleString() + '</span><button class="remove-btn" onclick="removeItem(\'' + n + '\')">🗑</button></div>';
+      var imgHtml = item.image ? '<img class="cart-item-img" src="' + escHtml(item.image) + '" alt=""/>' : '<div class="cart-item-img cart-item-img-placeholder">🛍️</div>';
+      return '<div class="cart-item">' + imgHtml + '<span class="item-name">' + item.name + '</span><div class="item-controls"><button onclick="changeQty(\'' + n + '\',-1)">−</button><span>' + item.qty + '</span><button onclick="changeQty(\'' + n + '\',1)">+</button></div><span class="item-price">R ' + (item.price*item.qty).toLocaleString() + '</span><button class="remove-btn" onclick="removeItem(\'' + n + '\')">🗑</button></div>';
     }).join('');
   }
   function changeQty(name, change) { var item = cart.find(function(i){ return i.name===name; }); if(item){ item.qty+=change; if(item.qty<=0){removeItem(name);return;} } updateCartUI(); }
   function removeItem(name) { cart = cart.filter(function(i){ return i.name!==name; }); updateCartUI(); }
+
+  // Cart survives a refresh/closed tab — it's the #1 reason a "sticky"
+  // cart feels sticky. Discount code is intentionally NOT restored, since
+  // promo validity can change between visits; the owner's items/qty are
+  // the useful part to keep.
+  function saveCartToStorage() {
+    try { localStorage.setItem('mrc_cart', JSON.stringify(cart)); } catch(e) {}
+  }
+  function restoreCartFromStorage() {
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_cart') || 'null');
+      if (Array.isArray(raw) && raw.length) { cart = raw; updateCartUI(); }
+    } catch(e) {}
+  }
   function toggleCart() { document.getElementById('cart-sidebar').classList.toggle('open'); document.getElementById('cart-overlay').classList.toggle('open'); }
+
+  // ── PWA — lets a phone "Add to Home Screen" and open the store like
+  // an app. Safe no-op if the browser doesn't support it. ──────────
+  function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function(e){ console.error('Service worker registration failed:', e); });
+    }
+  }
   function applyPromo() {
     var code = document.getElementById('promo-input').value.trim().toUpperCase();
     var msg  = document.getElementById('promo-msg');
@@ -1957,6 +2287,19 @@ function sendTelegramNotification(orderData) {
       cats.map(function(c){
         return '<li onclick="selectCat(\'' + c.key + '\')">' + (c.icon||'') + ' ' + escHtml(c.name) + '</li>';
       }).join('');
+    populateFilterCategorySelect(cats);
+  }
+
+  // Keeps the visible category dropdown in the search/filter bar in sync
+  // with real category data (same source as the sidebar above).
+  function populateFilterCategorySelect(cats) {
+    var sel = document.getElementById('filter-category');
+    if (!sel) return;
+    var current = sel.value || 'all';
+    sel.innerHTML = '<option value="all">🛍️ All Categories</option>' +
+      cats.map(function(c){ return '<option value="' + c.key + '">' + (c.icon||'') + ' ' + escHtml(c.name) + '</option>'; }).join('');
+    sel.value = current;
+    if (sel.value !== current) sel.value = 'all';
   }
 
   function renderCategoryRail() {
@@ -2000,6 +2343,14 @@ function sendTelegramNotification(orderData) {
 
     var used = {};
     var html = '';
+
+    // "Recently Viewed" always leads, when there's anything to show —
+    // it isn't counted in `used` since it's a cross-cutting view, not
+    // a real category, so a product still shows in its normal shelf too.
+    var recentIds = getRecentlyViewed();
+    var recentItems = recentIds.map(function(id){ return products.find(function(p){ return String(p.id) === id; }); }).filter(Boolean);
+    if (recentItems.length) html += shelfRowHtml('recent', '👀 Recently Viewed', recentItems, settings.itemLimit);
+
     cats.forEach(function(cat){
       if (cat.theme && cat.theme.shelfHidden) return;
       var items = products.filter(function(p){ return p.category === cat.key; });
@@ -2063,7 +2414,12 @@ function sendTelegramNotification(orderData) {
     }
     var catFilter = document.getElementById('category-filter');
     if (catFilter && !knownKeys) catFilter.value = key;
+    var filterSel = document.getElementById('filter-category');
+    if (filterSel) filterSel.value = knownKeys ? 'all' : key;
     document.getElementById('search-input').value = '';
+    document.getElementById('filter-price-min').value = '';
+    document.getElementById('filter-price-max').value = '';
+    document.getElementById('filter-instock').checked = false;
     showSearchView();
     var cards = document.querySelectorAll('#products-grid .product-card');
     var visible = 0;
@@ -2074,7 +2430,9 @@ function sendTelegramNotification(orderData) {
       if (ok) visible++;
     });
     document.getElementById('product-count').textContent = 'Showing ' + visible + ' product' + (visible !== 1 ? 's' : '');
-    document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    var noResults = document.getElementById('no-results');
+    noResults.textContent = NO_RESULTS_DEFAULT_TEXT;
+    noResults.style.display = visible === 0 ? 'block' : 'none';
     if (!knownKeys) applyCategoryTheme(key);
     document.querySelector('.products-section').scrollIntoView({behavior:'smooth', block:'start'});
   }
@@ -2082,11 +2440,16 @@ function sendTelegramNotification(orderData) {
   function shelfItemHtml(p, i){
     var pid = p.id || i;
     var img = getImages(p)[0];
-    return '<button class="shelf-item" type="button" onclick="openShelfProduct(\'' + pid + '\', this)">' +
-      '<div class="shelf-item-plate"><img src="' + escHtml(img) + '" alt="' + escHtml(p.name) + '" loading="lazy" ' +
-      'onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/></div>' +
+    var stock = stockInfo(p);
+    return '<button class="shelf-item' + (stock.soldOut?' sold-out':'') + '" type="button" onclick="openShelfProduct(\'' + pid + '\', this)">' +
+      '<div class="shelf-item-plate">' + wishlistBtnHtml(pid) +
+      '<img src="' + escHtml(img) + '" alt="' + escHtml(p.name) + '" loading="lazy" ' +
+      'onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/>' +
+      (stock.soldOut ? '<div class="sold-out-ribbon">Sold Out</div>' : '') +
+      '</div>' +
       '<div class="shelf-item-name">' + escHtml(p.name) + '</div>' +
       '<div class="shelf-item-price">R ' + (p.price||0).toLocaleString() + '</div>' +
+      (stock.low ? '<div class="low-stock-badge">🔥 Only ' + stock.count + ' left!</div>' : '') +
     '</button>';
   }
 
@@ -2313,6 +2676,120 @@ function sendTelegramNotification(orderData) {
       document.getElementById('timer-seconds').textContent=String(Math.floor((r%60000)/1000)).padStart(2,'0');
     }
     update(); setInterval(update,1000);
+  }
+
+  // ── SMART ASSISTANT — free, rule-based "shopping assistant" chat.
+  // Everything runs client-side against the real product catalog: no
+  // API key, no backend, no per-message cost, and nothing an outsider
+  // could abuse to run up a bill. It understands a budget ("under
+  // R300", "R100 to R250"), a category name/keyword, and falls back to
+  // matching words against product names/descriptions. It is NOT a
+  // general-purpose AI — it can't hold a conversation about anything
+  // beyond finding a product in the catalog.
+  var saOpened = false;
+  var saStopwords = ['a','an','the','for','me','my','to','of','under','below','less','than','with','and','or','some','any','please','show','find','looking','need','want','gift','cheap','budget','around','about','between'];
+
+  function toggleSmartAssistant() {
+    var panel = document.getElementById('smart-assistant-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open') && !saOpened) {
+      saOpened = true;
+      appendAssistantMessage('bot', 'Hi! 👋 I\'m the Mr Clearance shopping assistant. I can search our real stock for you — try something like <em>"gift under R300"</em> or <em>"cheap kitchen stuff"</em>.');
+      renderAssistantSuggestions();
+    }
+    if (panel.classList.contains('open')) document.getElementById('sa-input').focus();
+  }
+
+  function renderAssistantSuggestions() {
+    var wrap = document.getElementById('sa-suggestions');
+    var examples = ['Gift under R300', 'Cheap footwear', 'Best sellers'];
+    wrap.innerHTML = examples.map(function(ex){
+      return '<button type="button" onclick="document.getElementById(\'sa-input\').value=\'' + ex.replace(/'/g,"\\'") + '\';sendAssistantQuery();">' + escHtml(ex) + '</button>';
+    }).join('');
+  }
+
+  function appendAssistantMessage(who, html) {
+    var box = document.getElementById('sa-messages');
+    var div = document.createElement('div');
+    div.className = 'sa-msg sa-msg-' + who;
+    div.innerHTML = html;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // Pulls a price ceiling/range out of free text. Handles "under/below/
+  // less than R300", "R100 to R300" / "R100-R300", and a bare "300"
+  // when nothing else in the query looks like a price hint.
+  function parsePriceRange(text) {
+    var range = { min: null, max: null };
+    var between = text.match(/r?\s*(\d+)\s*(?:to|-|and)\s*r?\s*(\d+)/i);
+    if (between) { range.min = parseFloat(between[1]); range.max = parseFloat(between[2]); return range; }
+    var under = text.match(/(?:under|below|less than|max|cheaper than|up to)\s*r?\s*(\d+)/i);
+    if (under) { range.max = parseFloat(under[1]); return range; }
+    var over = text.match(/(?:over|above|more than|min)\s*r?\s*(\d+)/i);
+    if (over) { range.min = parseFloat(over[1]); return range; }
+    var bare = text.match(/r\s*(\d+)/i);
+    if (bare) { range.max = parseFloat(bare[1]); return range; }
+    return range;
+  }
+
+  function matchCategoryFromText(text) {
+    var cats = [];
+    try {
+      var raw = JSON.parse(localStorage.getItem('mrc_categories') || 'null');
+      cats = Array.isArray(raw) && raw.length ? raw : DEFAULT_CATEGORIES_SITE;
+    } catch(e) { cats = DEFAULT_CATEGORIES_SITE; }
+    var lower = text.toLowerCase();
+    var found = cats.find(function(c){ return lower.indexOf(c.name.toLowerCase()) !== -1 || lower.indexOf(c.key.toLowerCase()) !== -1; });
+    return found ? found.key : null;
+  }
+
+  function sendAssistantQuery() {
+    var input = document.getElementById('sa-input');
+    var text = input.value.trim();
+    if (!text) return;
+    appendAssistantMessage('user', escHtml(text));
+    input.value = '';
+
+    var range = parsePriceRange(text);
+    var catKey = matchCategoryFromText(text);
+    var wantsBestSellers = /best.?sell|popular|top rated|trending/i.test(text);
+
+    var products = getProducts().slice();
+    var results = products.filter(function(p){
+      if (stockInfo(p).soldOut) return false;
+      if (catKey && p.category !== catKey) return false;
+      if (range.min != null && (p.price||0) < range.min) return false;
+      if (range.max != null && (p.price||0) > range.max) return false;
+      return true;
+    });
+
+    // No category/price hint found at all — fall back to matching
+    // leftover keywords against product name/description.
+    if (!catKey && range.min == null && range.max == null && !wantsBestSellers) {
+      var words = text.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(function(w){ return w && w.length > 2 && saStopwords.indexOf(w) === -1; });
+      if (words.length) {
+        results = products.filter(function(p){
+          if (stockInfo(p).soldOut) return false;
+          var hay = (p.name + ' ' + (p.desc||'')).toLowerCase();
+          return words.some(function(w){ return hay.indexOf(w) !== -1; });
+        });
+      }
+    }
+
+    if (wantsBestSellers) {
+      results = results.sort(function(a,b){ return (b.reviewCount||0) - (a.reviewCount||0) || (b.avgRating||0) - (a.avgRating||0); });
+    }
+
+    results = results.slice(0, 4);
+
+    if (!results.length) {
+      appendAssistantMessage('bot', 'Hmm, I couldn\'t find a match for that in what\'s in stock right now. Try a wider budget, or browse a category from the menu 🗂️');
+      return;
+    }
+    var intro = catKey || range.min != null || range.max != null || wantsBestSellers
+      ? 'Here\'s what I found:' : 'Here are a few things that might match:';
+    appendAssistantMessage('bot', intro + '<div class="sa-results">' + results.map(function(p,i){ return shelfItemHtml(p, i); }).join('') + '</div>');
   }
   </script>
 
