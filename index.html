@@ -1812,7 +1812,16 @@
   // ── LOADER ────────────────────────────────────────────────────
   function hideLoader() { var l = document.getElementById('loader'); if (l) { l.style.opacity='0'; setTimeout(function(){ l.style.display='none'; }, 600); } }
   setTimeout(hideLoader, 2000);
-  window.onload = function(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderHeroVisual(); renderAds(); renderCategorySidebar(); renderCategoryRail(); setupPdpStarInput(); updateWishlistCount(); restoreCartFromStorage(); registerServiceWorker(); };
+  // DOMContentLoaded (not window.onload) on purpose — onload waits for
+  // EVERY resource on the page to finish (GSAP, EmailJS, Google Fonts,
+  // favicons, manifest...) before running a single line here, which was
+  // delaying the very first render of real products/photos by however
+  // long those unrelated downloads took. DOMContentLoaded fires as soon
+  // as the HTML itself is parsed — real content (and the image downloads
+  // it kicks off) starts immediately instead of waiting in line.
+  function initHomepage(){ renderProducts(); startDealsTimer(); hideLoader(); renderDeals(); renderHeroVisual(); renderAds(); renderCategorySidebar(); renderCategoryRail(); setupPdpStarInput(); updateWishlistCount(); restoreCartFromStorage(); registerServiceWorker(); }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initHomepage); }
+  else { initHomepage(); }
 
   // ── TOAST ─────────────────────────────────────────────────────
   function showToast(msg) { var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2800); }
@@ -2343,26 +2352,33 @@ function sendTelegramNotification(orderData) {
 
     var used = {};
     var html = '';
+    // Only the very first shelf row is above the fold on open — its
+    // images load eagerly (no loading="lazy") so they start downloading
+    // immediately instead of waiting on the browser's lazy-load/viewport
+    // check. Every row after it stays lazy, which is still the right
+    // call for anything the visitor has to scroll to.
+    var isFirstRow = true;
 
     // "Recently Viewed" always leads, when there's anything to show —
     // it isn't counted in `used` since it's a cross-cutting view, not
     // a real category, so a product still shows in its normal shelf too.
     var recentIds = getRecentlyViewed();
     var recentItems = recentIds.map(function(id){ return products.find(function(p){ return String(p.id) === id; }); }).filter(Boolean);
-    if (recentItems.length) html += shelfRowHtml('recent', '👀 Recently Viewed', recentItems, settings.itemLimit);
+    if (recentItems.length) { html += shelfRowHtml('recent', '👀 Recently Viewed', recentItems, settings.itemLimit, isFirstRow); isFirstRow = false; }
 
     cats.forEach(function(cat){
       if (cat.theme && cat.theme.shelfHidden) return;
       var items = products.filter(function(p){ return p.category === cat.key; });
       if (!items.length) return;
       items.forEach(function(p, i){ used[p.id || ('n' + i + p.name)] = true; });
-      html += shelfRowHtml(cat.key, cat.name, items, settings.itemLimit);
+      html += shelfRowHtml(cat.key, cat.name, items, settings.itemLimit, isFirstRow);
+      isFirstRow = false;
     });
     // Products whose category doesn't match any defined category (or
     // whose category's shelf is hidden) still need to be reachable —
     // never let a real product silently vanish.
     var orphans = products.filter(function(p, i){ return !used[p.id || ('n' + i + p.name)]; });
-    if (orphans.length) html += shelfRowHtml('more', settings.catchallTitle || 'More From Mr Clearance', orphans, settings.itemLimit);
+    if (orphans.length) { html += shelfRowHtml('more', settings.catchallTitle || 'More From Mr Clearance', orphans, settings.itemLimit, isFirstRow); isFirstRow = false; }
 
     section.innerHTML = html;
     section.style.display = html ? 'block' : 'none';
@@ -2373,14 +2389,14 @@ function sendTelegramNotification(orderData) {
     if (typeof showShelvesView === 'function' && !document.getElementById('search-input').value) showShelvesView();
   }
 
-  function shelfRowHtml(key, name, items, limit){
+  function shelfRowHtml(key, name, items, limit, eager){
     var shown = items;
     var remaining = 0;
     if (limit && items.length > limit) {
       shown = items.slice(0, limit);
       remaining = items.length - limit;
     }
-    var itemsHtml = shown.map(shelfItemHtml).join('');
+    var itemsHtml = shown.map(function(p, i){ return shelfItemHtml(p, i, eager); }).join('');
     if (remaining > 0) itemsHtml += shelfViewAllHtml(key, remaining);
     return '<div class="shelf-row" id="shelf-' + escHtml(key) + '">' +
       '<div class="shelf-row-label"><h2>' + escHtml(name) + '</h2><span class="rule"></span><span class="count">' + items.length + '</span></div>' +
@@ -2437,13 +2453,13 @@ function sendTelegramNotification(orderData) {
     document.querySelector('.products-section').scrollIntoView({behavior:'smooth', block:'start'});
   }
 
-  function shelfItemHtml(p, i){
+  function shelfItemHtml(p, i, eager){
     var pid = p.id || i;
     var img = getImages(p)[0];
     var stock = stockInfo(p);
     return '<button class="shelf-item' + (stock.soldOut?' sold-out':'') + '" type="button" onclick="openShelfProduct(\'' + pid + '\', this)">' +
       '<div class="shelf-item-plate">' + wishlistBtnHtml(pid) +
-      '<img src="' + escHtml(img) + '" alt="' + escHtml(p.name) + '" loading="lazy" ' +
+      '<img src="' + escHtml(img) + '" alt="' + escHtml(p.name) + '" loading="' + (eager?'eager':'lazy') + '" ' +
       'onerror="this.src=\'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f5f5f5%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2218%22%20fill%3D%22%23e31837%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ENo%20Image%3C/text%3E%3C/svg%3E\'"/>' +
       (stock.soldOut ? '<div class="sold-out-ribbon">Sold Out</div>' : '') +
       '</div>' +
@@ -2594,6 +2610,7 @@ function sendTelegramNotification(orderData) {
     else {
       photoBox.innerHTML = '';
       var imgEl = document.createElement('img');
+      imgEl.fetchPriority = 'high'; // almost always the largest image on first paint
       imgEl.src = img;
       imgEl.alt = source.name || '';
       imgEl.onerror = showPlaceholder;
