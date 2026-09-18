@@ -386,6 +386,19 @@
     .product-card[data-category="workwear"] .card-img-wrap { background:#1c1c1c; }
     .product-card[data-category="workwear"] .badge-sale { background:#f59e0b; color:#1c1c1c; }
 
+    /* Draws the eye to the size row when Add to Cart is tapped without
+       a size picked yet — a backup to the toast message, not the only
+       signal, so it's obvious even if a toast is ever missed. */
+    @keyframes pdpSizesShake {
+      0%, 100% { transform:translateX(0); }
+      20% { transform:translateX(-6px); }
+      40% { transform:translateX(6px); }
+      60% { transform:translateX(-4px); }
+      80% { transform:translateX(4px); }
+    }
+    .pdp-sizes-shake { animation:pdpSizesShake 0.4s ease; }
+    .pdp-sizes-shake .pdp-section-label { color:#e31837; }
+
   </style>
  <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -1458,16 +1471,34 @@
     el.textContent = Math.max(1, parseInt(el.textContent) + change);
   }
   function pdpAddToCart() {
-    if (!pdpCurrentProduct) return;
-    var p = pdpCurrentProduct;
-    if (p.sizes && p.sizes.length > 0 && !pdpSelectedSize) { showToast('👆 Please select a size first!'); return; }
-    var qty  = parseInt(document.getElementById('pdp-qty').textContent);
-    var name = p.name + (pdpSelectedSize ? ' (' + pdpSelectedSize + ')' : '');
-    var existing = cart.find(function(i){ return i.name === name; });
-    if (existing) existing.qty += qty; else cart.push({ name:name, price:p.price, qty:qty });
-    updateCartUI();
-    showToast('✅ ' + qty + 'x ' + name + ' added!');
-    closePdp(); toggleCart();
+    try {
+      if (!pdpCurrentProduct) { showToast('⚠️ Please reopen this product and try again'); return; }
+      var p = pdpCurrentProduct;
+      if (p.sizes && p.sizes.length > 0 && !pdpSelectedSize) {
+        showToast('👆 Please select a size first!');
+        // The toast alone can be easy to miss (or, before this fix,
+        // literally hidden behind the popup's own backdrop) — visibly
+        // draw attention to the size row itself too.
+        var sizesSection = document.getElementById('pdp-sizes-section');
+        if (sizesSection) {
+          sizesSection.scrollIntoView({ behavior:'smooth', block:'center' });
+          sizesSection.classList.remove('pdp-sizes-shake');
+          void sizesSection.offsetWidth; // restart the animation if it just ran
+          sizesSection.classList.add('pdp-sizes-shake');
+        }
+        return;
+      }
+      var qty  = parseInt(document.getElementById('pdp-qty').textContent);
+      var name = p.name + (pdpSelectedSize ? ' (' + pdpSelectedSize + ')' : '');
+      var existing = cart.find(function(i){ return i.name === name; });
+      if (existing) existing.qty += qty; else cart.push({ name:name, price:p.price, qty:qty });
+      updateCartUI();
+      showToast('✅ ' + qty + 'x ' + name + ' added!');
+      closePdp(); toggleCart();
+    } catch (e) {
+      console.error('Add to cart failed:', e);
+      showToast('❌ Something went wrong adding that — please try again');
+    }
   }
 
   // ── LIGHTBOX ──────────────────────────────────────────────────
